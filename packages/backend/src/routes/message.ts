@@ -51,6 +51,25 @@ router.post('/stream', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: 'This session has been closed' })
       }
 
+      if (session.status === 'human') {
+        const userMessage = await prisma.message.create({
+          data: {
+            sessionId: session.id,
+            senderType: 'user',
+            content,
+            userId
+          }
+        })
+
+        return res.json({
+          id: userMessage.id,
+          sessionId: session.id,
+          content: userMessage.content,
+          senderType: userMessage.senderType,
+          createdAt: userMessage.createdAt
+        })
+      }
+
       const lastMessage = session.messages[0]
       if (lastMessage) {
         const hoursSinceLastMessage = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60)

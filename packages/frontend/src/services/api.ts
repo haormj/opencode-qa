@@ -29,6 +29,7 @@ export interface SessionDetail {
   id: string
   title: string
   status: string
+  needHuman: boolean
   createdAt: string
   updatedAt: string
   messages: MessageItem[]
@@ -355,6 +356,12 @@ export async function adminReplyToSession(sessionId: string, content: string): P
   return request(`${API_BASE}/admin/sessions/${sessionId}/reply`, {
     method: 'POST',
     body: JSON.stringify({ content }),
+  })
+}
+
+export async function closeAdminSession(sessionId: string): Promise<void> {
+  await request(`${API_BASE}/admin/sessions/${sessionId}/close`, {
+    method: 'PATCH',
   })
 }
 

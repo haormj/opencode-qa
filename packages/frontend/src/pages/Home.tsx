@@ -179,14 +179,13 @@ function Home() {
     if (!sessionId) return
     
     try {
-      await updateSessionStatus(sessionId, 'need_human')
-      setSessionStatus('need_human')
-      handleCopyLink()
-      message.success('已标记为需要人工处理')
+      await updateSessionStatus(sessionId, 'human')
+      setSessionStatus('human')
+      message.success('已标记为需要人工处理，可复制链接发给支撑人员')
     } catch {
       message.error('标记失败，请稍后重试')
     }
-  }, [sessionId, handleCopyLink])
+  }, [sessionId])
 
   const handleSelectSession = (id: string) => {
     setSearchParams({ sessionId: id })

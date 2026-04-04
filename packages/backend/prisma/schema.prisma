@@ -63,15 +63,17 @@ model Bot {
 }
 
 model Session {
-  id              String    @id @default(uuid())
-  userId          String    @map("user_id")
-  title           String
-  status          String    @default("active")
-  opencodeSessionId String? @map("opencode_session_id")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  messages        Message[]
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  title             String
+  status            String    @default("active")
+  needHuman         Boolean   @default(false) @map("need_human")
+  isDeleted         Boolean   @default(false) @map("is_deleted")
+  opencodeSessionId String?   @map("opencode_session_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  messages          Message[]
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }

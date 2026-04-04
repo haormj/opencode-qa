@@ -9,7 +9,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const userId = req.user!.id
 
     const sessions = await prisma.session.findMany({
-      where: { userId },
+      where: { userId, isDeleted: false },
       orderBy: { updatedAt: 'desc' },
       include: {
         _count: {
@@ -62,6 +62,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       id: session.id,
       title: session.title,
       status: session.status,
+      needHuman: session.needHuman,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       messages: session.messages.map(m => ({
@@ -119,15 +120,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     const userId = req.user!.id
 
     const session = await prisma.session.findFirst({
-      where: { id, userId }
+      where: { id, userId, isDeleted: false }
     })
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    await prisma.session.delete({
-      where: { id }
+    await prisma.session.update({
+      where: { id },
+      data: { isDeleted: true, status: 'closed' }
     })
 
     res.json({ success: true })
@@ -143,8 +145,8 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     const { status } = req.body
     const userId = req.user!.id
 
-    if (!status || !['active', 'need_human', 'resolved'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (active, need_human, resolved)' })
+    if (!status || !['active', 'human', 'closed'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (active, human, closed)' })
     }
 
     const session = await prisma.session.findFirst({
@@ -155,14 +157,20 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Session not found' })
     }
 
+    const updateData: { status: string; needHuman?: boolean } = { status }
+    if (status === 'human') {
+      updateData.needHuman = true
+    }
+
     const updated = await prisma.session.update({
       where: { id },
-      data: { status }
+      data: updateData
     })
 
     res.json({
       id: updated.id,
       status: updated.status,
+      needHuman: updated.needHuman,
       updatedAt: updated.updatedAt
     })
   } catch (error) {

@@ -9,14 +9,14 @@ import './Admin.css'
 
 const statusColors: Record<string, string> = {
   active: 'green',
-  need_human: 'orange',
-  resolved: 'blue'
+  human: 'orange',
+  closed: 'default'
 }
 
 const statusLabels: Record<string, string> = {
   active: '进行中',
-  need_human: '待人工',
-  resolved: '已解决'
+  human: '待人工',
+  closed: '已关闭'
 }
 
 function AdminSessionDetail() {

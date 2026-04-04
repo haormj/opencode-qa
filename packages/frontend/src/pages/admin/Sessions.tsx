@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Table, Card, Tag, Input, Select, Button, Space, Avatar, Tooltip, message } from 'antd'
-import { SearchOutlined, EyeOutlined } from '@ant-design/icons'
+import { Table, Card, Tag, Input, Select, Button, Space, Avatar, Tooltip, message, Popconfirm } from 'antd'
+import { SearchOutlined, EyeOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAdminSessions, generateAvatarColor, type AdminSession } from '../../services/api'
+import { getAdminSessions, closeAdminSession, generateAvatarColor, type AdminSession } from '../../services/api'
 import './Admin.css'
 
 const statusColors: Record<string, string> = {
   active: 'green',
-  need_human: 'orange',
-  resolved: 'blue'
+  human: 'orange',
+  closed: 'default'
 }
 
 const statusLabels: Record<string, string> = {
   active: '进行中',
-  need_human: '待人工',
-  resolved: '已解决'
+  human: '待人工',
+  closed: '已关闭'
 }
 
 function AdminSessions() {
@@ -57,6 +57,16 @@ function AdminSessions() {
   const handleSearch = () => {
     setPage(1)
     fetchSessions()
+  }
+
+  const handleCloseSession = async (sessionId: string) => {
+    try {
+      await closeAdminSession(sessionId)
+      message.success('会话已关闭')
+      fetchSessions()
+    } catch {
+      message.error('关闭会话失败')
+    }
   }
 
   const columns: ColumnsType<AdminSession> = [
@@ -123,15 +133,34 @@ function AdminSessions() {
     {
       title: '操作',
       key: 'action',
-      width: 80,
+      width: 120,
       render: (_, record) => (
-        <Tooltip title="查看详情">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/admin/sessions/${record.id}`)}
-          />
-        </Tooltip>
+        <Space>
+          <Tooltip title="查看详情">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/admin/sessions/${record.id}`)}
+            />
+          </Tooltip>
+          {record.status !== 'closed' && (
+            <Popconfirm
+              title="确定关闭该会话？"
+              description="关闭后用户将无法继续发送消息"
+              onConfirm={() => handleCloseSession(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Tooltip title="关闭会话">
+                <Button
+                  type="text"
+                  danger
+                  icon={<StopOutlined />}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
+        </Space>
       )
     }
   ]
@@ -160,8 +189,8 @@ function AdminSessions() {
             style={{ width: 120 }}
             options={[
               { value: 'active', label: '进行中' },
-              { value: 'need_human', label: '待人工' },
-              { value: 'resolved', label: '已解决' }
+              { value: 'human', label: '待人工' },
+              { value: 'closed', label: '已关闭' }
             ]}
           />
           <Button type="primary" onClick={handleSearch}>

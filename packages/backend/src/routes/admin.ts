@@ -143,6 +143,14 @@ router.post('/sessions/:id/reply', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' })
     }
 
+    if (session.status === 'closed') {
+      return res.status(400).json({ error: 'Cannot reply to a closed session' })
+    }
+
+    if (session.status !== 'human') {
+      return res.status(400).json({ error: 'Cannot reply to a session that does not need human assistance' })
+    }
+
     const message = await prisma.message.create({
       data: {
         sessionId: id,
@@ -154,10 +162,7 @@ router.post('/sessions/:id/reply', async (req, res) => {
 
     await prisma.session.update({
       where: { id },
-      data: {
-        status: 'resolved',
-        updatedAt: new Date()
-      }
+      data: { updatedAt: new Date() }
     })
 
     res.json({
@@ -168,6 +173,38 @@ router.post('/sessions/:id/reply', async (req, res) => {
     })
   } catch (error) {
     console.error('Admin reply error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.patch('/sessions/:id/close', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const session = await prisma.session.findUnique({
+      where: { id }
+    })
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' })
+    }
+
+    if (session.status === 'closed') {
+      return res.status(400).json({ error: 'Session is already closed' })
+    }
+
+    const updated = await prisma.session.update({
+      where: { id },
+      data: { status: 'closed' }
+    })
+
+    res.json({
+      id: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt
+    })
+  } catch (error) {
+    console.error('Admin close session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

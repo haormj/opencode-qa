@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import { Button, Tooltip, Avatar } from 'antd'
-import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
+import { LinkOutlined, UserSwitchOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
 import './ChatBox.css'
 
 export interface ExtendedMessageProps extends MessageProps {
@@ -130,30 +130,27 @@ function ChatBox({
   }
 
   function handleSend(type: string, text: string) {
-    if (isAdminMode) {
-      if (sessionStatus !== 'need_human') return
-    } else {
-      if (isNeedHuman) return
-    }
+    if (isClosed) return
+    if (isAdminMode && !isHuman) return
     if (type === 'text' && text.trim()) {
       onSend(type, text)
     }
   }
 
-  const isNeedHuman = sessionStatus === 'need_human'
+  const isHuman = sessionStatus === 'human'
   const isClosed = sessionStatus === 'closed'
   const showActions = sessionId && sessionTitle && !hideHeader
   const showWelcome = messages.length === 0 && !sessionTitle && !hideHeader
   
   const getPlaceholder = () => {
-    if (isClosed) return '会话已关闭（超过24小时未活动）'
+    if (isClosed) return '会话已关闭'
     if (isAdminMode) {
-      return isNeedHuman ? '请输入回复内容...' : '该会话未标记为需要人工处理，无法回复'
+      return isHuman ? '请输入回复内容...' : '该会话未标记为需要人工处理，无法回复'
     }
-    return isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'
+    return '请输入您的问题...'
   }
   
-  const isInputDisabled = isClosed || (isAdminMode ? !isNeedHuman : isNeedHuman)
+  const isInputDisabled = isClosed || (isAdminMode && !isHuman)
 
   return (
     <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isInputDisabled ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
@@ -182,24 +179,14 @@ function ChatBox({
                   复制链接
                 </Button>
               </Tooltip>
-              {isNeedHuman ? (
-                <Tooltip title="已标记为需要人工处理">
-                  <Button 
-                    type="text"
-                    icon={<CheckCircleOutlined />}
-                    disabled
-                    className="marked-btn"
-                  >
-                    已标记
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip title="标记后输入框将被禁用，等待人工处理">
+              {!isClosed && (
+                <Tooltip title={isHuman ? '可以点击复制链接发给支撑人员进一步定位' : '点击之后，AI将不再回复消息，可以点击复制链接发给支撑人员进一步定位'}>
                   <Button 
                     type="primary"
                     danger
                     icon={<UserSwitchOutlined />}
                     onClick={onMarkNeedHuman}
+                    disabled={isHuman}
                   >
                     AI无法解决，需要人工
                   </Button>
@@ -221,6 +208,7 @@ function ChatBox({
           onSend={handleSend}
           placeholder={getPlaceholder()}
           isTyping={typing}
+          key={sessionStatus}
         />
       </div>
     </div>
