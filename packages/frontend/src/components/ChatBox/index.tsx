@@ -124,7 +124,7 @@ function ChatBox({
         </Tooltip>
         <div className="chat-header-content">
           <h2 className="chat-header-title">{sessionTitle || '新对话'}</h2>
-          {sessionTitle && <p className="chat-header-subtitle">由 OpenCode AI 生成</p>}
+          <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
         </div>
         {showActions && (
           <div className="chat-header-actions">
