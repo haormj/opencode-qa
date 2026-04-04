@@ -4,6 +4,26 @@ import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
+router.get('/public/:id/info', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const session = await prisma.session.findUnique({
+      where: { id },
+      select: { id: true, userId: true, status: true }
+    })
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' })
+    }
+
+    res.json(session)
+  } catch (error) {
+    console.error('Get session info error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id

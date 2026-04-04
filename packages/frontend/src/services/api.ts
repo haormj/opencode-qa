@@ -222,6 +222,16 @@ export function logout(): void {
   window.location.href = '/login'
 }
 
+export interface SessionInfo {
+  id: string
+  userId: string
+  status: string
+}
+
+export async function getSessionInfo(id: string): Promise<SessionInfo> {
+  return request<SessionInfo>(`${API_BASE}/sessions/public/${id}/info`)
+}
+
 export function sendMessageStream(
   content: string,
   sessionId: string | null,

@@ -185,7 +185,7 @@ function Home() {
 
   const handleCopyLink = useCallback(() => {
     if (!sessionId) return
-    const link = `${window.location.origin}?sessionId=${sessionId}`
+    const link = `${window.location.origin}/session/${sessionId}`
     navigator.clipboard.writeText(link)
     message.success('会话链接已复制')
   }, [sessionId])

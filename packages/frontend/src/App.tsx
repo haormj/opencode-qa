@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { isAuthenticated, isAdmin } from './services/api'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import SessionRedirect from './pages/SessionRedirect'
 import AdminLayout from './pages/admin/Layout'
 import AdminSessions from './pages/admin/Sessions'
 import AdminSessionDetail from './pages/admin/SessionDetail'
@@ -37,6 +38,14 @@ function App() {
           }
         />
         <Route path="/login" element={<Login />} />
+        <Route
+          path="/session/:id"
+          element={
+            <PrivateRoute>
+              <SessionRedirect />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/admin"
           element={
