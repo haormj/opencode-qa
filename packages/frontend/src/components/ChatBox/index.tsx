@@ -6,12 +6,21 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
-import { Button, Tooltip } from 'antd'
-import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { Button, Tooltip, Avatar } from 'antd'
+import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
 import './ChatBox.css'
 
+export interface ExtendedMessageProps extends MessageProps {
+  sender?: {
+    name: string
+    avatar?: string
+    color?: string
+    type: 'user' | 'ai' | 'admin'
+  }
+}
+
 interface ChatBoxProps {
-  messages: MessageProps[]
+  messages: ExtendedMessageProps[]
   typing?: boolean
   sessionTitle?: string
   sessionStatus?: string
@@ -21,6 +30,8 @@ interface ChatBoxProps {
   onCopyLink?: () => void
   sidebarCollapsed?: boolean
   onToggleSidebar?: () => void
+  hideHeader?: boolean
+  isAdminMode?: boolean
 }
 
 function ChatBox({ 
@@ -33,7 +44,9 @@ function ChatBox({
   onMarkNeedHuman,
   onCopyLink,
   sidebarCollapsed = false,
-  onToggleSidebar
+  onToggleSidebar,
+  hideHeader = false,
+  isAdminMode = false
 }: ChatBoxProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
@@ -70,8 +83,8 @@ function ChatBox({
     }
   }, [])
 
-  function renderMessageContent(msg: MessageProps) {
-    const { type, content, position } = msg
+  function renderMessageContent(msg: ExtendedMessageProps) {
+    const { type, content, position, sender } = msg
     
     if (type === 'typing') {
       return <div className="typing-message">OpenCode 正在思考...</div>
@@ -81,6 +94,22 @@ function ChatBox({
 
     return (
       <div className="message-wrapper">
+        {position === 'left' && sender && (
+          <div className="message-sender">
+            <Avatar size="small" style={{ backgroundColor: sender.color || '#1890ff' }}>
+              {sender.type === 'admin' ? <UserOutlined /> : sender.type === 'ai' ? <RobotOutlined /> : (sender.avatar || sender.name[0])}
+            </Avatar>
+            <span className="sender-name">{sender.name}</span>
+          </div>
+        )}
+        {position === 'right' && sender && (
+          <div className="message-sender message-sender-right">
+            <span className="sender-name">{sender.name}</span>
+            <Avatar size="small" style={{ backgroundColor: sender.color || '#1890ff' }}>
+              {sender.avatar || sender.name[0]}
+            </Avatar>
+          </div>
+        )}
         <Bubble
           type="text"
           content={isUser ? content.text : ''}
@@ -101,68 +130,75 @@ function ChatBox({
   }
 
   function handleSend(type: string, text: string) {
-    if (isNeedHuman) return
+    if (isAdminMode) {
+      if (sessionStatus !== 'need_human') return
+    } else {
+      if (isNeedHuman) return
+    }
     if (type === 'text' && text.trim()) {
       onSend(type, text)
     }
   }
 
   const isNeedHuman = sessionStatus === 'need_human'
-  const showActions = sessionId && sessionTitle
-  const showWelcome = messages.length === 0 && !sessionTitle
+  const showActions = sessionId && sessionTitle && !hideHeader
+  const showWelcome = messages.length === 0 && !sessionTitle && !hideHeader
+  const isInputDisabled = isAdminMode ? (sessionStatus !== 'need_human') : isNeedHuman
 
   return (
-    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isNeedHuman ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
-      <div className="chat-header">
-        <Tooltip title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}>
-          <Button
-            type="text"
-            className="sidebar-toggle-btn"
-            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={onToggleSidebar}
-          />
-        </Tooltip>
-        <div className="chat-header-content">
-          <h2 className="chat-header-title">{sessionTitle || '新对话'}</h2>
-          <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
-        </div>
-        {showActions && (
-          <div className="chat-header-actions">
-            <Tooltip title="复制会话链接">
-              <Button 
-                type="text"
-                icon={<LinkOutlined />}
-                onClick={onCopyLink}
-              >
-                复制链接
-              </Button>
-            </Tooltip>
-            {isNeedHuman ? (
-              <Tooltip title="已标记为需要人工处理">
+    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isInputDisabled ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
+      {!hideHeader && (
+        <div className="chat-header">
+          <Tooltip title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}>
+            <Button
+              type="text"
+              className="sidebar-toggle-btn"
+              icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={onToggleSidebar}
+            />
+          </Tooltip>
+          <div className="chat-header-content">
+            <h2 className="chat-header-title">{sessionTitle || '新对话'}</h2>
+            <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
+          </div>
+          {showActions && (
+            <div className="chat-header-actions">
+              <Tooltip title="复制会话链接">
                 <Button 
                   type="text"
-                  icon={<CheckCircleOutlined />}
-                  disabled
-                  className="marked-btn"
+                  icon={<LinkOutlined />}
+                  onClick={onCopyLink}
                 >
-                  已标记
+                  复制链接
                 </Button>
               </Tooltip>
-            ) : (
-              <Tooltip title="标记后输入框将被禁用，等待人工处理">
-                <Button 
-                  type="primary"
-                  danger
-                  icon={<UserSwitchOutlined />}
-                  onClick={onMarkNeedHuman}
-                >
-                  AI无法解决，需要人工
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        )}
-      </div>
+              {isNeedHuman ? (
+                <Tooltip title="已标记为需要人工处理">
+                  <Button 
+                    type="text"
+                    icon={<CheckCircleOutlined />}
+                    disabled
+                    className="marked-btn"
+                  >
+                    已标记
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip title="标记后输入框将被禁用，等待人工处理">
+                  <Button 
+                    type="primary"
+                    danger
+                    icon={<UserSwitchOutlined />}
+                    onClick={onMarkNeedHuman}
+                  >
+                    AI无法解决，需要人工
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <div className="chat-content">
         {showWelcome && (
           <div className="welcome-message">
@@ -173,7 +209,7 @@ function ChatBox({
           messages={messages}
           renderMessageContent={renderMessageContent}
           onSend={handleSend}
-          placeholder={isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'}
+          placeholder={isInputDisabled ? (isAdminMode ? '该会话未标记为需要人工处理，无法回复' : '会话已标记，等待人工处理...') : '请输入您的问题...'}
           isTyping={typing}
         />
       </div>

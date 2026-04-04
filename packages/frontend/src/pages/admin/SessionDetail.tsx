@@ -1,15 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Tag, Button, Input, Space, message, Avatar, Spin, Typography } from 'antd'
-import { ArrowLeftOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import 'github-markdown-css/github-markdown-light.css'
+import { Tag, Button, message } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 import { getAdminSessionDetail, adminReplyToSession, generateAvatarColor, type SessionDetail, type QuestionItem, type User } from '../../services/api'
+import type { ExtendedMessageProps } from '../../components/ChatBox'
+import ChatBox from '../../components/ChatBox'
 import './Admin.css'
-
-const { TextArea } = Input
-const { Title, Text } = Typography
 
 const statusColors: Record<string, string> = {
   active: 'green',
@@ -28,8 +24,6 @@ function AdminSessionDetail() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<(SessionDetail & { user: User }) | null>(null)
-  const [replyText, setReplyText] = useState('')
-  const [replying, setReplying] = useState(false)
 
   const fetchSession = async () => {
     if (!id) return
@@ -48,146 +42,98 @@ function AdminSessionDetail() {
     fetchSession()
   }, [id])
 
-  const handleReply = async () => {
-    if (!id || !replyText.trim()) {
+  const convertQuestionsToMessages = (questions: QuestionItem[], user: User): ExtendedMessageProps[] => {
+    const messages: ExtendedMessageProps[] = []
+    
+    questions.forEach(q => {
+      messages.push({
+        _id: `q-${q.id}`,
+        type: 'text',
+        content: { text: q.question },
+        position: 'right',
+        createdAt: q.createdAt,
+        sender: {
+          name: user.displayName,
+          color: generateAvatarColor(user.displayName),
+          type: 'user'
+        }
+      })
+      
+      if (q.answer) {
+        messages.push({
+          _id: `a-${q.id}`,
+          type: 'text',
+          content: { text: q.answer },
+          position: 'left',
+          createdAt: q.createdAt,
+          sender: q.isAdminReply ? {
+            name: '管理员',
+            color: '#1890ff',
+            type: 'admin'
+          } : {
+            name: 'AI 助手',
+            color: '#52c41a',
+            type: 'ai'
+          }
+        })
+      }
+    })
+    
+    return messages
+  }
+
+  const handleReply = (type: string, text: string) => {
+    if (!id || !text.trim()) {
       message.warning('请输入回复内容')
       return
     }
 
-    setReplying(true)
-    try {
-      await adminReplyToSession(id, replyText)
-      message.success('回复成功')
-      setReplyText('')
-      fetchSession()
-    } catch (error) {
-      message.error('回复失败')
-    } finally {
-      setReplying(false)
-    }
+    adminReplyToSession(id, text)
+      .then(() => {
+        message.success('回复成功')
+        fetchSession()
+      })
+      .catch(() => {
+        message.error('回复失败')
+      })
   }
-
-  const canReply = session?.status === 'need_human'
 
   if (loading) {
     return (
       <div className="admin-loading">
-        <Spin size="large" />
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>加载中...</div>
       </div>
     )
   }
 
   if (!session) {
     return (
-      <Card>
-        <div className="admin-empty">会话不存在</div>
-      </Card>
+      <div className="admin-empty">会话不存在</div>
     )
   }
 
   return (
-    <Card
-      title={
-        <Space>
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin')} />
-          <span>{session.title}</span>
-          <Tag color={statusColors[session.status]}>
-            {statusLabels[session.status]}
-          </Tag>
-        </Space>
-      }
-    >
-      <div className="session-info">
-        <Space>
-          <Avatar style={{ backgroundColor: generateAvatarColor(session.user.displayName) }}>
-            {session.user.displayName[0]}
-          </Avatar>
-          <div>
-            <Text strong>{session.user.displayName}</Text>
-            <br />
-            <Text type="secondary">@{session.user.username}</Text>
-          </div>
-        </Space>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin')} />
+        <span style={{ fontSize: '16px', fontWeight: 500 }}>{session.title}</span>
+        <Tag color={statusColors[session.status]}>
+          {statusLabels[session.status]}
+        </Tag>
       </div>
-
-      <div className="message-list">
-        {session.questions.map((q: QuestionItem) => (
-          <div
-            key={q.id}
-            className={`message-item ${q.isAdminReply ? 'admin-message' : 'user-message'}`}
-          >
-            <div className="message-header">
-              <Space>
-                <Avatar
-                  size="small"
-                  style={{
-                    backgroundColor: q.isAdminReply
-                      ? '#1890ff'
-                      : generateAvatarColor(session.user.displayName)
-                  }}
-                >
-                  {q.isAdminReply ? <RobotOutlined /> : session.user.displayName[0]}
-                </Avatar>
-                <Text strong>
-                  {q.isAdminReply ? '管理员回复' : q.question}
-                </Text>
-              </Space>
-              <Text type="secondary" className="message-time">
-                {new Date(q.createdAt).toLocaleString()}
-              </Text>
-            </div>
-            {!q.isAdminReply && (
-              <div className="message-question">
-                <Text>{q.question}</Text>
-              </div>
-            )}
-            {q.answer && (
-              <div className="markdown-body message-answer">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {q.answer}
-                </ReactMarkdown>
-              </div>
-            )}
-            {q.feedback && (
-              <div className="message-feedback">
-                <Tag color="orange">反馈：{q.feedback.reason}</Tag>
-                {q.feedback.contact && <Text type="secondary">联系方式：{q.feedback.contact}</Text>}
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="chat-page-full">
+        <ChatBox
+          messages={convertQuestionsToMessages(session.questions, session.user)}
+          sessionTitle=""
+          sessionStatus={session.status}
+          sessionId={session.id}
+          onSend={handleReply}
+          onMarkNeedHuman={undefined}
+          hideHeader
+          isAdminMode
+        />
       </div>
-
-      <div className="reply-section">
-        {canReply ? (
-          <Space.Compact style={{ width: '100%' }}>
-            <TextArea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="输入管理员回复..."
-              autoSize={{ minRows: 2, maxRows: 4 }}
-              style={{ flex: 1 }}
-            />
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              loading={replying}
-              onClick={handleReply}
-            >
-              发送
-            </Button>
-          </Space.Compact>
-        ) : (
-          <div className="reply-disabled">
-            <Text type="secondary">
-              {session.status === 'resolved'
-                ? '该会话已解决，无需回复'
-                : '该会话未标记为需要人工处理，无法回复'}
-            </Text>
-          </div>
-        )}
-      </div>
-    </Card>
+    </div>
   )
 }
 

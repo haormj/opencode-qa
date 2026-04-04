@@ -2,9 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
-import ChatBox from '../components/ChatBox'
-import { askQuestionStream, getSession, updateSessionStatus } from '../services/api'
-import type { MessageProps } from '@chatui/core'
+import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
+import { askQuestionStream, getSession, updateSessionStatus, getUsername, generateAvatarColor } from '../services/api'
 import type { QuestionItem, Session } from '../services/api'
 import './Home.css'
 
@@ -13,7 +12,7 @@ function Home() {
   const sessionId = searchParams.get('sessionId')
 
   const [loading, setLoading] = useState(false)
-  const [messages, setMessages] = useState<MessageProps[]>([])
+  const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
@@ -41,7 +40,8 @@ function Home() {
   const loadSession = async (id: string) => {
     try {
       const session = await getSession(id)
-      const loadedMessages: MessageProps[] = []
+      const loadedMessages: ExtendedMessageProps[] = []
+      const username = getUsername()
       
       session.questions.forEach((q: QuestionItem) => {
         loadedMessages.push({
@@ -49,13 +49,29 @@ function Home() {
           type: 'text',
           content: { text: q.question },
           position: 'right',
+          sender: {
+            name: username,
+            color: generateAvatarColor(username),
+            type: 'user'
+          }
         })
-        loadedMessages.push({
-          _id: `a-${q.id}`,
-          type: 'text',
-          content: { text: q.answer || '' },
-          position: 'left',
-        } as MessageProps)
+        if (q.answer) {
+          loadedMessages.push({
+            _id: `a-${q.id}`,
+            type: 'text',
+            content: { text: q.answer },
+            position: 'left',
+            sender: q.isAdminReply ? {
+              name: '管理员',
+              color: '#1890ff',
+              type: 'admin'
+            } : {
+              name: 'AI 助手',
+              color: '#52c41a',
+              type: 'ai'
+            }
+          })
+        }
       })
       
       setMessages(loadedMessages)
@@ -71,19 +87,30 @@ function Home() {
       return
     }
 
-    const userMessage: MessageProps = {
+    const username = getUsername()
+    const userMessage: ExtendedMessageProps = {
       _id: Date.now().toString(),
       type: 'text',
       content: { text },
       position: 'right',
+      sender: {
+        name: username,
+        color: generateAvatarColor(username),
+        type: 'user'
+      }
     }
 
     const assistantMessageId = (Date.now() + 1).toString()
-    const assistantMessage: MessageProps = {
+    const assistantMessage: ExtendedMessageProps = {
       _id: assistantMessageId,
       type: 'typing',
       content: { text: '' },
       position: 'left',
+      sender: {
+        name: 'AI 助手',
+        color: '#52c41a',
+        type: 'ai'
+      }
     }
 
     setMessages(prev => [...prev, userMessage, assistantMessage])

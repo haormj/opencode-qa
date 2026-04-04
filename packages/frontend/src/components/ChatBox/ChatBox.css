@@ -387,6 +387,24 @@
   width: auto;
 }
 
+.message-sender {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.message-sender-right {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.sender-name {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
 .Message.right .message-wrapper {
   max-width: 70%;
   width: auto;
