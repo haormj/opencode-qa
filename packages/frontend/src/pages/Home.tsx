@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
-import { sendMessageStream, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
+import { sendMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
 import type { Session } from '../services/api'
 import './Home.css'
 
@@ -106,6 +106,21 @@ function Home() {
       }
     }
 
+    if (sessionStatus === 'human' && sessionId) {
+      setMessages(prev => [...prev, userMessage])
+      
+      sendHumanMessage(text, sessionId)
+        .then(() => {
+          message.success('消息已发送，等待人工处理')
+        })
+        .catch((error) => {
+          console.error('Send message error:', error)
+          message.error('发送消息失败，请稍后重试')
+          setMessages(prev => prev.filter(msg => msg._id !== userMessage._id))
+        })
+      return
+    }
+
     const assistantMessageId = (Date.now() + 1).toString()
     const assistantMessage: ExtendedMessageProps = {
       _id: assistantMessageId,
@@ -166,7 +181,7 @@ function Home() {
         setLoading(false)
       }
     )
-  }, [sessionId, setSearchParams])
+  }, [sessionId, sessionStatus, setSearchParams])
 
   const handleCopyLink = useCallback(() => {
     if (!sessionId) return

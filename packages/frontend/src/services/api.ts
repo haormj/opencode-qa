@@ -298,6 +298,16 @@ export function sendMessageStream(
   return () => controller.abort()
 }
 
+export async function sendHumanMessage(
+  content: string,
+  sessionId: string
+): Promise<{ id: string; sessionId: string; content: string; senderType: string; createdAt: string }> {
+  return request(`${API_BASE}/messages/stream`, {
+    method: 'POST',
+    body: JSON.stringify({ content, sessionId }),
+  })
+}
+
 export async function getHistory(page: number = 1, pageSize: number = 20): Promise<HistoryResponse> {
   return request<HistoryResponse>(`${API_BASE}/history?page=${page}&pageSize=${pageSize}`)
 }
