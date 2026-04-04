@@ -6,24 +6,40 @@
   flex-direction: column;
   transition: width 0.3s ease;
   overflow: hidden;
+  height: 100vh;
 }
 
 .sidebar.collapsed {
   width: 48px;
 }
 
-.sidebar-header {
-  padding: 12px;
+.sidebar-brand {
+  padding: 16px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #e8e8e8;
-  min-height: 48px;
+  min-height: 56px;
 }
 
-.sidebar-title {
-  font-weight: 500;
-  font-size: 14px;
+.brand-text {
+  font-weight: 600;
+  font-size: 18px;
+  color: #333;
+}
+
+.collapse-btn {
+  padding: 4px 8px;
+}
+
+.sidebar-new-chat {
+  padding: 12px;
+}
+
+.sidebar.collapsed .sidebar-new-chat {
+  padding: 8px;
+  display: flex;
+  justify-content: center;
 }
 
 .session-list {
@@ -31,10 +47,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.session-list-header {
-  padding: 12px;
 }
 
 .session-list-content {
@@ -94,4 +106,39 @@
 
 .session-actions .ant-btn {
   padding: 2px 4px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-top: 1px solid #e8e8e8;
+  gap: 12px;
+}
+
+.sidebar.collapsed .user-info {
+  justify-content: center;
+  padding: 8px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.user-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: #333;
 }

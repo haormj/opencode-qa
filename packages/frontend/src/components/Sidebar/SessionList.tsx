@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Button, Empty, Spin, message } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { Empty, Spin, message } from 'antd'
 import SessionItem from './SessionItem'
 import { getSessions, deleteSession, updateSessionTitle } from '../../services/api'
 import type { Session } from '../../services/api'
-import './Sidebar.css'
 
 interface SessionListProps {
   currentSessionId: string | null
   onSelectSession: (sessionId: string) => void
   onNewSession: () => void
   refreshTrigger?: number
+  collapsed?: boolean
 }
 
-function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger }: SessionListProps) {
+function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed }: SessionListProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -57,19 +56,12 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
     }
   }
 
+  if (collapsed) {
+    return null
+  }
+
   return (
     <div className="session-list">
-      <div className="session-list-header">
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={onNewSession}
-          block
-        >
-          新建会话
-        </Button>
-      </div>
-      
       <div className="session-list-content">
         {loading ? (
           <div className="session-list-loading">

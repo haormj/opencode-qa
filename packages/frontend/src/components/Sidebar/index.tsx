@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Button, Tooltip } from 'antd'
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
+import UserInfo from './UserInfo'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -16,25 +17,40 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
 
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-header">
-        {!collapsed && <span className="sidebar-title">会话列表</span>}
+      <div className="sidebar-brand">
+        {!collapsed && <span className="brand-text">OpenCode QA</span>}
         <Tooltip title={collapsed ? '展开' : '收起'} placement="right">
           <Button
             type="text"
+            className="collapse-btn"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
           />
         </Tooltip>
       </div>
-      
-      {!collapsed && (
-        <SessionList
-          currentSessionId={currentSessionId}
-          onSelectSession={onSelectSession}
-          onNewSession={onNewSession}
-          refreshTrigger={refreshTrigger}
-        />
-      )}
+
+      <div className="sidebar-new-chat">
+        <Tooltip title="新对话" placement={collapsed ? 'right' : 'top'}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={onNewSession}
+            block={!collapsed}
+          >
+            {!collapsed && '新对话'}
+          </Button>
+        </Tooltip>
+      </div>
+
+      <SessionList
+        currentSessionId={currentSessionId}
+        onSelectSession={onSelectSession}
+        onNewSession={onNewSession}
+        refreshTrigger={refreshTrigger}
+        collapsed={collapsed}
+      />
+
+      <UserInfo collapsed={collapsed} />
     </div>
   )
 }

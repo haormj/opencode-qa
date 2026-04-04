@@ -65,6 +65,7 @@ export interface HistoryResponse {
 const API_BASE = '/api'
 
 const USER_ID_KEY = 'opencode-qa-user-id'
+const USERNAME_KEY = 'opencode-qa-username'
 
 function getUserId(): string {
   let userId = localStorage.getItem(USER_ID_KEY)
@@ -73,6 +74,28 @@ function getUserId(): string {
     localStorage.setItem(USER_ID_KEY, userId)
   }
   return userId
+}
+
+export function getUsername(): string {
+  let username = localStorage.getItem(USERNAME_KEY)
+  if (!username) {
+    username = `用户_${Math.random().toString(36).substring(2, 6)}`
+    localStorage.setItem(USERNAME_KEY, username)
+  }
+  return username
+}
+
+export function generateAvatarColor(name: string): string {
+  const colors = [
+    '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
+    '#1890ff', '#52c41a', '#eb2f96', '#722ed1',
+    '#13c2c2', '#fa8c16', '#2f54eb', '#52c41a'
+  ]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
