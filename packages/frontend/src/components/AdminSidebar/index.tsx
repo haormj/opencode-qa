@@ -50,7 +50,7 @@ function AdminSidebar() {
         />
       </div>
 
-      <UserInfo collapsed={false} />
+      <UserInfo collapsed={false} isAdminPage />
     </div>
   )
 }

@@ -5,9 +5,10 @@ import { getStoredUser, isAdmin, logout, generateAvatarColor } from '../../servi
 
 interface UserInfoProps {
   collapsed: boolean
+  isAdminPage?: boolean
 }
 
-function UserInfo({ collapsed }: UserInfoProps) {
+function UserInfo({ collapsed, isAdminPage = false }: UserInfoProps) {
   const navigate = useNavigate()
   const user = getStoredUser()
   const username = user?.displayName || user?.username || '用户'
@@ -16,7 +17,14 @@ function UserInfo({ collapsed }: UserInfoProps) {
 
   const menuItems = []
 
-  if (isAdmin()) {
+  if (isAdminPage) {
+    menuItems.push({
+      key: 'user-side',
+      icon: <UserOutlined />,
+      label: '返回用户侧',
+      onClick: () => navigate('/')
+    })
+  } else if (isAdmin()) {
     menuItems.push({
       key: 'admin',
       icon: <SettingOutlined />,
