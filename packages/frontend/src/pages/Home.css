@@ -48,6 +48,10 @@
   display: none;
 }
 
+.welcome-content .chat-box-wrapper .ChatFooter {
+  background: #fff;
+}
+
 .welcome-content .chat-box-wrapper:hover {
   border-color: #4096ff;
 }
