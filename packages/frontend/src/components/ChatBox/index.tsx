@@ -1,72 +1,81 @@
-import { List, Avatar, Typography, Button, Empty, Spin } from 'antd'
-import { UserOutlined, RobotOutlined, DislikeOutlined } from '@ant-design/icons'
-import type { QuestionResponse } from '../../services/api'
-
-const { Paragraph } = Typography
-
-interface Message {
-  id: string
-  type: 'user' | 'assistant'
-  content: string
-  questionData?: QuestionResponse
-  streaming?: boolean
-}
+import Chat, { Bubble, MessageProps } from '@chatui/core'
+import '@chatui/core/dist/index.css'
+import 'github-markdown-css/github-markdown-light.css'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github.css'
+import { Button } from 'antd'
+import { DislikeOutlined } from '@ant-design/icons'
+import './ChatBox.css'
 
 interface ChatBoxProps {
-  messages: Message[]
-  loading: boolean
+  messages: MessageProps[]
+  typing?: boolean
+  onSend: (type: string, text: string) => void
   onFeedback: (questionId: number) => void
 }
 
-function ChatBox({ messages, loading, onFeedback }: ChatBoxProps) {
-  if (messages.length === 0 && !loading) {
+function ChatBox({ messages, typing, onSend, onFeedback }: ChatBoxProps) {
+  const hasMessages = messages.length > 0
+
+  function renderMessageContent(msg: MessageProps) {
+    const { content, position, data } = msg as MessageProps & { 
+      data?: { questionId?: number } 
+    }
+    const isUser = position === 'right'
+
     return (
-      <Empty
-        description="开始提问吧"
-        style={{ padding: '40px 0' }}
-      />
+      <div className="message-wrapper">
+        <Bubble
+          type="text"
+          content={isUser ? content.text : ''}
+        >
+          {!isUser && (
+            <div className="markdown-body">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+              >
+                {content.text || ''}
+              </ReactMarkdown>
+            </div>
+          )}
+        </Bubble>
+        {!isUser && data?.questionId && (
+          <div className="message-actions">
+            <Button 
+              type="text" 
+              size="small"
+              icon={<DislikeOutlined />}
+              onClick={() => onFeedback(data.questionId!)}
+            >
+              未解决？提交反馈
+            </Button>
+          </div>
+        )}
+      </div>
     )
   }
 
+  function handleSend(type: string, text: string) {
+    if (type === 'text' && text.trim()) {
+      onSend(type, text)
+    }
+  }
+
   return (
-    <div style={{ maxHeight: 500, overflowY: 'auto', marginBottom: 16 }}>
-      <List
-        dataSource={messages}
-        renderItem={(item) => (
-          <List.Item style={{ border: 'none' }}>
-            <List.Item.Meta
-              avatar={
-                <Avatar 
-                  icon={item.type === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                  style={{ backgroundColor: item.type === 'user' ? '#1890ff' : '#52c41a' }}
-                />
-              }
-              title={item.type === 'user' ? '我' : 'OpenCode'}
-              description={
-                <div>
-                  <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>
-                    {item.content}
-                    {item.streaming && <span style={{ opacity: 0.5 }}>▊</span>}
-                  </Paragraph>
-                  {item.type === 'assistant' && item.questionData && !item.streaming && (
-                    <Button 
-                      type="text" 
-                      size="small"
-                      icon={<DislikeOutlined />}
-                      onClick={() => onFeedback(item.questionData!.id)}
-                    >
-                      未解决？提交反馈
-                    </Button>
-                  )}
-                </div>
-              }
-            />
-          </List.Item>
-        )}
+    <div className="chat-box-wrapper">
+      <Chat
+        navbar={hasMessages ? { title: 'OpenCode QA' } : undefined}
+        messages={messages}
+        renderMessageContent={renderMessageContent}
+        onSend={handleSend}
+        placeholder="请输入您的问题..."
       />
-      {loading && messages.every(m => !m.streaming) && (
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <Spin />
+      {typing && (
+        <div className="typing-indicator">
+          <span className="typing-text">OpenCode 正在思考...</span>
         </div>
       )}
     </div>

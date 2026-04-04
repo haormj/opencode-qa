@@ -1,65 +1,60 @@
 import { useState, useCallback } from 'react'
-import { Card, Input, Button, message, Typography } from 'antd'
-import { SendOutlined } from '@ant-design/icons'
+import { message, Typography } from 'antd'
 import ChatBox from '../components/ChatBox'
 import FeedbackModal from '../components/FeedbackModal'
-import { askQuestionStream, type QuestionResponse } from '../services/api'
+import { askQuestionStream } from '../services/api'
+import type { MessageProps } from '@chatui/core'
+import './Home.css'
 
-const { TextArea } = Input
-const { Title } = Typography
-
-interface Message {
-  id: string
-  type: 'user' | 'assistant'
-  content: string
-  questionData?: QuestionResponse
-  streaming?: boolean
-}
+const { Title, Paragraph } = Typography
 
 function Home() {
-  const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<MessageProps[]>([])
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null)
 
-  const handleSubmit = useCallback(() => {
-    if (!question.trim()) {
+  const handleSend = useCallback((_type: string, text: string) => {
+    if (!text.trim()) {
       message.warning('请输入问题')
       return
     }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: question
+    const userMessage: MessageProps = {
+      _id: Date.now().toString(),
+      type: 'text',
+      content: { text },
+      position: 'right',
     }
     
     const assistantMessageId = (Date.now() + 1).toString()
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      type: 'assistant',
-      content: '',
-      streaming: true
+    const assistantMessage: MessageProps = {
+      _id: assistantMessageId,
+      type: 'text',
+      content: { text: '' },
+      position: 'left',
     }
     
     setMessages(prev => [...prev, userMessage, assistantMessage])
-    setQuestion('')
     setLoading(true)
 
     askQuestionStream(
-      question,
-      (text) => {
+      text,
+      (chunk) => {
         setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: msg.content + text }
+          msg._id === assistantMessageId 
+            ? { ...msg, content: { text: msg.content.text + chunk } }
             : msg
         ))
       },
       (result) => {
         setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: result.answer, questionData: result, streaming: false }
+          msg._id === assistantMessageId 
+            ? { 
+                ...msg, 
+                content: { text: result.answer },
+                data: { questionId: result.id }
+              }
             : msg
         ))
         setLoading(false)
@@ -67,11 +62,11 @@ function Home() {
       (error) => {
         console.error('Stream error:', error)
         message.error('提问失败，请稍后重试')
-        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+        setMessages(prev => prev.filter(msg => msg._id !== assistantMessageId))
         setLoading(false)
       }
     )
-  }, [question])
+  }, [])
 
   const handleFeedback = (questionId: number) => {
     setCurrentQuestionId(questionId)
@@ -84,43 +79,33 @@ function Home() {
     setFeedbackModalOpen(false)
   }
 
+  const hasMessages = messages.length > 0
+
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <Card>
-        <Title level={3} style={{ marginBottom: 24 }}>
-          业务知识问答
-        </Title>
-        
+    <div className={hasMessages ? 'chat-page-full' : 'chat-page-center'}>
+      {hasMessages ? (
         <ChatBox 
-          messages={messages} 
-          loading={loading}
+          messages={messages}
+          typing={loading}
+          onSend={handleSend}
           onFeedback={handleFeedback}
         />
-
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-          <TextArea
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
-            placeholder="请输入您的问题..."
-            autoSize={{ minRows: 2, maxRows: 4 }}
-            onPressEnter={e => {
-              if (!e.shiftKey) {
-                e.preventDefault()
-                handleSubmit()
-              }
-            }}
-          />
-          <Button 
-            type="primary" 
-            icon={<SendOutlined />}
-            onClick={handleSubmit}
-            loading={loading}
-            style={{ height: 'auto' }}
-          >
-            发送
-          </Button>
+      ) : (
+        <div className="chat-welcome">
+          <div className="welcome-content">
+            <Title level={2} style={{ marginBottom: 8 }}>OpenCode QA</Title>
+            <Paragraph type="secondary" style={{ marginBottom: 32 }}>
+              基于项目代码库的智能问答系统
+            </Paragraph>
+            <ChatBox 
+              messages={messages}
+              typing={loading}
+              onSend={handleSend}
+              onFeedback={handleFeedback}
+            />
+          </div>
         </div>
-      </Card>
+      )}
 
       <FeedbackModal
         open={feedbackModalOpen}

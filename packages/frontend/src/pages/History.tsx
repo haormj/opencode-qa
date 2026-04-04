@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Tag, Typography, Space, Button, Modal, Descriptions } from 'antd'
+import { Card, Table, Tag, Typography, Button, Modal, Descriptions } from 'antd'
 import { EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getHistory, type HistoryItem } from '../services/api'

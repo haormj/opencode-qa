@@ -24,7 +24,7 @@ function App() {
             ]}
           />
         </Header>
-        <Content style={{ padding: '24px 50px' }}>
+        <Content style={{ padding: '0' }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/history" element={<History />} />

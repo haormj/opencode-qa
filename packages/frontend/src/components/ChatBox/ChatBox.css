@@ -1,0 +1,189 @@
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d9d9d9 transparent;
+}
+
+.chat-box-wrapper {
+  border: none;
+  overflow: hidden;
+  --app-bg: #fff;
+  --navbar-bg: #fff;
+  --color-fill-2: #fff;
+}
+
+.chat-box-wrapper .ChatUI {
+  height: 100%;
+}
+
+.chat-box-wrapper .ChatUI-Navbar {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 16px;
+}
+
+.chat-box-wrapper .ChatUI-Navbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.chat-box-wrapper .ChatUI-MessageContainer {
+  padding: 16px 24px;
+}
+
+.chat-box-wrapper .ChatUI-Composer {
+  border-top: 1px solid #f0f0f0;
+  padding: 12px 16px;
+}
+
+.chat-box-wrapper .ChatUI-Composer-input {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.chat-box-wrapper .ChatUI-Composer-input:focus {
+  border-color: #4096ff;
+}
+
+.chat-box-wrapper .ChatUI-Composer-sendBtn {
+  border-radius: 6px;
+}
+
+.message-wrapper {
+  max-width: 85%;
+}
+
+.message-wrapper .markdown-body {
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  background: transparent;
+}
+
+.message-wrapper .markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+.message-wrapper .markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.message-wrapper .markdown-body p {
+  margin: 0 0 6px 0;
+}
+
+.message-wrapper .markdown-body ul,
+.message-wrapper .markdown-body ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.message-wrapper .markdown-body li {
+  margin: 2px 0;
+}
+
+.message-wrapper .markdown-body li > p {
+  margin: 0;
+}
+
+.message-wrapper .markdown-body pre {
+  margin: 8px 0;
+  padding: 12px 16px;
+  overflow-x: auto;
+  background: #f6f8fa;
+  border-radius: 6px;
+}
+
+.message-wrapper .markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.message-wrapper .markdown-body code:not(pre code) {
+  padding: 2px 6px;
+  background: #f6f8fa;
+  border-radius: 4px;
+  font-size: 85%;
+}
+
+.message-wrapper .markdown-body blockquote {
+  margin: 8px 0;
+  padding: 4px 0 4px 12px;
+  border-left-color: #d9d9d9;
+}
+
+.message-wrapper .markdown-body table {
+  margin: 8px 0;
+  border: 1px solid #e8e8e8;
+}
+
+.message-wrapper .markdown-body th {
+  background: #fafafa;
+}
+
+.message-wrapper .markdown-body h1,
+.message-wrapper .markdown-body h2,
+.message-wrapper .markdown-body h3,
+.message-wrapper .markdown-body h4,
+.message-wrapper .markdown-body h5,
+.message-wrapper .markdown-body h6 {
+  margin: 12px 0 6px 0;
+  line-height: 1.3;
+}
+
+.message-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.message-actions .ant-btn {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.message-actions .ant-btn:hover {
+  color: #1890ff;
+}
+
+.typing-indicator {
+  position: absolute;
+  bottom: 80px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  z-index: 10;
+}
+
+.typing-text {
+  font-size: 13px;
+  color: #8c8c8c;
+}
