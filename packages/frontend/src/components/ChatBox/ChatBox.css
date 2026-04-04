@@ -286,7 +286,22 @@
 }
 
 .message-wrapper {
-  max-width: 85%;
+  width: auto;
+}
+
+.Message.right .message-wrapper {
+  max-width: 70%;
+  width: auto;
+}
+
+.Message.left .message-wrapper {
+  max-width: 100%;
+  width: 100%;
+}
+
+.Message.left .Bubble {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .message-wrapper .markdown-body {
