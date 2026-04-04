@@ -60,6 +60,7 @@ router.get('/:id', async (req, res) => {
     res.json({
       id: session.id,
       title: session.title,
+      status: session.status,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       questions: session.questions
@@ -132,6 +133,44 @@ router.delete('/:id', async (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('Delete session error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    const userId = req.headers['x-user-id'] as string
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' })
+    }
+
+    if (!status || !['active', 'need_human', 'resolved'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (active, need_human, resolved)' })
+    }
+
+    const session = await prisma.session.findFirst({
+      where: { id, userId }
+    })
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' })
+    }
+
+    const updated = await prisma.session.update({
+      where: { id },
+      data: { status }
+    })
+
+    res.json({
+      id: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt
+    })
+  } catch (error) {
+    console.error('Update session status error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

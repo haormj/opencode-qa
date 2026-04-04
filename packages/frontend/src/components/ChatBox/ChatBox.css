@@ -110,10 +110,15 @@
 }
 
 .chat-header {
+  position: relative;
   text-align: center;
   padding: 24px 16px 16px;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
+}
+
+.chat-header-content {
+  padding-right: 200px;
 }
 
 .chat-header-title {
@@ -127,6 +132,32 @@
   margin: 4px 0 0;
   font-size: 13px;
   color: #8c8c8c;
+}
+
+.chat-header-actions {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chat-header-actions .marked-btn {
+  color: #52c41a;
+}
+
+.chat-box-wrapper.session-locked .Composer,
+.chat-box-wrapper.session-locked .ChatUI-Composer {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.chat-box-wrapper.session-locked .Composer-input,
+.chat-box-wrapper.session-locked .ChatUI-Composer-input {
+  background: #f5f5f5;
+  cursor: not-allowed;
 }
 
 .chat-box-wrapper .ChatUI,

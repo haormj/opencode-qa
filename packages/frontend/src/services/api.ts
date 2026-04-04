@@ -26,6 +26,7 @@ export interface QuestionItem {
 export interface Session {
   id: string
   title: string
+  status: string
   createdAt: string
   updatedAt: string
   questionCount: number
@@ -34,6 +35,7 @@ export interface Session {
 export interface SessionDetail {
   id: string
   title: string
+  status: string
   createdAt: string
   updatedAt: string
   questions: QuestionItem[]
@@ -211,9 +213,9 @@ export async function deleteSession(sessionId: string): Promise<void> {
   })
 }
 
-export async function submitFeedback(questionId: number, reason: string, contact?: string): Promise<void> {
-  await request(`${API_BASE}/feedback`, {
-    method: 'POST',
-    body: JSON.stringify({ questionId, reason, contact }),
+export async function updateSessionStatus(sessionId: string, status: string): Promise<void> {
+  await request(`${API_BASE}/sessions/${sessionId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   })
 }

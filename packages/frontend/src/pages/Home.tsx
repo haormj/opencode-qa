@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { message, Typography } from 'antd'
 import Sidebar from '../components/Sidebar'
 import ChatBox from '../components/ChatBox'
-import FeedbackModal from '../components/FeedbackModal'
-import { askQuestionStream, getSession } from '../services/api'
+import { askQuestionStream, getSession, updateSessionStatus } from '../services/api'
 import type { MessageProps } from '@chatui/core'
 import type { QuestionItem, Session } from '../services/api'
 import './Home.css'
@@ -17,10 +16,9 @@ function Home() {
 
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<MessageProps[]>([])
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
-  const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sessions, setSessions] = useState<Session[]>([])
+  const [sessionStatus, setSessionStatus] = useState<string>('active')
 
   const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
     setSessions(loadedSessions)
@@ -37,6 +35,7 @@ function Home() {
       loadSession(sessionId)
     } else {
       setMessages([])
+      setSessionStatus('active')
     }
   }, [sessionId])
 
@@ -57,11 +56,11 @@ function Home() {
           type: 'text',
           content: { text: q.answer || '' },
           position: 'left',
-          data: { questionId: q.id }
         } as MessageProps)
       })
       
       setMessages(loadedMessages)
+      setSessionStatus(session.status || 'active')
     } catch {
       message.error('加载会话失败')
     }
@@ -116,8 +115,7 @@ function Home() {
           msg._id === assistantMessageId
             ? {
                 ...msg,
-                content: { text: result.answer },
-                data: { questionId: result.id }
+                content: { text: result.answer }
               }
             : msg
         ))
@@ -132,16 +130,25 @@ function Home() {
     )
   }, [sessionId, setSearchParams])
 
-  const handleFeedback = (questionId: number) => {
-    setCurrentQuestionId(questionId)
-    setFeedbackModalOpen(true)
-  }
+  const handleCopyLink = useCallback(() => {
+    if (!sessionId) return
+    const link = `${window.location.origin}?sessionId=${sessionId}`
+    navigator.clipboard.writeText(link)
+    message.success('会话链接已复制')
+  }, [sessionId])
 
-  const handleFeedbackSubmit = async (reason: string, contact: string) => {
-    console.log('Feedback submitted:', { questionId: currentQuestionId, reason, contact })
-    message.success('反馈已提交，我们会尽快处理')
-    setFeedbackModalOpen(false)
-  }
+  const handleMarkNeedHuman = useCallback(async () => {
+    if (!sessionId) return
+    
+    try {
+      await updateSessionStatus(sessionId, 'need_human')
+      setSessionStatus('need_human')
+      handleCopyLink()
+      message.success('已标记为需要人工处理')
+    } catch {
+      message.error('标记失败，请稍后重试')
+    }
+  }, [sessionId, handleCopyLink])
 
   const handleSelectSession = (id: string) => {
     setSearchParams({ sessionId: id })
@@ -150,6 +157,7 @@ function Home() {
   const handleNewSession = () => {
     setSearchParams({})
     setMessages([])
+    setSessionStatus('active')
   }
 
   const hasMessages = messages.length > 0
@@ -170,8 +178,11 @@ function Home() {
               messages={messages}
               typing={loading}
               sessionTitle={currentSessionTitle}
+              sessionStatus={sessionStatus}
+              sessionId={sessionId || undefined}
               onSend={handleSend}
-              onFeedback={handleFeedback}
+              onMarkNeedHuman={handleMarkNeedHuman}
+              onCopyLink={handleCopyLink}
             />
           </div>
         ) : (
@@ -182,18 +193,11 @@ function Home() {
                 messages={messages}
                 typing={loading}
                 onSend={handleSend}
-                onFeedback={handleFeedback}
               />
             </div>
           </div>
         )}
       </div>
-
-      <FeedbackModal
-        open={feedbackModalOpen}
-        onClose={() => setFeedbackModalOpen(false)}
-        onSubmit={handleFeedbackSubmit}
-      />
     </div>
   )
 }

@@ -6,19 +6,31 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
-import { Button } from 'antd'
-import { DislikeOutlined } from '@ant-design/icons'
+import { Button, Tooltip } from 'antd'
+import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import './ChatBox.css'
 
 interface ChatBoxProps {
   messages: MessageProps[]
   typing?: boolean
   sessionTitle?: string
+  sessionStatus?: string
+  sessionId?: string
   onSend: (type: string, text: string) => void
-  onFeedback: (questionId: number) => void
+  onMarkNeedHuman?: () => void
+  onCopyLink?: () => void
 }
 
-function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBoxProps) {
+function ChatBox({ 
+  messages, 
+  typing, 
+  sessionTitle, 
+  sessionStatus = 'active',
+  sessionId,
+  onSend, 
+  onMarkNeedHuman,
+  onCopyLink
+}: ChatBoxProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -55,9 +67,7 @@ function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBox
   }, [])
 
   function renderMessageContent(msg: MessageProps) {
-    const { type, content, position, data } = msg as MessageProps & { 
-      data?: { questionId?: number } 
-    }
+    const { type, content, position } = msg
     
     if (type === 'typing') {
       return <div className="typing-message">OpenCode 正在思考...</div>
@@ -82,41 +92,71 @@ function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBox
             </div>
           )}
         </Bubble>
-        {!isUser && data?.questionId && (
-          <div className="message-actions">
-            <Button 
-              type="text" 
-              size="small"
-              icon={<DislikeOutlined />}
-              onClick={() => onFeedback(data.questionId!)}
-            >
-              未解决？提交反馈
-            </Button>
-          </div>
-        )}
       </div>
     )
   }
 
   function handleSend(type: string, text: string) {
+    if (isNeedHuman) return
     if (type === 'text' && text.trim()) {
       onSend(type, text)
     }
   }
 
+  const isNeedHuman = sessionStatus === 'need_human'
+  const showActions = sessionId && sessionTitle
+
   return (
-    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''}`}>
+    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isNeedHuman ? 'session-locked' : ''}`}>
       {sessionTitle && (
         <div className="chat-header">
-          <h2 className="chat-header-title">{sessionTitle}</h2>
-          <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
+          <div className="chat-header-content">
+            <h2 className="chat-header-title">{sessionTitle}</h2>
+            <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
+          </div>
+          {showActions && (
+            <div className="chat-header-actions">
+              <Tooltip title="复制会话链接">
+                <Button 
+                  type="text"
+                  icon={<LinkOutlined />}
+                  onClick={onCopyLink}
+                >
+                  复制链接
+                </Button>
+              </Tooltip>
+              {isNeedHuman ? (
+                <Tooltip title="已标记为需要人工处理">
+                  <Button 
+                    type="text"
+                    icon={<CheckCircleOutlined />}
+                    disabled
+                    className="marked-btn"
+                  >
+                    已标记
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip title="标记后输入框将被禁用，等待人工处理">
+                  <Button 
+                    type="primary"
+                    danger
+                    icon={<UserSwitchOutlined />}
+                    onClick={onMarkNeedHuman}
+                  >
+                    AI无法解决，需要人工
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
+          )}
         </div>
       )}
       <Chat
         messages={messages}
         renderMessageContent={renderMessageContent}
         onSend={handleSend}
-        placeholder="请输入您的问题..."
+        placeholder={isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'}
         isTyping={typing}
       />
     </div>
