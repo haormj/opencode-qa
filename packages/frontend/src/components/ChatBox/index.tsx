@@ -12,12 +12,12 @@ import './ChatBox.css'
 interface ChatBoxProps {
   messages: MessageProps[]
   typing?: boolean
+  sessionTitle?: string
   onSend: (type: string, text: string) => void
   onFeedback: (questionId: number) => void
 }
 
-function ChatBox({ messages, typing, onSend, onFeedback }: ChatBoxProps) {
-  const hasMessages = messages.length > 0
+function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBoxProps) {
 
   function renderMessageContent(msg: MessageProps) {
     const { type, content, position, data } = msg as MessageProps & { 
@@ -71,8 +71,13 @@ function ChatBox({ messages, typing, onSend, onFeedback }: ChatBoxProps) {
 
   return (
     <div className="chat-box-wrapper">
+      {sessionTitle && (
+        <div className="chat-header">
+          <h2 className="chat-header-title">{sessionTitle}</h2>
+          <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
+        </div>
+      )}
       <Chat
-        navbar={hasMessages ? { title: 'OpenCode QA' } : undefined}
         messages={messages}
         renderMessageContent={renderMessageContent}
         onSend={handleSend}

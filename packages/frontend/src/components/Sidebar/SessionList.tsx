@@ -10,9 +10,10 @@ interface SessionListProps {
   onNewSession: () => void
   refreshTrigger?: number
   collapsed?: boolean
+  onSessionsLoad?: (sessions: Session[]) => void
 }
 
-function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed }: SessionListProps) {
+function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed, onSessionsLoad }: SessionListProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -20,6 +21,7 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
     try {
       const data = await getSessions()
       setSessions(data)
+      onSessionsLoad?.(data)
     } catch {
       message.error('获取会话列表失败')
     } finally {

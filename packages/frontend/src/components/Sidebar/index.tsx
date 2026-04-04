@@ -3,6 +3,7 @@ import { Button, Tooltip } from 'antd'
 import { MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import UserInfo from './UserInfo'
+import type { Session } from '../../services/api'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -10,9 +11,10 @@ interface SidebarProps {
   onSelectSession: (sessionId: string) => void
   onNewSession: () => void
   refreshTrigger?: number
+  onSessionsLoad?: (sessions: Session[]) => void
 }
 
-function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger }: SidebarProps) {
+function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -48,6 +50,7 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
         onNewSession={onNewSession}
         refreshTrigger={refreshTrigger}
         collapsed={collapsed}
+        onSessionsLoad={onSessionsLoad}
       />
 
       <UserInfo collapsed={collapsed} />

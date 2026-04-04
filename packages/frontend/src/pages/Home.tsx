@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message, Typography } from 'antd'
 import Sidebar from '../components/Sidebar'
@@ -6,7 +6,7 @@ import ChatBox from '../components/ChatBox'
 import FeedbackModal from '../components/FeedbackModal'
 import { askQuestionStream, getSession } from '../services/api'
 import type { MessageProps } from '@chatui/core'
-import type { QuestionItem } from '../services/api'
+import type { QuestionItem, Session } from '../services/api'
 import './Home.css'
 
 const { Title } = Typography
@@ -20,6 +20,17 @@ function Home() {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [sessions, setSessions] = useState<Session[]>([])
+
+  const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
+    setSessions(loadedSessions)
+  }, [])
+
+  const currentSessionTitle = useMemo(() => {
+    if (!sessionId) return '新对话'
+    const session = sessions.find(s => s.id === sessionId)
+    return session?.title || '新对话'
+  }, [sessionId, sessions])
 
   useEffect(() => {
     if (sessionId) {
@@ -150,6 +161,7 @@ function Home() {
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
         refreshTrigger={refreshTrigger}
+        onSessionsLoad={handleSessionsLoad}
       />
       <div className="home-content">
         {hasMessages ? (
@@ -157,6 +169,7 @@ function Home() {
             <ChatBox
               messages={messages}
               typing={loading}
+              sessionTitle={currentSessionTitle}
               onSend={handleSend}
               onFeedback={handleFeedback}
             />
