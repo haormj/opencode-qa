@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Empty, Spin, message } from 'antd'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-react'
+import 'overlayscrollbars/styles/overlayscrollbars.css'
 import SessionItem from './SessionItem'
 import { getSessions, deleteSession, updateSessionTitle } from '../../services/api'
 import type { Session } from '../../services/api'
@@ -58,13 +60,20 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
     }
   }
 
-  if (collapsed) {
-    return null
-  }
-
   return (
-    <div className="session-list">
-      <div className="session-list-content">
+    <div className="session-list" style={{ display: collapsed ? 'none' : 'flex' }}>
+      <OverlayScrollbarsComponent
+        className="session-list-content"
+        options={{
+          scrollbars: {
+            theme: 'os-theme-light',
+            visibility: 'auto',
+            autoHide: 'scroll',
+            autoHideDelay: 800,
+            dragScroll: true,
+          },
+        }}
+      >
         {loading ? (
           <div className="session-list-loading">
             <Spin />
@@ -83,7 +92,7 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
             />
           ))
         )}
-      </div>
+      </OverlayScrollbarsComponent>
     </div>
   )
 }

@@ -18,7 +18,6 @@ interface ChatBoxProps {
 }
 
 function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBoxProps) {
-
   function renderMessageContent(msg: MessageProps) {
     const { type, content, position, data } = msg as MessageProps & { 
       data?: { questionId?: number } 
