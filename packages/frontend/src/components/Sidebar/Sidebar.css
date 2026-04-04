@@ -204,13 +204,22 @@
 }
 
 .session-actions {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
   margin-left: 8px;
+  display: flex;
+  gap: 4px;
+  transition: opacity 0.2s ease;
 }
 
 .session-item:hover .session-actions {
-  display: flex;
-  gap: 4px;
+  visibility: visible;
+  opacity: 1;
+}
+
+.session-item.editing .session-actions {
+  visibility: visible;
+  opacity: 1;
 }
 
 .session-actions .ant-btn {

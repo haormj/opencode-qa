@@ -33,7 +33,7 @@ function SessionItem({ session, isActive, onClick, onDelete, onRename }: Session
 
   return (
     <div
-      className={`session-item ${isActive ? 'active' : ''}`}
+      className={`session-item ${isActive ? 'active' : ''} ${isEditing ? 'editing' : ''}`}
       onClick={() => !isEditing && onClick()}
     >
       <MessageOutlined className="session-icon" />
