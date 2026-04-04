@@ -26,6 +26,14 @@ function UserHeader({
   const isClosed = sessionStatus === 'closed'
   const showActions = sessionId && sessionTitle
 
+  const truncateTitle = (title: string, maxLen: number = 20) => {
+    if (title.length <= maxLen) return title
+    return title.slice(0, maxLen) + '...'
+  }
+
+  const displayTitle = sessionTitle || '新对话'
+  const truncatedTitle = truncateTitle(displayTitle)
+
   return (
     <div className="user-header">
       <div className="user-header-left">
@@ -39,7 +47,9 @@ function UserHeader({
         </Tooltip>
       </div>
       <div className="user-header-content">
-        <h2 className="user-header-title">{sessionTitle || '新对话'}</h2>
+        <Tooltip title={displayTitle !== truncatedTitle ? displayTitle : ''}>
+          <h2 className="user-header-title">{truncatedTitle}</h2>
+        </Tooltip>
         <p className="user-header-subtitle">由 OpenCode AI 生成</p>
       </div>
       <div className="user-header-right">

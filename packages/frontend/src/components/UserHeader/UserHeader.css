@@ -13,15 +13,20 @@
 .user-header-left {
   display: flex;
   align-items: center;
+  z-index: 1;
 }
 
 .user-header-content {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: calc(100% - 32px);
+  max-width: 828px;
 }
 
 .user-header-title {
