@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
-import { askQuestion, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
+import { sendOpenCodeMessage, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
@@ -119,7 +119,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       }
     })
 
-    const { sessionId: returnedSessionId, answer } = await askQuestion(
+    const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessage(
       content, 
       opencodeSessionId
     )

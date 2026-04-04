@@ -183,11 +183,11 @@ export async function rebuildContext(
   console.log('[OpenCode] Context rebuilt successfully')
 }
 
-export async function askQuestion(
-  question: string, 
+export async function sendOpenCodeMessage(
+  message: string, 
   opencodeSessionId?: string
 ): Promise<{ sessionId: string; answer: string }> {
-  console.log('[OpenCode] askQuestion called:', { question: question.substring(0, 50), opencodeSessionId })
+  console.log('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(opencodeSessionId)
   
@@ -200,7 +200,7 @@ export async function askQuestion(
         modelID: DEFAULT_MODEL
       },
       agent: DEFAULT_AGENT,
-      parts: [{ type: 'text', text: question }]
+      parts: [{ type: 'text', text: message }]
     }),
   })
   
