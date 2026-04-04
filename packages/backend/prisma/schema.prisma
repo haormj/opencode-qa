@@ -7,6 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Session {
+  id        String     @id @default(uuid())
+  userId    String     @map("user_id")
+  title     String
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  questions Question[]
+
+  @@map("sessions")
+}
+
 model Question {
   id        Int      @id @default(autoincrement())
   userId    String   @map("user_id")
@@ -16,6 +27,7 @@ model Question {
   status    String   @default("solved")
   createdAt DateTime @default(now()) @map("created_at")
   feedback  Feedback?
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("questions")
 }

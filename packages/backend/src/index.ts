@@ -5,6 +5,7 @@ import express from 'express'
 import cors from 'cors'
 import { PrismaClient } from '@prisma/client'
 import chatRoutes from './routes/chat.js'
+import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
 import feedbackRoutes from './routes/feedback.js'
 
@@ -21,6 +22,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/chat', chatRoutes)
+app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/feedback', feedbackRoutes)
 

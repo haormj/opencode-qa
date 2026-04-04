@@ -7,6 +7,38 @@ export interface QuestionResponse {
   createdAt: string
 }
 
+export interface QuestionItem {
+  id: number
+  userId: string
+  sessionId: string
+  question: string
+  answer: string | null
+  status: string
+  createdAt: string
+  feedback?: {
+    id: number
+    reason: string
+    contact: string | null
+    resolved: boolean
+  }
+}
+
+export interface Session {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  questionCount: number
+}
+
+export interface SessionDetail {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  questions: QuestionItem[]
+}
+
 export interface HistoryItem {
   id: number
   userId: string
@@ -32,11 +64,23 @@ export interface HistoryResponse {
 
 const API_BASE = '/api'
 
+const USER_ID_KEY = 'opencode-qa-user-id'
+
+function getUserId(): string {
+  let userId = localStorage.getItem(USER_ID_KEY)
+  if (!userId) {
+    userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    localStorage.setItem(USER_ID_KEY, userId)
+  }
+  return userId
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-user-id': getUserId(),
       ...options?.headers,
     },
   })
@@ -66,7 +110,10 @@ export function askQuestionStream(
   
   fetch(`${API_BASE}/chat/stream`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-user-id': getUserId(),
+    },
     body: JSON.stringify({ question, sessionId: sessionId || undefined }),
     signal: controller.signal,
   }).then(async (response) => {
@@ -120,8 +167,25 @@ export async function getHistory(page: number = 1, pageSize: number = 20): Promi
   return request<HistoryResponse>(`${API_BASE}/history?page=${page}&pageSize=${pageSize}`)
 }
 
-export async function getSession(sessionId: string): Promise<HistoryItem> {
-  return request<HistoryItem>(`${API_BASE}/chat/${sessionId}`)
+export async function getSession(sessionId: string): Promise<SessionDetail> {
+  return request<SessionDetail>(`${API_BASE}/chat/${sessionId}`)
+}
+
+export async function getSessions(): Promise<Session[]> {
+  return request<Session[]>(`${API_BASE}/sessions`)
+}
+
+export async function updateSessionTitle(sessionId: string, title: string): Promise<void> {
+  await request(`${API_BASE}/sessions/${sessionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  })
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  await request(`${API_BASE}/sessions/${sessionId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function submitFeedback(questionId: number, reason: string, contact?: string): Promise<void> {
