@@ -220,6 +220,14 @@ packages/
 4. 前端访问：http://localhost:3000
 5. 后端访问：http://localhost:8000
 
+## 修改后验证
+
+每次代码修改完成后，自动连接 Chrome 进行测试验证：
+1. 确保前后端服务正常运行
+2. 打开或刷新页面 http://localhost:3000
+3. 检查控制台是否有错误
+4. 根据修改内容进行功能测试
+
 ## 提交前检查
 
 1. 运行 TypeScript 类型检查：`npx tsc --noEmit`（在每个包内）

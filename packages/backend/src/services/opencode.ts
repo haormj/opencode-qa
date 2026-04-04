@@ -96,17 +96,23 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
   return { events: eventGenerator(), controller }
 }
 
-export async function askQuestion(question: string): Promise<{ sessionId: string; answer: string }> {
-  const session = await fetchAPI<Session>('/session', {
-    method: 'POST',
-    body: JSON.stringify({ title: question.substring(0, 100) }),
-  })
+export async function askQuestion(question: string, existingSessionId?: string): Promise<{ sessionId: string; answer: string }> {
+  let sessionId = existingSessionId
   
-  if (!session.id) {
-    throw new Error('Failed to create session')
+  if (!sessionId) {
+    const session = await fetchAPI<Session>('/session', {
+      method: 'POST',
+      body: JSON.stringify({ title: question.substring(0, 100) }),
+    })
+    
+    if (!session.id) {
+      throw new Error('Failed to create session')
+    }
+    
+    sessionId = session.id
   }
   
-  const result = await fetchAPI<MessageResponse>(`/session/${session.id}/message`, {
+  const result = await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {
     method: 'POST',
     body: JSON.stringify({
       model: {
@@ -128,7 +134,7 @@ export async function askQuestion(question: string): Promise<{ sessionId: string
   }
   
   return {
-    sessionId: session.id,
+    sessionId,
     answer: answer || '抱歉，我无法回答这个问题。'
   }
 }

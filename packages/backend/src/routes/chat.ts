@@ -7,7 +7,7 @@ const router = Router()
 
 router.post('/', async (req, res) => {
   try {
-    const { question } = req.body
+    const { question, sessionId: existingSessionId } = req.body
     
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question is required' })
@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
     
     const userId = req.headers['x-user-id'] as string || uuidv4()
     
-    const { sessionId, answer } = await askQuestion(question)
+    const { sessionId, answer } = await askQuestion(question, existingSessionId)
     
     const saved = await prisma.question.create({
       data: {
@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
 
 router.post('/stream', async (req, res) => {
   try {
-    const { question } = req.body
+    const { question, sessionId: existingSessionId } = req.body
     
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question is required' })
@@ -51,7 +51,7 @@ router.post('/stream', async (req, res) => {
     
     const userId = req.headers['x-user-id'] as string || uuidv4()
     
-    const { sessionId, answer } = await askQuestion(question)
+    const { sessionId, answer } = await askQuestion(question, existingSessionId)
     
     const saved = await prisma.question.create({
       data: {

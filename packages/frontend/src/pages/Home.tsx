@@ -13,6 +13,7 @@ function Home() {
   const [messages, setMessages] = useState<MessageProps[]>([])
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
 
   const handleSend = useCallback((_type: string, text: string) => {
     if (!text.trim()) {
@@ -30,7 +31,7 @@ function Home() {
     const assistantMessageId = (Date.now() + 1).toString()
     const assistantMessage: MessageProps = {
       _id: assistantMessageId,
-      type: 'text',
+      type: 'typing',
       content: { text: '' },
       position: 'left',
     }
@@ -38,16 +39,26 @@ function Home() {
     setMessages(prev => [...prev, userMessage, assistantMessage])
     setLoading(true)
 
+    let isFirstChunk = true
     askQuestionStream(
       text,
-      (chunk) => {
+      currentSessionId,
+      (chunk: string) => {
         setMessages(prev => prev.map(msg => 
           msg._id === assistantMessageId 
-            ? { ...msg, content: { text: msg.content.text + chunk } }
+            ? { 
+                ...msg, 
+                type: isFirstChunk ? 'text' : msg.type,
+                content: { text: msg.content.text + chunk } 
+              }
             : msg
         ))
+        if (isFirstChunk) isFirstChunk = false
       },
       (result) => {
+        if (!currentSessionId) {
+          setCurrentSessionId(result.sessionId)
+        }
         setMessages(prev => prev.map(msg => 
           msg._id === assistantMessageId 
             ? { 
@@ -66,7 +77,7 @@ function Home() {
         setLoading(false)
       }
     )
-  }, [])
+  }, [currentSessionId])
 
   const handleFeedback = (questionId: number) => {
     setCurrentQuestionId(questionId)

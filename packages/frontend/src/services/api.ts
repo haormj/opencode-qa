@@ -57,6 +57,7 @@ export async function askQuestion(question: string): Promise<QuestionResponse> {
 
 export function askQuestionStream(
   question: string,
+  sessionId: string | null,
   onText: (text: string) => void,
   onDone: (result: QuestionResponse) => void,
   onError: (error: Error) => void
@@ -66,7 +67,7 @@ export function askQuestionStream(
   fetch(`${API_BASE}/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, sessionId: sessionId || undefined }),
     signal: controller.signal,
   }).then(async (response) => {
     if (!response.ok) {
