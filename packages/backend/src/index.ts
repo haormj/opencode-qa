@@ -10,6 +10,7 @@ import historyRoutes from './routes/history.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import botRoutes from './routes/bot.js'
+import { startScheduler } from './services/scheduler.js'
 
 export const prisma = new PrismaClient()
 
@@ -32,6 +33,7 @@ app.use('/api/bots', botRoutes)
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
+  startScheduler()
 })
 
 process.on('SIGINT', async () => {

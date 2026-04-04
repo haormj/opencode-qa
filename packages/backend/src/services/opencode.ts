@@ -230,3 +230,24 @@ export async function askQuestion(
 export async function getSessionMessages(sessionId: string) {
   return fetchAPI<MessageResponse[]>(`/session/${sessionId}/message`)
 }
+
+export async function deleteOpenCodeSession(sessionId: string): Promise<void> {
+  console.log('[OpenCode] Deleting session:', sessionId)
+  
+  const headers: Record<string, string> = {}
+  if (OPENCODE_SERVER_PASSWORD) {
+    const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
+    headers['Authorization'] = `Basic ${auth}`
+  }
+
+  const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`, {
+    method: 'DELETE',
+    headers
+  })
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Failed to delete OpenCode session: ${response.status}`)
+  }
+  
+  console.log('[OpenCode] Session deleted:', sessionId)
+}
