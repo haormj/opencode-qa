@@ -7,7 +7,6 @@ import { PrismaClient } from '@prisma/client'
 import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
-import feedbackRoutes from './routes/feedback.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import botRoutes from './routes/bot.js'
@@ -28,7 +27,6 @@ app.use('/api/auth', authRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
-app.use('/api/feedback', feedbackRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/bots', botRoutes)
 

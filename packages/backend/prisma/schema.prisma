@@ -90,19 +90,6 @@ model Message {
   session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bot        Bot?      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  feedback   Feedback?
 
   @@map("messages")
-}
-
-model Feedback {
-  id        String   @id @default(uuid())
-  messageId String   @unique @map("message_id")
-  reason    String
-  contact   String?
-  resolved  Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  @@map("feedbacks")
 }

@@ -20,7 +20,7 @@ async function main() {
     create: {
       name: 'user',
       description: 'Regular user',
-      permissions: JSON.stringify(['chat', 'feedback'])
+      permissions: JSON.stringify(['chat'])
     }
   })
 

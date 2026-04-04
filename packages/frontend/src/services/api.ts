@@ -14,12 +14,6 @@ export interface MessageItem {
     displayName: string
     avatar?: string
   }
-  feedback?: {
-    id: string
-    reason: string
-    contact: string | null
-    resolved: boolean
-  }
 }
 
 export interface Session {

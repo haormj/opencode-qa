@@ -48,8 +48,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
             },
             bot: {
               select: { id: true, displayName: true, avatar: true }
-            },
-            feedback: true
+            }
           }
         }
       }
@@ -71,8 +70,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         content: m.content,
         createdAt: m.createdAt,
         user: m.user,
-        bot: m.bot,
-        feedback: m.feedback
+        bot: m.bot
       }))
     })
   } catch (error) {
