@@ -23,6 +23,8 @@ const availableRoles = [
 function AdminUsers() {
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<AdminUser[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(15)
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -165,8 +167,14 @@ function AdminUsers() {
         rowKey="id"
         loading={loading}
         pagination={{
+          current: page,
+          pageSize,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`
+          showTotal: (total) => `共 ${total} 条`,
+          onChange: (p, ps) => {
+            setPage(p)
+            setPageSize(ps)
+          }
         }}
       />
     </Card>
