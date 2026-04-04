@@ -32,6 +32,8 @@ interface StreamEvent {
 }
 
 async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> {
+  console.log(`[OpenCode] Request: ${path}`, options.body)
+  
   const response = await fetch(`${OPENCODE_URL}${path}`, {
     ...options,
     headers: {
@@ -41,10 +43,14 @@ async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> 
   })
   
   if (!response.ok) {
-    throw new Error(`OpenCode API error: ${response.status}`)
+    const errorBody = await response.text()
+    console.error(`[OpenCode] Error ${response.status}:`, errorBody)
+    throw new Error(`OpenCode API error: ${response.status} - ${errorBody}`)
   }
   
-  return response.json() as Promise<T>
+  const data = await response.json()
+  console.log(`[OpenCode] Response:`, JSON.stringify(data, null, 2))
+  return data as T
 }
 
 async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamEvent>, controller: AbortController }> {
@@ -97,9 +103,12 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
 }
 
 export async function askQuestion(question: string, existingSessionId?: string): Promise<{ sessionId: string; answer: string }> {
+  console.log('[OpenCode] askQuestion called:', { question: question.substring(0, 50), existingSessionId })
+  
   let sessionId = existingSessionId
   
   if (!sessionId) {
+    console.log('[OpenCode] Creating new session...')
     const session = await fetchAPI<Session>('/session', {
       method: 'POST',
       body: JSON.stringify({ title: question.substring(0, 100) }),
@@ -110,8 +119,12 @@ export async function askQuestion(question: string, existingSessionId?: string):
     }
     
     sessionId = session.id
+    console.log('[OpenCode] New session created:', sessionId)
+  } else {
+    console.log('[OpenCode] Using existing session:', sessionId)
   }
   
+  console.log('[OpenCode] Sending message to session:', sessionId)
   const result = await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {
     method: 'POST',
     body: JSON.stringify({
@@ -124,6 +137,12 @@ export async function askQuestion(question: string, existingSessionId?: string):
     }),
   })
   
+  console.log('[OpenCode] Message response:', {
+    hasInfo: !!result.info,
+    hasParts: !!result.parts,
+    partsLength: result.parts?.length
+  })
+  
   let answer = ''
   if (result.parts) {
     for (const part of result.parts) {
@@ -132,6 +151,8 @@ export async function askQuestion(question: string, existingSessionId?: string):
       }
     }
   }
+  
+  console.log('[OpenCode] Answer length:', answer.length)
   
   return {
     sessionId,
