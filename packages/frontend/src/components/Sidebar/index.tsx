@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { Button, Tooltip } from 'antd'
-import { MenuFoldOutlined, MenuUnfoldOutlined, PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import UserInfo from './UserInfo'
 import type { Session } from '../../services/api'
@@ -12,23 +11,14 @@ interface SidebarProps {
   onNewSession: () => void
   refreshTrigger?: number
   onSessionsLoad?: (sessions: Session[]) => void
+  collapsed?: boolean
 }
 
-function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
-
+function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, collapsed = false }: SidebarProps) {
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
         {!collapsed && <span className="brand-text">OpenCode QA</span>}
-        <Tooltip title={collapsed ? '展开' : '收起'} placement="right">
-          <Button
-            type="text"
-            className="collapse-btn"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-          />
-        </Tooltip>
       </div>
 
       <div className="sidebar-new-chat">

@@ -4,13 +4,19 @@
   border-right: 1px solid #e8e8e8;
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: transform 0.3s ease;
   overflow: hidden;
   height: 100vh;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar.collapsed {
-  width: 48px;
+  position: absolute;
+  transform: translateX(-100%);
+  width: 260px;
+  z-index: 1;
 }
 
 .sidebar-brand {

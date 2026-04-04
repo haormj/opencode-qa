@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import { Button, Tooltip } from 'antd'
-import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { LinkOutlined, UserSwitchOutlined, CheckCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import './ChatBox.css'
 
 interface ChatBoxProps {
@@ -19,6 +19,8 @@ interface ChatBoxProps {
   onSend: (type: string, text: string) => void
   onMarkNeedHuman?: () => void
   onCopyLink?: () => void
+  sidebarCollapsed?: boolean
+  onToggleSidebar?: () => void
 }
 
 function ChatBox({ 
@@ -29,7 +31,9 @@ function ChatBox({
   sessionId,
   onSend, 
   onMarkNeedHuman,
-  onCopyLink
+  onCopyLink,
+  sidebarCollapsed = false,
+  onToggleSidebar
 }: ChatBoxProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
@@ -105,60 +109,74 @@ function ChatBox({
 
   const isNeedHuman = sessionStatus === 'need_human'
   const showActions = sessionId && sessionTitle
+  const showWelcome = messages.length === 0 && !sessionTitle
 
   return (
-    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isNeedHuman ? 'session-locked' : ''}`}>
-      {sessionTitle && (
-        <div className="chat-header">
-          <div className="chat-header-content">
-            <h2 className="chat-header-title">{sessionTitle}</h2>
-            <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
-          </div>
-          {showActions && (
-            <div className="chat-header-actions">
-              <Tooltip title="复制会话链接">
+    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isNeedHuman ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
+      <div className="chat-header">
+        <Tooltip title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}>
+          <Button
+            type="text"
+            className="sidebar-toggle-btn"
+            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={onToggleSidebar}
+          />
+        </Tooltip>
+        <div className="chat-header-content">
+          <h2 className="chat-header-title">{sessionTitle || '新对话'}</h2>
+          {sessionTitle && <p className="chat-header-subtitle">由 OpenCode AI 生成</p>}
+        </div>
+        {showActions && (
+          <div className="chat-header-actions">
+            <Tooltip title="复制会话链接">
+              <Button 
+                type="text"
+                icon={<LinkOutlined />}
+                onClick={onCopyLink}
+              >
+                复制链接
+              </Button>
+            </Tooltip>
+            {isNeedHuman ? (
+              <Tooltip title="已标记为需要人工处理">
                 <Button 
                   type="text"
-                  icon={<LinkOutlined />}
-                  onClick={onCopyLink}
+                  icon={<CheckCircleOutlined />}
+                  disabled
+                  className="marked-btn"
                 >
-                  复制链接
+                  已标记
                 </Button>
               </Tooltip>
-              {isNeedHuman ? (
-                <Tooltip title="已标记为需要人工处理">
-                  <Button 
-                    type="text"
-                    icon={<CheckCircleOutlined />}
-                    disabled
-                    className="marked-btn"
-                  >
-                    已标记
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip title="标记后输入框将被禁用，等待人工处理">
-                  <Button 
-                    type="primary"
-                    danger
-                    icon={<UserSwitchOutlined />}
-                    onClick={onMarkNeedHuman}
-                  >
-                    AI无法解决，需要人工
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      <Chat
-        messages={messages}
-        renderMessageContent={renderMessageContent}
-        onSend={handleSend}
-        placeholder={isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'}
-        isTyping={typing}
-      />
+            ) : (
+              <Tooltip title="标记后输入框将被禁用，等待人工处理">
+                <Button 
+                  type="primary"
+                  danger
+                  icon={<UserSwitchOutlined />}
+                  onClick={onMarkNeedHuman}
+                >
+                  AI无法解决，需要人工
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="chat-content">
+        {showWelcome && (
+          <div className="welcome-message">
+            <h2>有什么可以帮你的？</h2>
+          </div>
+        )}
+        <Chat
+          messages={messages}
+          renderMessageContent={renderMessageContent}
+          onSend={handleSend}
+          placeholder={isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'}
+          isTyping={typing}
+        />
+      </div>
     </div>
   )
 }

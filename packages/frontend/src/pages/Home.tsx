@@ -1,14 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { message, Typography } from 'antd'
+import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
 import ChatBox from '../components/ChatBox'
 import { askQuestionStream, getSession, updateSessionStatus } from '../services/api'
 import type { MessageProps } from '@chatui/core'
 import type { QuestionItem, Session } from '../services/api'
 import './Home.css'
-
-const { Title } = Typography
 
 function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -19,6 +17,7 @@ function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
     setSessions(loadedSessions)
@@ -160,6 +159,10 @@ function Home() {
     setSessionStatus('active')
   }
 
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => !prev)
+  }, [])
+
   const hasMessages = messages.length > 0
 
   return (
@@ -170,6 +173,7 @@ function Home() {
         onNewSession={handleNewSession}
         refreshTrigger={refreshTrigger}
         onSessionsLoad={handleSessionsLoad}
+        collapsed={sidebarCollapsed}
       />
       <div className="home-content">
         {hasMessages ? (
@@ -183,18 +187,19 @@ function Home() {
               onSend={handleSend}
               onMarkNeedHuman={handleMarkNeedHuman}
               onCopyLink={handleCopyLink}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={toggleSidebar}
             />
           </div>
         ) : (
-          <div className="chat-welcome">
-            <div className="welcome-content">
-              <Title level={2} style={{ marginBottom: 32 }}>有什么可以帮你的？</Title>
-              <ChatBox
-                messages={messages}
-                typing={loading}
-                onSend={handleSend}
-              />
-            </div>
+          <div className="chat-page-full">
+            <ChatBox
+              messages={messages}
+              typing={loading}
+              onSend={handleSend}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={toggleSidebar}
+            />
           </div>
         )}
       </div>
