@@ -17,11 +17,10 @@
 }
 
 .chat-page-center {
-  height: calc(100vh - 64px - 72px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  padding: 24px;
   background: #fff;
 }
 
