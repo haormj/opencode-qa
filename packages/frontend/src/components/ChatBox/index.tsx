@@ -20,9 +20,14 @@ function ChatBox({ messages, typing, onSend, onFeedback }: ChatBoxProps) {
   const hasMessages = messages.length > 0
 
   function renderMessageContent(msg: MessageProps) {
-    const { content, position, data } = msg as MessageProps & { 
+    const { type, content, position, data } = msg as MessageProps & { 
       data?: { questionId?: number } 
     }
+    
+    if (type === 'typing') {
+      return <div className="typing-message">OpenCode 正在思考...</div>
+    }
+    
     const isUser = position === 'right'
 
     return (

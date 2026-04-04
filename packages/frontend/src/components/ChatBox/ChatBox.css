@@ -170,11 +170,8 @@
   color: #1890ff;
 }
 
-.chat-box-wrapper .Typing {
+.typing-message {
   padding: 8px 16px;
-}
-
-.chat-box-wrapper .Typing-indicator {
   color: #8c8c8c;
   font-size: 13px;
 }
