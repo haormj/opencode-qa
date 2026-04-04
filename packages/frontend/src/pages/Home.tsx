@@ -9,7 +9,7 @@ import type { MessageProps } from '@chatui/core'
 import type { QuestionItem } from '../services/api'
 import './Home.css'
 
-const { Title, Paragraph } = Typography
+const { Title } = Typography
 
 function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -162,10 +162,7 @@ function Home() {
         ) : (
           <div className="chat-welcome">
             <div className="welcome-content">
-              <Title level={2} style={{ marginBottom: 8 }}>OpenCode QA</Title>
-              <Paragraph type="secondary" style={{ marginBottom: 32 }}>
-                基于项目代码库的智能问答系统
-              </Paragraph>
+              <Title level={2} style={{ marginBottom: 32 }}>有什么可以帮你的？</Title>
               <ChatBox
                 messages={messages}
                 typing={loading}
