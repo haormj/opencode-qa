@@ -55,6 +55,66 @@ export async function askQuestion(question: string): Promise<QuestionResponse> {
   })
 }
 
+export function askQuestionStream(
+  question: string,
+  onText: (text: string) => void,
+  onDone: (result: QuestionResponse) => void,
+  onError: (error: Error) => void
+): () => void {
+  const controller = new AbortController()
+  
+  fetch(`${API_BASE}/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+    signal: controller.signal,
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body')
+    }
+    
+    const decoder = new TextDecoder()
+    let buffer = ''
+    
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      
+      let eventType = ''
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7)
+        } else if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6))
+          
+          if (eventType === 'text' && data.text) {
+            onText(data.text)
+          } else if (eventType === 'done') {
+            onDone(data as QuestionResponse)
+          } else if (eventType === 'error') {
+            onError(new Error(data.error || 'Unknown error'))
+          }
+        }
+      }
+    }
+  }).catch((error) => {
+    if (error.name !== 'AbortError') {
+      onError(error)
+    }
+  })
+  
+  return () => controller.abort()
+}
+
 export async function getHistory(page: number = 1, pageSize: number = 20): Promise<HistoryResponse> {
   return request<HistoryResponse>(`${API_BASE}/history?page=${page}&pageSize=${pageSize}`)
 }

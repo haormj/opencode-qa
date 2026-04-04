@@ -24,6 +24,13 @@ interface MessageResponse {
   parts: MessagePart[]
 }
 
+interface StreamEvent {
+  type: string
+  properties?: Record<string, unknown>
+  part?: MessagePart
+  message?: MessageResponse
+}
+
 async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${OPENCODE_URL}${path}`, {
     ...options,
@@ -38,6 +45,55 @@ async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> 
   }
   
   return response.json() as Promise<T>
+}
+
+async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamEvent>, controller: AbortController }> {
+  const controller = new AbortController()
+  const response = await fetch(`${OPENCODE_URL}/event`, {
+    signal: controller.signal,
+    headers: { Accept: 'text/event-stream' }
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Failed to connect to event stream: ${response.status}`)
+  }
+  
+  const body = response.body
+  if (!body) {
+    throw new Error('No response body')
+  }
+  
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  
+  async function* eventGenerator(): AsyncGenerator<StreamEvent> {
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = line.slice(6)
+              yield JSON.parse(data) as StreamEvent
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+  
+  return { events: eventGenerator(), controller }
 }
 
 export async function askQuestion(question: string): Promise<{ sessionId: string; answer: string }> {

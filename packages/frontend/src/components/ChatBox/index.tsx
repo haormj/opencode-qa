@@ -1,6 +1,6 @@
 import { List, Avatar, Typography, Button, Empty, Spin } from 'antd'
 import { UserOutlined, RobotOutlined, DislikeOutlined } from '@ant-design/icons'
-import type { QuestionResponse } from '../services/api'
+import type { QuestionResponse } from '../../services/api'
 
 const { Paragraph } = Typography
 
@@ -9,6 +9,7 @@ interface Message {
   type: 'user' | 'assistant'
   content: string
   questionData?: QuestionResponse
+  streaming?: boolean
 }
 
 interface ChatBoxProps {
@@ -45,8 +46,9 @@ function ChatBox({ messages, loading, onFeedback }: ChatBoxProps) {
                 <div>
                   <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>
                     {item.content}
+                    {item.streaming && <span style={{ opacity: 0.5 }}>▊</span>}
                   </Paragraph>
-                  {item.type === 'assistant' && item.questionData && (
+                  {item.type === 'assistant' && item.questionData && !item.streaming && (
                     <Button 
                       type="text" 
                       size="small"
@@ -62,7 +64,7 @@ function ChatBox({ messages, loading, onFeedback }: ChatBoxProps) {
           </List.Item>
         )}
       />
-      {loading && (
+      {loading && messages.every(m => !m.streaming) && (
         <div style={{ textAlign: 'center', padding: 20 }}>
           <Spin />
         </div>

@@ -41,6 +41,70 @@ router.post('/', async (req, res) => {
   }
 })
 
+router.post('/stream', async (req, res) => {
+  try {
+    const { question } = req.body
+    
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'Question is required' })
+    }
+    
+    const userId = req.headers['x-user-id'] as string || uuidv4()
+    
+    const { sessionId, answer } = await askQuestion(question)
+    
+    const saved = await prisma.question.create({
+      data: {
+        userId,
+        sessionId,
+        question,
+        answer: answer || '抱歉，我无法回答这个问题。',
+        status: 'solved'
+      }
+    })
+    
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    
+    const sendEvent = (event: string, data: Record<string, unknown>) => {
+      res.write(`event: ${event}\n`)
+      res.write(`data: ${JSON.stringify(data)}\n\n`)
+    }
+    
+    sendEvent('session', { sessionId })
+    
+    const chars = answer.split('')
+    let index = 0
+    
+    const interval = setInterval(() => {
+      if (index < chars.length) {
+        const chunk = chars.slice(index, index + 2).join('')
+        sendEvent('text', { text: chunk })
+        index += 2
+      } else {
+        clearInterval(interval)
+        sendEvent('done', {
+          id: saved.id,
+          sessionId: saved.sessionId,
+          question: saved.question,
+          answer: saved.answer,
+          status: saved.status,
+          createdAt: saved.createdAt
+        })
+        res.end()
+      }
+    }, 15)
+    
+    req.on('close', () => {
+      clearInterval(interval)
+    })
+  } catch (error) {
+    console.error('Stream error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params

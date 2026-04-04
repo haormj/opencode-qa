@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { Card, Input, Button, Spin, message, Typography } from 'antd'
+import { useState, useCallback } from 'react'
+import { Card, Input, Button, message, Typography } from 'antd'
 import { SendOutlined } from '@ant-design/icons'
 import ChatBox from '../components/ChatBox'
 import FeedbackModal from '../components/FeedbackModal'
-import { askQuestion, type QuestionResponse } from '../services/api'
+import { askQuestionStream, type QuestionResponse } from '../services/api'
 
 const { TextArea } = Input
 const { Title } = Typography
@@ -13,6 +13,7 @@ interface Message {
   type: 'user' | 'assistant'
   content: string
   questionData?: QuestionResponse
+  streaming?: boolean
 }
 
 function Home() {
@@ -22,7 +23,7 @@ function Home() {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null)
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(() => {
     if (!question.trim()) {
       message.warning('请输入问题')
       return
@@ -33,25 +34,44 @@ function Home() {
       type: 'user',
       content: question
     }
-    setMessages(prev => [...prev, userMessage])
+    
+    const assistantMessageId = (Date.now() + 1).toString()
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      type: 'assistant',
+      content: '',
+      streaming: true
+    }
+    
+    setMessages(prev => [...prev, userMessage, assistantMessage])
     setQuestion('')
     setLoading(true)
 
-    try {
-      const result = await askQuestion(question)
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: result.answer,
-        questionData: result
+    askQuestionStream(
+      question,
+      (text) => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: msg.content + text }
+            : msg
+        ))
+      },
+      (result) => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId 
+            ? { ...msg, content: result.answer, questionData: result, streaming: false }
+            : msg
+        ))
+        setLoading(false)
+      },
+      (error) => {
+        console.error('Stream error:', error)
+        message.error('提问失败，请稍后重试')
+        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+        setLoading(false)
       }
-      setMessages(prev => [...prev, assistantMessage])
-    } catch {
-      message.error('提问失败，请稍后重试')
-    } finally {
-      setLoading(false)
-    }
-  }
+    )
+  }, [question])
 
   const handleFeedback = (questionId: number) => {
     setCurrentQuestionId(questionId)
@@ -59,7 +79,6 @@ function Home() {
   }
 
   const handleFeedbackSubmit = async (reason: string, contact: string) => {
-    // TODO: 调用反馈 API
     console.log('Feedback submitted:', { questionId: currentQuestionId, reason, contact })
     message.success('反馈已提交，我们会尽快处理')
     setFeedbackModalOpen(false)
@@ -101,12 +120,6 @@ function Home() {
             发送
           </Button>
         </div>
-
-        {loading && (
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <Spin tip="正在思考中..." />
-          </div>
-        )}
       </Card>
 
       <FeedbackModal
