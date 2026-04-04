@@ -61,6 +61,24 @@ function AdminSessions() {
 
   const columns: ColumnsType<AdminSession> = [
     {
+      title: '会话标题',
+      dataIndex: 'title',
+      key: 'title',
+      width: 300,
+      ellipsis: true,
+      render: (title: string, record) => (
+        <span
+          style={{
+            color: '#1890ff',
+            cursor: 'pointer'
+          }}
+          onClick={() => navigate(`/admin/sessions/${record.id}`)}
+        >
+          {title}
+        </span>
+      )
+    },
+    {
       title: '用户',
       dataIndex: 'user',
       key: 'user',
@@ -75,23 +93,6 @@ function AdminSessions() {
           </Avatar>
           <span>{user.displayName}</span>
         </Space>
-      )
-    },
-    {
-      title: '会话标题',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-      render: (title: string, record) => (
-        <span
-          style={{
-            color: '#1890ff',
-            cursor: 'pointer'
-          }}
-          onClick={() => navigate(`/admin/sessions/${record.id}`)}
-        >
-          {title}
-        </span>
       )
     },
     {
