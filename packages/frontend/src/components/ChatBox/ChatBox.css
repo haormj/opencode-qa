@@ -1,11 +1,41 @@
 /* 滚动条样式 */
 .chat-box-wrapper ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.chat-box-wrapper.scrolling ::-webkit-scrollbar {
   width: 2px;
   height: 2px;
 }
 
 .chat-box-wrapper ::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-track-piece:start {
+  background: transparent !important;
+  display: none !important;
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-track-piece:end {
+  background: transparent !important;
+  display: none !important;
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-track {
   background: transparent;
+  display: none;
 }
 
 .chat-box-wrapper ::-webkit-scrollbar-thumb {
@@ -14,12 +44,48 @@
   transition: background 0.3s ease;
 }
 
-.chat-box-wrapper:hover ::-webkit-scrollbar-thumb {
+.chat-box-wrapper ::-webkit-scrollbar-button,
+.chat-box-wrapper ::-webkit-scrollbar-button:start,
+.chat-box-wrapper ::-webkit-scrollbar-button:end,
+.chat-box-wrapper ::-webkit-scrollbar-button:vertical:start,
+.chat-box-wrapper ::-webkit-scrollbar-button:vertical:end,
+.chat-box-wrapper ::-webkit-scrollbar-button:horizontal:start,
+.chat-box-wrapper ::-webkit-scrollbar-button:horizontal:end,
+.chat-box-wrapper ::-webkit-scrollbar-button:decrement,
+.chat-box-wrapper ::-webkit-scrollbar-button:increment,
+.chat-box-wrapper ::-webkit-scrollbar-button:vertical:decrement,
+.chat-box-wrapper ::-webkit-scrollbar-button:vertical:increment {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-corner {
+  background: transparent;
+  display: none;
+}
+
+.chat-box-wrapper.scrolling ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
 }
 
-.chat-box-wrapper ::-webkit-scrollbar-thumb:hover {
+.chat-box-wrapper.scrolling ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.35);
+}
+
+.chat-box-wrapper ::-webkit-scrollbar-track-piece {
+  background: transparent;
+  display: none;
 }
 
 .chat-box-wrapper {
@@ -27,7 +93,7 @@
   scrollbar-color: transparent transparent;
 }
 
-.chat-box-wrapper:hover {
+.chat-box-wrapper.scrolling {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
@@ -89,11 +155,42 @@
 }
 
 .chat-box-wrapper .PullToRefresh::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.chat-box-wrapper .PullToRefresh.scrolling::-webkit-scrollbar {
   width: 2px;
+  height: 2px;
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track-piece:start {
+  background: transparent !important;
+  display: none !important;
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track-piece:end {
+  background: transparent !important;
+  display: none !important;
 }
 
 .chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track {
   background: transparent;
+  display: none;
 }
 
 .chat-box-wrapper .PullToRefresh::-webkit-scrollbar-thumb {
@@ -102,12 +199,48 @@
   transition: background 0.3s ease;
 }
 
-.chat-box-wrapper .PullToRefresh:hover::-webkit-scrollbar-thumb {
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:start,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:end,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:vertical:start,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:vertical:end,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:horizontal:start,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:horizontal:end,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:decrement,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:increment,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:vertical:decrement,
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-button:vertical:increment {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-corner {
+  background: transparent;
+  display: none;
+}
+
+.chat-box-wrapper .PullToRefresh.scrolling::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
 }
 
-.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-thumb:hover {
+.chat-box-wrapper .PullToRefresh.scrolling::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.35);
+}
+
+.chat-box-wrapper .PullToRefresh::-webkit-scrollbar-track-piece {
+  background: transparent;
+  display: none;
 }
 
 .chat-box-wrapper .PullToRefresh {
@@ -115,7 +248,7 @@
   scrollbar-color: transparent transparent;
 }
 
-.chat-box-wrapper .PullToRefresh:hover {
+.chat-box-wrapper .PullToRefresh.scrolling {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 

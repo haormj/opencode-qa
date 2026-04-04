@@ -26,12 +26,42 @@ body {
 }
 
 *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+*.scrolling::-webkit-scrollbar {
   width: 2px;
   height: 2px;
 }
 
 *::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+*::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+*::-webkit-scrollbar-track-piece:start {
+  background: transparent !important;
+  display: none !important;
+}
+
+*::-webkit-scrollbar-track-piece:end {
+  background: transparent !important;
+  display: none !important;
+}
+
+*::-webkit-scrollbar-track {
   background: transparent;
+  display: none;
 }
 
 *::-webkit-scrollbar-thumb {
@@ -40,7 +70,38 @@ body {
   transition: background 0.3s ease;
 }
 
-*:hover::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button:start,
+*::-webkit-scrollbar-button:end,
+*::-webkit-scrollbar-button:vertical:start,
+*::-webkit-scrollbar-button:vertical:end,
+*::-webkit-scrollbar-button:horizontal:start,
+*::-webkit-scrollbar-button:horizontal:end,
+*::-webkit-scrollbar-button:decrement,
+*::-webkit-scrollbar-button:increment,
+*::-webkit-scrollbar-button:vertical:decrement,
+*::-webkit-scrollbar-button:vertical:increment {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+  display: none;
+}
+
+*.scrolling::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -48,11 +109,16 @@ body {
   background: rgba(0, 0, 0, 0.35);
 }
 
+*::-webkit-scrollbar-track-piece {
+  background: transparent;
+  display: none;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 
-*:hover {
+*.scrolling {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import Chat, { Bubble, MessageProps } from '@chatui/core'
 import '@chatui/core/dist/index.css'
 import 'github-markdown-css/github-markdown-light.css'
@@ -18,6 +19,41 @@ interface ChatBoxProps {
 }
 
 function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBoxProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const pullToRefresh = wrapper.querySelector('.PullToRefresh') as HTMLElement
+    if (!pullToRefresh) return
+
+    const handleScroll = () => {
+      setIsScrolling(true)
+      pullToRefresh.classList.add('scrolling')
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        setIsScrolling(false)
+        pullToRefresh.classList.remove('scrolling')
+      }, 800)
+    }
+
+    pullToRefresh.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      pullToRefresh.removeEventListener('scroll', handleScroll)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
   function renderMessageContent(msg: MessageProps) {
     const { type, content, position, data } = msg as MessageProps & { 
       data?: { questionId?: number } 
@@ -69,7 +105,7 @@ function ChatBox({ messages, typing, sessionTitle, onSend, onFeedback }: ChatBox
   }
 
   return (
-    <div className="chat-box-wrapper">
+    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''}`}>
       {sessionTitle && (
         <div className="chat-header">
           <h2 className="chat-header-title">{sessionTitle}</h2>
