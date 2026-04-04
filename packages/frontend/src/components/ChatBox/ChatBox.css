@@ -289,6 +289,33 @@
   border-radius: 6px;
 }
 
+.chat-page-full .ChatFooter {
+  padding: 0 24px 20px;
+}
+
+.chat-page-full .Composer,
+.chat-page-full .ChatUI-Composer {
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.chat-page-full .ChatUI-Composer-input {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 0;
+  font-size: 15px;
+}
+
+.chat-page-full .ChatUI-Composer-input:focus {
+  border-color: transparent;
+}
+
+.chat-page-full .ChatUI-Composer-sendBtn {
+  border-radius: 8px;
+}
+
 .message-wrapper {
   width: auto;
 }
