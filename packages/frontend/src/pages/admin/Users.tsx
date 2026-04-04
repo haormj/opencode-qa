@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Space, Dropdown, message, Modal, Avatar } from 'antd'
+import { Card, Table, Tag, Button, Space, Dropdown, message, Modal, Avatar } from 'antd'
 import { UserOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAdminUsers, addUserRole, removeUserRole, generateAvatarColor, type AdminUser } from '../../services/api'
@@ -151,13 +151,14 @@ function AdminUsers() {
   ]
 
   return (
-    <div style={{ padding: 24, background: '#fff', borderRadius: 8 }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>用户管理</h2>
+    <Card
+      title="用户管理"
+      extra={
         <Button icon={<ReloadOutlined />} onClick={fetchUsers}>
           刷新
         </Button>
-      </div>
+      }
+    >
       <Table
         columns={columns}
         dataSource={users}
@@ -168,7 +169,7 @@ function AdminUsers() {
           showTotal: (total) => `共 ${total} 条`
         }}
       />
-    </div>
+    </Card>
   )
 }
 
