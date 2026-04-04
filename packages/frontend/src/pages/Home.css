@@ -41,7 +41,9 @@
   overflow: hidden;
 }
 
-.welcome-content .chat-box-wrapper .ChatUI-MessageContainer {
+.welcome-content .chat-box-wrapper .ChatUI-MessageContainer,
+.welcome-content .chat-box-wrapper .MessageContainer,
+.welcome-content .chat-box-wrapper .PullToRefresh {
   display: none;
 }
 
