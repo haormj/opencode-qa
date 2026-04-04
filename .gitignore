@@ -3,3 +3,13 @@ dist
 .env
 *.db
 *.db-journal
+
+# Logs
+*.log
+TODO
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo

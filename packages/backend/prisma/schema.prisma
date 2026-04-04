@@ -7,6 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          String     @id @default(uuid())
+  username    String     @unique
+  password    String
+  email       String?    @unique
+  displayName String     @map("display_name")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  sessions    Session[]
+  questions   Question[]
+  userRoles   UserRole[]
+
+  @@map("users")
+}
+
+model Role {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  permissions String
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id         Int      @id @default(autoincrement())
+  userId     String   @map("user_id")
+  roleId     Int      @map("role_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
 model Session {
   id        String     @id @default(uuid())
   userId    String     @map("user_id")
@@ -15,20 +52,23 @@ model Session {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
   questions Question[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
 model Question {
-  id        Int      @id @default(autoincrement())
-  userId    String   @map("user_id")
-  sessionId String   @map("session_id")
-  question  String
-  answer    String?
-  status    String   @default("solved")
-  createdAt DateTime @default(now()) @map("created_at")
-  feedback  Feedback?
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id           Int      @id @default(autoincrement())
+  userId       String   @map("user_id")
+  sessionId    String   @map("session_id")
+  question     String
+  answer       String?
+  status       String   @default("solved")
+  isAdminReply Boolean  @default(false) @map("is_admin_reply")
+  createdAt    DateTime @default(now()) @map("created_at")
+  feedback     Feedback?
+  session      Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("questions")
 }

@@ -14,6 +14,7 @@ export interface QuestionItem {
   question: string
   answer: string | null
   status: string
+  isAdminReply: boolean
   createdAt: string
   feedback?: {
     id: number
@@ -64,64 +65,145 @@ export interface HistoryResponse {
   items: HistoryItem[]
 }
 
+export interface User {
+  id: string
+  username: string
+  email?: string
+  displayName: string
+  roles?: string[]
+}
+
+export interface LoginResponse {
+  token: string
+  user: User
+}
+
+export interface AdminSession {
+  id: string
+  title: string
+  status: string
+  createdAt: string
+  updatedAt: string
+  questionCount: number
+  user: {
+    id: string
+    username: string
+    displayName: string
+  }
+}
+
+export interface AdminSessionListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: AdminSession[]
+}
+
 const API_BASE = '/api'
 
-const USER_ID_KEY = 'opencode-qa-user-id'
-const USERNAME_KEY = 'opencode-qa-username'
+const TOKEN_KEY = 'opencode-qa-token'
+const USER_KEY = 'opencode-qa-user'
 
-function getUserId(): string {
-  let userId = localStorage.getItem(USER_ID_KEY)
-  if (!userId) {
-    userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-    localStorage.setItem(USER_ID_KEY, userId)
-  }
-  return userId
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
 }
 
-export function getUsername(): string {
-  let username = localStorage.getItem(USERNAME_KEY)
-  if (!username) {
-    username = `用户_${Math.random().toString(36).substring(2, 6)}`
-    localStorage.setItem(USERNAME_KEY, username)
-  }
-  return username
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token)
 }
 
-export function generateAvatarColor(name: string): string {
-  const colors = [
-    '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
-    '#1890ff', '#52c41a', '#eb2f96', '#722ed1',
-    '#13c2c2', '#fa8c16', '#2f54eb', '#52c41a'
-  ]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+export function removeToken(): void {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+}
+
+export function getStoredUser(): User | null {
+  const userStr = localStorage.getItem(USER_KEY)
+  if (!userStr) return null
+  try {
+    return JSON.parse(userStr)
+  } catch {
+    return null
   }
-  return colors[Math.abs(hash) % colors.length]
+}
+
+export function setStoredUser(user: User): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
+export function isAuthenticated(): boolean {
+  return !!getToken()
+}
+
+export function isAdmin(): boolean {
+  const user = getStoredUser()
+  return !!user && !!user.roles && user.roles.includes('admin')
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = getToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': getUserId(),
+      ...headers,
       ...options?.headers,
     },
   })
-  
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+
+  if (response.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
   }
-  
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+
   return response.json()
 }
 
-export async function askQuestion(question: string): Promise<QuestionResponse> {
-  return request<QuestionResponse>(`${API_BASE}/chat`, {
+export async function login(username: string, password: string): Promise<LoginResponse> {
+  const result = await request<LoginResponse>(`${API_BASE}/auth/login`, {
     method: 'POST',
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ username, password }),
   })
+  setToken(result.token)
+  setStoredUser(result.user)
+  return result
+}
+
+export async function register(
+  username: string,
+  password: string,
+  email?: string,
+  displayName?: string
+): Promise<LoginResponse> {
+  const result = await request<LoginResponse>(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    body: JSON.stringify({ username, password, email, displayName }),
+  })
+  setToken(result.token)
+  setStoredUser(result.user)
+  return result
+}
+
+export async function getCurrentUser(): Promise<User> {
+  return request<User>(`${API_BASE}/auth/me`)
+}
+
+export function logout(): void {
+  removeToken()
+  window.location.href = '/login'
 }
 
 export function askQuestionStream(
@@ -132,43 +214,55 @@ export function askQuestionStream(
   onError: (error: Error) => void
 ): () => void {
   const controller = new AbortController()
-  
+  const token = getToken()
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   fetch(`${API_BASE}/chat/stream`, {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'x-user-id': getUserId(),
-    },
+    headers,
     body: JSON.stringify({ question, sessionId: sessionId || undefined }),
     signal: controller.signal,
   }).then(async (response) => {
+    if (response.status === 401) {
+      removeToken()
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const reader = response.body?.getReader()
     if (!reader) {
       throw new Error('No response body')
     }
-    
+
     const decoder = new TextDecoder()
     let buffer = ''
-    
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      
+
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
-      
+
       let eventType = ''
       for (const line of lines) {
         if (line.startsWith('event: ')) {
           eventType = line.slice(7)
         } else if (line.startsWith('data: ')) {
           const data = JSON.parse(line.slice(6))
-          
+
           if (eventType === 'text' && data.text) {
             onText(data.text)
           } else if (eventType === 'done') {
@@ -184,7 +278,7 @@ export function askQuestionStream(
       onError(error)
     }
   })
-  
+
   return () => controller.abort()
 }
 
@@ -218,4 +312,51 @@ export async function updateSessionStatus(sessionId: string, status: string): Pr
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
+}
+
+export async function getAdminSessions(params?: {
+  status?: string
+  userId?: string
+  search?: string
+  page?: number
+  pageSize?: number
+}): Promise<AdminSessionListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.status) searchParams.set('status', params.status)
+  if (params?.userId) searchParams.set('userId', params.userId)
+  if (params?.search) searchParams.set('search', params.search)
+  if (params?.page) searchParams.set('page', params.page.toString())
+  if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+
+  const query = searchParams.toString()
+  return request<AdminSessionListResponse>(`${API_BASE}/admin/sessions${query ? `?${query}` : ''}`)
+}
+
+export async function getAdminSessionDetail(sessionId: string): Promise<SessionDetail & { user: User }> {
+  return request(`${API_BASE}/admin/sessions/${sessionId}`)
+}
+
+export async function adminReplyToSession(sessionId: string, answer: string): Promise<QuestionItem> {
+  return request(`${API_BASE}/admin/sessions/${sessionId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ answer }),
+  })
+}
+
+export function generateAvatarColor(name: string): string {
+  const colors = [
+    '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
+    '#1890ff', '#52c41a', '#eb2f96', '#722ed1',
+    '#13c2c2', '#fa8c16', '#2f54eb', '#52c41a'
+  ]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
+export function getUsername(): string {
+  const user = getStoredUser()
+  return user?.displayName || user?.username || '用户'
 }

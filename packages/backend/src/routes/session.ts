@@ -1,15 +1,12 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
+import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'] as string
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' })
-    }
+    const userId = req.user!.id
 
     const sessions = await prisma.session.findMany({
       where: { userId },
@@ -24,6 +21,7 @@ router.get('/', async (req, res) => {
     res.json(sessions.map(s => ({
       id: s.id,
       title: s.title,
+      status: s.status,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
       questionCount: s._count.questions
@@ -34,14 +32,10 @@ router.get('/', async (req, res) => {
   }
 })
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params
-    const userId = req.headers['x-user-id'] as string
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' })
-    }
+    const userId = req.user!.id
 
     const session = await prisma.session.findFirst({
       where: { id, userId },
@@ -71,15 +65,11 @@ router.get('/:id', async (req, res) => {
   }
 })
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params
     const { title } = req.body
-    const userId = req.headers['x-user-id'] as string
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' })
-    }
+    const userId = req.user!.id
 
     if (!title || typeof title !== 'string') {
       return res.status(400).json({ error: 'Title is required' })
@@ -109,14 +99,10 @@ router.patch('/:id', async (req, res) => {
   }
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params
-    const userId = req.headers['x-user-id'] as string
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' })
-    }
+    const userId = req.user!.id
 
     const session = await prisma.session.findFirst({
       where: { id, userId }
@@ -137,15 +123,11 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
-    const userId = req.headers['x-user-id'] as string
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' })
-    }
+    const userId = req.user!.id
 
     if (!status || !['active', 'need_human', 'resolved'].includes(status)) {
       return res.status(400).json({ error: 'Valid status is required (active, need_human, resolved)' })

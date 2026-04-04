@@ -1,21 +1,20 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
 import { askQuestion } from '../services/opencode.js'
-import { v4 as uuidv4 } from 'uuid'
+import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
-router.post('/stream', async (req, res) => {
+router.post('/stream', authMiddleware, async (req, res) => {
   try {
     console.log('[Stream] Request received:', req.body)
 
     const { question, sessionId: existingSessionId } = req.body
+    const userId = req.user!.id
 
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'Question is required' })
     }
-
-    const userId = req.headers['x-user-id'] as string || uuidv4()
 
     console.log('[Stream] Calling askQuestion...')
     const { sessionId, answer } = await askQuestion(question, existingSessionId)
@@ -28,7 +27,8 @@ router.post('/stream', async (req, res) => {
         data: {
           id: sessionId,
           userId,
-          title
+          title,
+          status: 'active'
         }
       })
     } else {
@@ -44,7 +44,8 @@ router.post('/stream', async (req, res) => {
         sessionId,
         question,
         answer: answer || '抱歉，我无法回答这个问题。',
-        status: 'solved'
+        status: 'solved',
+        isAdminReply: false
       }
     })
 
@@ -97,10 +98,10 @@ router.post('/stream', async (req, res) => {
   }
 })
 
-router.get('/:sessionId', async (req, res) => {
+router.get('/:sessionId', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params
-    const userId = req.headers['x-user-id'] as string
+    const userId = req.user!.id
 
     const session = await prisma.session.findFirst({
       where: { id: sessionId, userId },
@@ -119,6 +120,7 @@ router.get('/:sessionId', async (req, res) => {
     res.json({
       id: session.id,
       title: session.title,
+      status: session.status,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       questions: session.questions

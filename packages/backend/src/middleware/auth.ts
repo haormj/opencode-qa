@@ -1,9 +1,13 @@
 import { Request, Response, NextFunction } from 'express'
+import jwt from 'jsonwebtoken'
+import { prisma } from '../index.js'
 
 export interface AuthUser {
   id: string
-  name?: string
-  email?: string
+  username: string
+  displayName: string
+  roles: string[]
+  permissions: string[]
 }
 
 declare global {
@@ -14,39 +18,74 @@ declare global {
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  // TODO: 对接内部 SSO 系统
-  // 当前使用简单的 header 传递用户信息
-  const userId = req.headers['x-user-id'] as string
-  
-  if (!userId) {
-    // 开发模式：自动生成临时用户 ID
-    req.user = { id: 'dev-user' }
-    return next()
+const JWT_SECRET = process.env.JWT_SECRET || 'default-secret'
+
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    const token = authHeader.substring(7)
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    })
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    const roles = user.userRoles.map(ur => ur.role.name)
+    const permissions = user.userRoles.flatMap(ur => {
+      try {
+        return JSON.parse(ur.role.permissions) as string[]
+      } catch {
+        return []
+      }
+    })
+
+    req.user = {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      roles,
+      permissions
+    }
+
+    next()
+  } catch (error) {
+    console.error('Auth middleware error:', error)
+    return res.status(401).json({ error: 'Invalid token' })
   }
-  
-  req.user = {
-    id: userId,
-    name: req.headers['x-user-name'] as string,
-    email: req.headers['x-user-email'] as string
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
-  
+
+  if (!req.user.roles.includes('admin')) {
+    return res.status(403).json({ error: 'Admin access required' })
+  }
+
   next()
 }
 
-export function ssoLogin(req: Request, res: Response) {
-  // TODO: 实现 SSO 登录跳转
-  // const redirectUrl = process.env.SSO_LOGIN_URL
-  // res.redirect(redirectUrl)
-  res.json({ message: 'SSO login not implemented yet' })
-}
+export function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next()
+  }
 
-export function ssoCallback(req: Request, res: Response) {
-  // TODO: 实现 SSO 回调处理
-  // 1. 验证 SSO 返回的 token
-  // 2. 获取用户信息
-  // 3. 创建/更新本地用户
-  // 4. 设置 session/cookie
-  // 5. 重定向到前端
-  res.json({ message: 'SSO callback not implemented yet' })
+  return authMiddleware(req, res, next)
 }
