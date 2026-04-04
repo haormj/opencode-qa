@@ -81,7 +81,18 @@ function AdminSessions() {
       title: '会话标题',
       dataIndex: 'title',
       key: 'title',
-      ellipsis: true
+      ellipsis: true,
+      render: (title: string, record) => (
+        <span
+          style={{
+            color: '#1890ff',
+            cursor: 'pointer'
+          }}
+          onClick={() => navigate(`/admin/sessions/${record.id}`)}
+        >
+          {title}
+        </span>
+      )
     },
     {
       title: '状态',
