@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tag, Button, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -24,6 +24,7 @@ function AdminSessionDetail() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<(SessionDetail & { user: User }) | null>(null)
+  const notFoundRef = useRef(false)
 
   const fetchSession = async () => {
     if (!id) return
@@ -32,8 +33,10 @@ function AdminSessionDetail() {
       const result = await getAdminSessionDetail(id)
       setSession(result)
     } catch (error) {
+      if (notFoundRef.current) return
       const errorMessage = error instanceof Error ? error.message : '加载会话详情失败'
       if (errorMessage.includes('Session not found')) {
+        notFoundRef.current = true
         message.error('会话不存在')
         navigate('/admin')
       } else {
