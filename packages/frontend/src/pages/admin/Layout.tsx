@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import AdminSidebar from '../../components/AdminSidebar'
+import AdminHeader from '../../components/AdminHeader'
 import { isAdmin } from '../../services/api'
 import './Admin.css'
 
@@ -18,7 +19,10 @@ function AdminLayout() {
     <div className="admin-layout">
       <AdminSidebar />
       <div className="admin-content">
-        <Outlet />
+        <AdminHeader />
+        <div className="admin-content-body">
+          <Outlet />
+        </div>
       </div>
     </div>
   )

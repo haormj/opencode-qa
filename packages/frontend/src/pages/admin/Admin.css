@@ -9,10 +9,17 @@
   flex-direction: column;
   overflow: hidden;
   background: #fff;
+}
+
+.admin-content-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 24px;
 }
 
-.admin-content > * {
+.admin-content-body > * {
   flex: 1;
   display: flex;
   flex-direction: column;
