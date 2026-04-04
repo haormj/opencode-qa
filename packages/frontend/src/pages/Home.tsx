@@ -153,12 +153,14 @@ function Home() {
       />
       <div className="home-content">
         {hasMessages ? (
-          <ChatBox
-            messages={messages}
-            typing={loading}
-            onSend={handleSend}
-            onFeedback={handleFeedback}
-          />
+          <div className="chat-page-full">
+            <ChatBox
+              messages={messages}
+              typing={loading}
+              onSend={handleSend}
+              onFeedback={handleFeedback}
+            />
+          </div>
         ) : (
           <div className="chat-welcome">
             <div className="welcome-content">
