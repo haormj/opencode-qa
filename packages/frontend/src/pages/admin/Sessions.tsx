@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Tag, Input, Select, Button, Space, Avatar, Tooltip, message } from 'antd'
-import { SearchOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons'
+import { SearchOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAdminSessions, generateAvatarColor, type AdminSession } from '../../services/api'
 import './Admin.css'
@@ -25,7 +25,7 @@ function AdminSessions() {
   const [sessions, setSessions] = useState<AdminSession[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(10)
 
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | undefined>(

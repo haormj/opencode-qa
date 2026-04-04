@@ -76,7 +76,7 @@ function AdminSessionDetail() {
     })
   }
 
-  const handleReply = (type: string, text: string) => {
+  const handleReply = (_type: string, text: string) => {
     if (!id || !text.trim()) {
       message.warning('请输入回复内容')
       return
