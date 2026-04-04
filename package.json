@@ -1,0 +1,26 @@
+{
+  "name": "opencode-qa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Business knowledge Q&A system based on OpenCode",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w @opencode-qa/backend",
+    "dev:frontend": "npm run dev -w @opencode-qa/frontend",
+    "build": "npm run build -w @opencode-qa/backend && npm run build -w @opencode-qa/frontend",
+    "start": "npm run start -w @opencode-qa/backend",
+    "db:generate": "npm run db:generate -w @opencode-qa/backend",
+    "db:push": "npm run db:push -w @opencode-qa/backend",
+    "db:migrate": "npm run db:migrate -w @opencode-qa/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
