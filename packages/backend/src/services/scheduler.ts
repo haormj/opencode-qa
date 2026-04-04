@@ -37,11 +37,11 @@ async function closeInactiveSessions(): Promise<number> {
       })
 
       if (session.opencodeSessionId) {
-        try {
-          await deleteOpenCodeSession(session.opencodeSessionId)
+        const deleted = await deleteOpenCodeSession(session.opencodeSessionId)
+        if (deleted) {
           logger.info(`会话 ${session.id} 已关闭，OpenCode Session ${session.opencodeSessionId} 已删除`)
-        } catch (error) {
-          logger.error(`删除 OpenCode Session 失败: ${session.opencodeSessionId}`, error instanceof Error ? error : new Error(String(error)))
+        } else {
+          logger.error(`会话 ${session.id} 已关闭，但 OpenCode Session ${session.opencodeSessionId} 删除失败`)
         }
       } else {
         logger.info(`会话 ${session.id} 已关闭`)

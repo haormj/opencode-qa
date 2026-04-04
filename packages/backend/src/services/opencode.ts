@@ -231,23 +231,30 @@ export async function getSessionMessages(sessionId: string) {
   return fetchAPI<MessageResponse[]>(`/session/${sessionId}/message`)
 }
 
-export async function deleteOpenCodeSession(sessionId: string): Promise<void> {
+export async function deleteOpenCodeSession(sessionId: string): Promise<boolean> {
   console.log('[OpenCode] Deleting session:', sessionId)
   
-  const headers: Record<string, string> = {}
-  if (OPENCODE_SERVER_PASSWORD) {
-    const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
-    headers['Authorization'] = `Basic ${auth}`
-  }
+  try {
+    const headers: Record<string, string> = {}
+    if (OPENCODE_SERVER_PASSWORD) {
+      const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
+      headers['Authorization'] = `Basic ${auth}`
+    }
 
-  const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`, {
-    method: 'DELETE',
-    headers
-  })
+    const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`, {
+      method: 'DELETE',
+      headers
+    })
 
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`Failed to delete OpenCode session: ${response.status}`)
+    if (!response.ok && response.status !== 404) {
+      console.error(`[OpenCode] Failed to delete session ${sessionId}: ${response.status}`)
+      return false
+    }
+    
+    console.log('[OpenCode] Session deleted:', sessionId)
+    return true
+  } catch (error) {
+    console.error(`[OpenCode] Error deleting session ${sessionId}:`, error)
+    return false
   }
-  
-  console.log('[OpenCode] Session deleted:', sessionId)
 }
