@@ -220,6 +220,24 @@ packages/
 4. 前端访问：http://localhost:3000
 5. 后端访问：http://localhost:8000
 
+### 启动服务流程
+
+在启动开发服务前，必须先检测端口占用情况：
+
+1. **检测端口占用**：
+   ```bash
+   netstat -ano | findstr ":3000 :8000"
+   ```
+
+2. **如果端口已被占用**，终止对应进程：
+   ```bash
+   # 查找进程 PID（最后一列数字）
+   # 使用 taskkill 终止进程
+   taskkill /F /PID <PID>
+   ```
+
+3. **启动服务**：在新的终端窗口运行 `npm run dev`
+
 ## 修改后验证
 
 每次代码修改完成后，自动连接 Chrome 进行测试验证：

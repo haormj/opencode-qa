@@ -259,6 +259,10 @@
   padding: 16px 24px;
 }
 
+.chat-box-wrapper .ChatFooter {
+  background: #fff;
+}
+
 .chat-box-wrapper .Composer,
 .chat-box-wrapper .ChatUI-Composer {
   flex-shrink: 0;
