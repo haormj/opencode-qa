@@ -7,6 +7,8 @@ import AdminLayout from './pages/admin/Layout'
 import AdminSessions from './pages/admin/Sessions'
 import AdminSessionDetail from './pages/admin/SessionDetail'
 import AdminUsers from './pages/admin/Users'
+import StatisticsLayout from './pages/admin/StatisticsLayout'
+import StatisticsOverview from './pages/admin/StatisticsOverview'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated()) {
@@ -54,9 +56,14 @@ function App() {
             </AdminRoute>
           }
         >
-          <Route index element={<AdminSessions />} />
+          <Route index element={<Navigate to="/admin/sessions" replace />} />
+          <Route path="sessions" element={<AdminSessions />} />
           <Route path="sessions/:id" element={<AdminSessionDetail />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="statistics" element={<StatisticsLayout />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<StatisticsOverview />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

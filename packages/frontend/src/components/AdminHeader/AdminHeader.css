@@ -27,11 +27,11 @@
 }
 
 .admin-header-title {
-  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #262626;
   line-height: 1.2;
+  margin-left: 8px;
 }
 
 .admin-header-right {

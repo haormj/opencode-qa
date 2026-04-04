@@ -126,3 +126,31 @@
 .admin-content-body .ant-table-tbody > tr {
   height: 32px;
 }
+
+.statistics-overview {
+  padding: 0;
+}
+
+.stats-cards {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  text-align: center;
+}
+
+.stat-card-title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 12px;
+}
+
+.stat-card-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.pie-chart-card {
+  margin-top: 0;
+}

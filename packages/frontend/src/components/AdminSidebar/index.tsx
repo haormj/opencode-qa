@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined, UserOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined, BarChartOutlined } from '@ant-design/icons'
 import UserInfo from '../Sidebar/UserInfo'
 import './AdminSidebar.css'
 
@@ -10,7 +10,7 @@ function AdminSidebar() {
 
   const menuItems = [
     {
-      key: '/admin',
+      key: '/admin/sessions',
       icon: <MessageOutlined />,
       label: '会话管理'
     },
@@ -18,8 +18,21 @@ function AdminSidebar() {
       key: '/admin/users',
       icon: <UserOutlined />,
       label: '用户管理'
+    },
+    {
+      key: '/admin/statistics',
+      icon: <BarChartOutlined />,
+      label: '数据统计'
     }
   ]
+
+  const getSelectedKey = () => {
+    const pathname = location.pathname
+    if (pathname.startsWith('/admin/sessions')) return '/admin/sessions'
+    if (pathname.startsWith('/admin/users')) return '/admin/users'
+    if (pathname.startsWith('/admin/statistics')) return '/admin/statistics'
+    return pathname
+  }
 
   return (
     <div className="admin-sidebar">
@@ -30,7 +43,7 @@ function AdminSidebar() {
       <div className="admin-sidebar-menu">
         <Menu
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[getSelectedKey()]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ border: 'none', background: 'transparent' }}

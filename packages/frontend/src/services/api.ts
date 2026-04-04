@@ -447,3 +447,20 @@ export function getUsername(): string {
   const user = getStoredUser()
   return user?.displayName || user?.username || '用户'
 }
+
+export interface Statistics {
+  interceptionRate: number
+  sessions: {
+    total: number
+    active: number
+    human: number
+    closed: number
+  }
+  users: {
+    total: number
+  }
+}
+
+export async function getStatistics(): Promise<Statistics> {
+  return request<Statistics>(`${API_BASE}/admin/statistics`)
+}

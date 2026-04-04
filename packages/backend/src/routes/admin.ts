@@ -317,4 +317,33 @@ router.delete('/users/:id/roles/:role', async (req, res) => {
   }
 })
 
+router.get('/statistics', async (req, res) => {
+  try {
+    const [total, active, human, closed] = await Promise.all([
+      prisma.session.count(),
+      prisma.session.count({ where: { status: 'active' } }),
+      prisma.session.count({ where: { status: 'human' } }),
+      prisma.session.count({ where: { status: 'closed' } })
+    ])
+
+    const closedWithNeedHuman = await prisma.session.count({
+      where: { status: 'closed', needHuman: true }
+    })
+    const interceptionRate = closed > 0
+      ? parseFloat(((1 - closedWithNeedHuman / closed) * 100).toFixed(1))
+      : 100
+
+    const usersTotal = await prisma.user.count()
+
+    res.json({
+      interceptionRate,
+      sessions: { total, active, human, closed },
+      users: { total: usersTotal }
+    })
+  } catch (error) {
+    console.error('Get statistics error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router
