@@ -63,7 +63,7 @@ function UserHeader({
                   onClick={onMarkNeedHuman}
                   disabled={isHuman}
                 >
-                  AI无法解决，需要人工
+                  人工
                 </Button>
               </Tooltip>
             )}
