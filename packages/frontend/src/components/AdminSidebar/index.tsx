@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined } from '@ant-design/icons'
 import UserInfo from '../Sidebar/UserInfo'
 import './AdminSidebar.css'
 
@@ -13,6 +13,11 @@ function AdminSidebar() {
       key: '/admin',
       icon: <MessageOutlined />,
       label: '会话管理'
+    },
+    {
+      key: '/admin/users',
+      icon: <UserOutlined />,
+      label: '用户管理'
     }
   ]
 

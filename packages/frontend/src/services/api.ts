@@ -99,6 +99,15 @@ export interface AdminSessionListResponse {
   items: AdminSession[]
 }
 
+export interface AdminUser {
+  id: string
+  username: string
+  email?: string
+  displayName: string
+  createdAt: string
+  roles: string[]
+}
+
 const API_BASE = '/api'
 
 const TOKEN_KEY = 'opencode-qa-token'
@@ -340,6 +349,23 @@ export async function adminReplyToSession(sessionId: string, answer: string): Pr
   return request(`${API_BASE}/admin/sessions/${sessionId}/reply`, {
     method: 'POST',
     body: JSON.stringify({ answer }),
+  })
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  return request(`${API_BASE}/admin/users`)
+}
+
+export async function addUserRole(userId: string, role: string): Promise<void> {
+  await request(`${API_BASE}/admin/users/${userId}/roles`, {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  })
+}
+
+export async function removeUserRole(userId: string, role: string): Promise<void> {
+  await request(`${API_BASE}/admin/users/${userId}/roles/${role}`, {
+    method: 'DELETE',
   })
 }
 
