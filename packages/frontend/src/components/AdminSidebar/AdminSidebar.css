@@ -1,0 +1,50 @@
+.admin-sidebar {
+  width: 260px;
+  background: #f5f5f5;
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.admin-sidebar-brand {
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #e8e8e8;
+  height: 56px;
+}
+
+.admin-sidebar-brand .brand-text {
+  font-weight: 600;
+  font-size: 18px;
+  color: #333;
+}
+
+.admin-sidebar-menu {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.admin-sidebar-menu .ant-menu {
+  background: transparent;
+}
+
+.admin-sidebar-menu .ant-menu-item {
+  margin: 0 8px 4px;
+  border-radius: 8px;
+}
+
+.admin-sidebar-menu .ant-menu-item:hover {
+  background: #e8e8e8;
+}
+
+.admin-sidebar-menu .ant-menu-item-selected {
+  background: #d6e4ff;
+}

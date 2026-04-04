@@ -1,63 +1,21 @@
 .admin-layout {
-  min-height: 100vh;
-}
-
-.admin-sider {
-  background: #fff;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
-}
-
-.admin-logo {
-  height: 64px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.admin-logo h2 {
-  margin: 0;
-  color: #1890ff;
-  font-size: 18px;
-}
-
-.admin-logo span {
-  color: #999;
-  font-size: 12px;
-}
-
-.admin-header {
-  background: #fff;
-  padding: 0 24px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.admin-header-right {
-  display: flex;
-  align-items: center;
-}
-
-.admin-user-info {
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.admin-user-info:hover {
-  background-color: #f5f5f5;
+  height: 100vh;
 }
 
 .admin-content {
-  margin: 24px;
-  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fff;
-  border-radius: 8px;
-  min-height: calc(100vh - 112px);
+  padding: 24px;
+}
+
+.admin-content > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-loading {
