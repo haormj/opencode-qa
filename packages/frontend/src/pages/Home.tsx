@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
@@ -17,6 +17,7 @@ function Home() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const notFoundRef = useRef(false)
 
   const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
     setSessions(loadedSessions)
@@ -77,8 +78,10 @@ function Home() {
       setMessages(loadedMessages)
       setSessionStatus(session.status || 'active')
     } catch (error) {
+      if (notFoundRef.current) return
       const errorMessage = error instanceof Error ? error.message : '加载会话失败'
       if (errorMessage.includes('Session not found')) {
+        notFoundRef.current = true
         message.error('会话不存在或已被删除')
         setSearchParams({})
       } else {
