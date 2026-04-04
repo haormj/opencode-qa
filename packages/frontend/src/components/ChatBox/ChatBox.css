@@ -130,11 +130,16 @@
 }
 
 .chat-header-content {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  max-width: calc(100% - 720px);
+  min-width: 0;
 }
 
 .chat-header-title {
@@ -143,6 +148,10 @@
   font-weight: 600;
   color: #262626;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .chat-header-subtitle {

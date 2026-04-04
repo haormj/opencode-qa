@@ -51,9 +51,11 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
   const handleRename = async (sessionId: string, title: string) => {
     try {
       await updateSessionTitle(sessionId, title)
-      setSessions(prev => prev.map(s => 
+      const updatedSessions = sessions.map(s => 
         s.id === sessionId ? { ...s, title } : s
-      ))
+      )
+      setSessions(updatedSessions)
+      onSessionsLoad?.(updatedSessions)
       message.success('标题已更新')
     } catch {
       message.error('更新失败')
