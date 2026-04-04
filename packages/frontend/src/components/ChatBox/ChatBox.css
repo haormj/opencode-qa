@@ -295,6 +295,8 @@
 
 .chat-page-full .Composer,
 .chat-page-full .ChatUI-Composer {
+  max-width: 828px;
+  margin-left: calc((100% - 828px) / 2 - 5px);
   border: 1px solid #e8e8e8;
   border-radius: 16px;
   padding: 12px 16px;
