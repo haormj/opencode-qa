@@ -72,12 +72,8 @@ function ChatBox({ messages, typing, onSend, onFeedback }: ChatBoxProps) {
         renderMessageContent={renderMessageContent}
         onSend={handleSend}
         placeholder="请输入您的问题..."
+        isTyping={typing}
       />
-      {typing && (
-        <div className="typing-indicator">
-          <span className="typing-text">OpenCode 正在思考...</span>
-        </div>
-      )}
     </div>
   )
 }
