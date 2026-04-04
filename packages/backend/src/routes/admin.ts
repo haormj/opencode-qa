@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
+import { deleteOpenCodeSession } from '../services/opencode.js'
 
 const router = Router()
 
@@ -197,6 +198,10 @@ router.patch('/sessions/:id/close', async (req, res) => {
       where: { id },
       data: { status: 'closed' }
     })
+
+    if (session.opencodeSessionId) {
+      await deleteOpenCodeSession(session.opencodeSessionId)
+    }
 
     res.json({
       id: updated.id,
