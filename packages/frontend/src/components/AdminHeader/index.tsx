@@ -6,9 +6,6 @@ function AdminHeader() {
 
   const getTitle = (pathname: string): string | null => {
     if (pathname.startsWith('/admin/statistics/overview')) return '概览'
-    if (pathname.startsWith('/admin/sessions')) return '会话管理'
-    if (pathname.startsWith('/admin/users')) return '用户管理'
-    if (pathname.startsWith('/admin/statistics')) return '数据统计'
     return null
   }
 
