@@ -41,6 +41,10 @@
   overflow: hidden;
 }
 
+.welcome-content .chat-box-wrapper .ChatUI-MessageContainer {
+  display: none;
+}
+
 .welcome-content .chat-box-wrapper:hover {
   border-color: #4096ff;
 }
