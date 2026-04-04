@@ -1,7 +1,6 @@
 import { Button, Tooltip } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
-import UserInfo from './UserInfo'
 import type { Session } from '../../services/api'
 import './Sidebar.css'
 
@@ -42,8 +41,6 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
         collapsed={collapsed}
         onSessionsLoad={onSessionsLoad}
       />
-
-      <UserInfo collapsed={collapsed} />
     </div>
   )
 }

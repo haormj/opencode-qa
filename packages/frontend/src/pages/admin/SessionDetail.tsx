@@ -127,12 +127,8 @@ function AdminSessionDetail() {
       <div className="chat-page-full">
         <ChatBox
           messages={convertMessagesToChatBox(session.messages)}
-          sessionTitle=""
           sessionStatus={session.status}
-          sessionId={session.id}
           onSend={handleReply}
-          onMarkNeedHuman={undefined}
-          hideHeader
           isAdminMode
         />
       </div>

@@ -6,8 +6,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
-import { Button, Tooltip, Avatar } from 'antd'
-import { LinkOutlined, UserSwitchOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
+import { Avatar } from 'antd'
+import { RobotOutlined, UserOutlined } from '@ant-design/icons'
 import './ChatBox.css'
 
 export interface ExtendedMessageProps extends MessageProps {
@@ -22,31 +22,17 @@ export interface ExtendedMessageProps extends MessageProps {
 interface ChatBoxProps {
   messages: ExtendedMessageProps[]
   typing?: boolean
-  sessionTitle?: string
-  sessionStatus?: string
-  sessionId?: string
   onSend: (type: string, text: string) => void
-  onMarkNeedHuman?: () => void
-  onCopyLink?: () => void
-  sidebarCollapsed?: boolean
-  onToggleSidebar?: () => void
-  hideHeader?: boolean
   isAdminMode?: boolean
+  sessionStatus?: string
 }
 
 function ChatBox({ 
   messages, 
   typing, 
-  sessionTitle, 
-  sessionStatus = 'active',
-  sessionId,
-  onSend, 
-  onMarkNeedHuman,
-  onCopyLink,
-  sidebarCollapsed = false,
-  onToggleSidebar,
-  hideHeader = false,
-  isAdminMode = false
+  onSend,
+  isAdminMode = false,
+  sessionStatus = 'active'
 }: ChatBoxProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isScrolling, setIsScrolling] = useState(false)
@@ -139,8 +125,7 @@ function ChatBox({
 
   const isHuman = sessionStatus === 'human'
   const isClosed = sessionStatus === 'closed'
-  const showActions = sessionId && sessionTitle && !hideHeader
-  const showWelcome = messages.length === 0 && !sessionTitle && !hideHeader
+  const showWelcome = messages.length === 0
   
   const getPlaceholder = () => {
     if (isClosed) return '会话已关闭'
@@ -154,48 +139,6 @@ function ChatBox({
 
   return (
     <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isInputDisabled ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
-      {!hideHeader && (
-        <div className="chat-header">
-          <Tooltip title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}>
-            <Button
-              type="text"
-              className="sidebar-toggle-btn"
-              icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={onToggleSidebar}
-            />
-          </Tooltip>
-          <div className="chat-header-content">
-            <h2 className="chat-header-title">{sessionTitle || '新对话'}</h2>
-            <p className="chat-header-subtitle">由 OpenCode AI 生成</p>
-          </div>
-          {showActions && (
-            <div className="chat-header-actions">
-              <Tooltip title="复制会话链接">
-                <Button 
-                  type="text"
-                  icon={<LinkOutlined />}
-                  onClick={onCopyLink}
-                >
-                  复制链接
-                </Button>
-              </Tooltip>
-              {!isClosed && (
-                <Tooltip title={isHuman ? '可以点击复制链接发给支撑人员进一步定位' : '点击之后，AI将不再回复消息，可以点击复制链接发给支撑人员进一步定位'}>
-                  <Button 
-                    type="primary"
-                    danger
-                    icon={<UserSwitchOutlined />}
-                    onClick={onMarkNeedHuman}
-                    disabled={isHuman}
-                  >
-                    AI无法解决，需要人工
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-          )}
-        </div>
-      )}
       <div className="chat-content">
         {showWelcome && (
           <div className="welcome-message">

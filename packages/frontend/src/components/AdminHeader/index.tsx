@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom'
+import UserInfo from '../Sidebar/UserInfo'
 import './AdminHeader.css'
 
 function AdminHeader() {
@@ -19,6 +20,7 @@ function AdminHeader() {
       <div className="admin-header-content">
       </div>
       <div className="admin-header-right">
+        <UserInfo collapsed={false} isAdminPage />
       </div>
     </div>
   )

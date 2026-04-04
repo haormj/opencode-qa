@@ -1,7 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
 import { MessageOutlined, UserOutlined, BarChartOutlined } from '@ant-design/icons'
-import UserInfo from '../Sidebar/UserInfo'
 import './AdminSidebar.css'
 
 function AdminSidebar() {
@@ -49,8 +48,6 @@ function AdminSidebar() {
           style={{ border: 'none', background: 'transparent' }}
         />
       </div>
-
-      <UserInfo collapsed={false} isAdminPage />
     </div>
   )
 }

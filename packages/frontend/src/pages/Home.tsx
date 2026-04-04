@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
+import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
 import { sendMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
 import type { Session } from '../services/api'
@@ -219,8 +220,6 @@ function Home() {
     setSidebarCollapsed(prev => !prev)
   }, [])
 
-  const hasMessages = messages.length > 0
-
   return (
     <div className="home-layout">
       <Sidebar
@@ -232,32 +231,22 @@ function Home() {
         collapsed={sidebarCollapsed}
       />
       <div className="home-content">
-        {hasMessages ? (
-          <div className="chat-page-full">
-            <ChatBox
-              messages={messages}
-              typing={loading}
-              sessionTitle={currentSessionTitle}
-              sessionStatus={sessionStatus}
-              sessionId={sessionId || undefined}
-              onSend={handleSend}
-              onMarkNeedHuman={handleMarkNeedHuman}
-              onCopyLink={handleCopyLink}
-              sidebarCollapsed={sidebarCollapsed}
-              onToggleSidebar={toggleSidebar}
-            />
-          </div>
-        ) : (
-          <div className="chat-page-full">
-            <ChatBox
-              messages={messages}
-              typing={loading}
-              onSend={handleSend}
-              sidebarCollapsed={sidebarCollapsed}
-              onToggleSidebar={toggleSidebar}
-            />
-          </div>
-        )}
+        <UserHeader
+          sessionTitle={currentSessionTitle}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
+          sessionId={sessionId || undefined}
+          sessionStatus={sessionStatus}
+          onCopyLink={handleCopyLink}
+          onMarkNeedHuman={handleMarkNeedHuman}
+        />
+        <div className="home-content-body">
+          <ChatBox
+            messages={messages}
+            typing={loading}
+            onSend={handleSend}
+          />
+        </div>
       </div>
     </div>
   )
