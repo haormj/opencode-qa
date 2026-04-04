@@ -76,8 +76,14 @@ function Home() {
       
       setMessages(loadedMessages)
       setSessionStatus(session.status || 'active')
-    } catch {
-      message.error('加载会话失败')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '加载会话失败'
+      if (errorMessage.includes('Session not found')) {
+        message.error('会话不存在或已被删除')
+        setSearchParams({})
+      } else {
+        message.error('加载会话失败')
+      }
     }
   }
 

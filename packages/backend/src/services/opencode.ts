@@ -133,14 +133,14 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
   return { events: eventGenerator(), controller }
 }
 
-export async function getOrCreateOpenCodeSession(sessionId?: string): Promise<string> {
+export async function checkOrCreateOpenCodeSession(sessionId?: string): Promise<{ sessionId: string; needsRebuild: boolean }> {
   if (sessionId) {
     console.log('[OpenCode] Checking existing session:', sessionId)
     try {
       const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`)
       if (response.ok) {
         console.log('[OpenCode] Session exists:', sessionId)
-        return sessionId
+        return { sessionId, needsRebuild: false }
       }
     } catch (error) {
       console.log('[OpenCode] Session check failed, will create new one')
@@ -158,13 +158,38 @@ export async function getOrCreateOpenCodeSession(sessionId?: string): Promise<st
   }
   
   console.log('[OpenCode] New session created:', session.id)
-  return session.id
+  return { sessionId: session.id, needsRebuild: !!sessionId }
 }
 
-export async function askQuestion(question: string, opencodeSessionId?: string): Promise<{ sessionId: string; answer: string }> {
+export async function rebuildContext(
+  sessionId: string,
+  historyParts: Array<{ type: 'text'; text: string }>
+): Promise<void> {
+  console.log('[OpenCode] Rebuilding context with', historyParts.length, 'messages')
+  
+  await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {
+    method: 'POST',
+    body: JSON.stringify({
+      model: {
+        providerID: DEFAULT_PROVIDER,
+        modelID: DEFAULT_MODEL
+      },
+      agent: DEFAULT_AGENT,
+      parts: historyParts,
+      noReply: true
+    })
+  })
+  
+  console.log('[OpenCode] Context rebuilt successfully')
+}
+
+export async function askQuestion(
+  question: string, 
+  opencodeSessionId?: string
+): Promise<{ sessionId: string; answer: string }> {
   console.log('[OpenCode] askQuestion called:', { question: question.substring(0, 50), opencodeSessionId })
   
-  const sessionId = await getOrCreateOpenCodeSession(opencodeSessionId)
+  const { sessionId } = await checkOrCreateOpenCodeSession(opencodeSessionId)
   
   console.log('[OpenCode] Sending message to session:', sessionId)
   const result = await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {

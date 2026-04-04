@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
-import { askQuestion } from '../services/opencode.js'
+import { askQuestion, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
@@ -71,6 +71,26 @@ router.post('/stream', authMiddleware, async (req, res) => {
 
     const sessionId = session.id
 
+    const { sessionId: opencodeSessionId, needsRebuild } = await checkOrCreateOpenCodeSession(
+      session.opencodeSessionId || undefined
+    )
+
+    if (needsRebuild) {
+      console.log('[Message] Rebuilding context, fetching history messages')
+      
+      const previousMessages = await prisma.message.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: 'asc' }
+      })
+      
+      const historyParts = previousMessages.map(msg => ({
+        type: 'text' as const,
+        text: `${msg.senderType === 'user' ? '用户' : 'AI'}：${msg.content}`
+      }))
+      
+      await rebuildContext(opencodeSessionId, historyParts)
+    }
+
     const userMessage = await prisma.message.create({
       data: {
         sessionId,
@@ -80,12 +100,15 @@ router.post('/stream', authMiddleware, async (req, res) => {
       }
     })
 
-    const { sessionId: opencodeSessionId, answer } = await askQuestion(content, session.opencodeSessionId || undefined)
+    const { sessionId: returnedSessionId, answer } = await askQuestion(
+      content, 
+      opencodeSessionId
+    )
 
     if (!session.opencodeSessionId) {
       await prisma.session.update({
         where: { id: sessionId },
-        data: { opencodeSessionId }
+        data: { opencodeSessionId: returnedSessionId }
       })
     }
 
