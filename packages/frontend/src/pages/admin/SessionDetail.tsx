@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tag, Button, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { getAdminSessionDetail, adminReplyToSession, generateAvatarColor, type SessionDetail, type QuestionItem, type User } from '../../services/api'
+import { getAdminSessionDetail, adminReplyToSession, type SessionDetail, type MessageItem, type User } from '../../services/api'
 import type { ExtendedMessageProps } from '../../components/ChatBox'
 import ChatBox from '../../components/ChatBox'
 import './Admin.css'
@@ -42,44 +42,38 @@ function AdminSessionDetail() {
     fetchSession()
   }, [id])
 
-  const convertQuestionsToMessages = (questions: QuestionItem[], user: User): ExtendedMessageProps[] => {
-    const messages: ExtendedMessageProps[] = []
-    
-    questions.forEach(q => {
-      messages.push({
-        _id: `q-${q.id}`,
-        type: 'text',
-        content: { text: q.question },
-        position: 'right',
-        createdAt: q.createdAt,
-        sender: {
-          name: user.displayName,
-          color: generateAvatarColor(user.displayName),
-          type: 'user'
-        }
-      })
+  const convertMessagesToChatBox = (messages: MessageItem[]): ExtendedMessageProps[] => {
+    return messages.map(msg => {
+      let senderName = '用户'
+      let senderColor = '#1890ff'
+      let senderType: 'user' | 'admin' | 'ai' = 'user'
       
-      if (q.answer) {
-        messages.push({
-          _id: `a-${q.id}`,
-          type: 'text',
-          content: { text: q.answer },
-          position: 'left',
-          createdAt: q.createdAt,
-          sender: q.isAdminReply ? {
-            name: '管理员',
-            color: '#1890ff',
-            type: 'admin'
-          } : {
-            name: 'AI 助手',
-            color: '#52c41a',
-            type: 'ai'
-          }
-        })
+      if (msg.senderType === 'bot' && msg.bot) {
+        senderName = msg.bot.displayName
+        senderColor = msg.bot.avatar || '#52c41a'
+        senderType = 'ai'
+      } else if (msg.senderType === 'admin') {
+        senderName = '管理员'
+        senderColor = '#1890ff'
+        senderType = 'admin'
+      } else if (msg.senderType === 'user' && msg.user) {
+        senderName = msg.user.displayName
+        senderColor = '#1890ff'
+        senderType = 'user'
+      }
+      
+      return {
+        _id: msg.id,
+        type: 'text',
+        content: { text: msg.content },
+        position: msg.senderType === 'user' ? 'right' : 'left',
+        sender: {
+          name: senderName,
+          color: senderColor,
+          type: senderType
+        }
       }
     })
-    
-    return messages
   }
 
   const handleReply = (type: string, text: string) => {
@@ -123,7 +117,7 @@ function AdminSessionDetail() {
       </div>
       <div className="chat-page-full">
         <ChatBox
-          messages={convertQuestionsToMessages(session.questions, session.user)}
+          messages={convertMessagesToChatBox(session.messages)}
           sessionTitle=""
           sessionStatus={session.status}
           sessionId={session.id}

@@ -1,9 +1,20 @@
 const OPENCODE_HOST = process.env.OPENCODE_HOST || '127.0.0.1'
 const OPENCODE_PORT = process.env.OPENCODE_PORT || '4096'
 const OPENCODE_URL = `http://${OPENCODE_HOST}:${OPENCODE_PORT}`
+const OPENCODE_SERVER_USERNAME = process.env.OPENCODE_SERVER_USERNAME || 'opencode'
+const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
 const DEFAULT_PROVIDER = process.env.OPENCODE_PROVIDER || 'baiduqianfancodingplan'
 const DEFAULT_MODEL = process.env.OPENCODE_MODEL || 'glm-5'
 const DEFAULT_AGENT = process.env.OPENCODE_AGENT || 'explore'
+
+console.log('[OpenCode Config]', {
+  OPENCODE_URL,
+  OPENCODE_SERVER_USERNAME,
+  OPENCODE_SERVER_PASSWORD: OPENCODE_SERVER_PASSWORD ? '***' : '(not set)',
+  DEFAULT_PROVIDER,
+  DEFAULT_MODEL,
+  DEFAULT_AGENT
+})
 
 interface Session {
   id: string
@@ -34,12 +45,19 @@ interface StreamEvent {
 async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> {
   console.log(`[OpenCode] Request: ${path}`, options.body)
   
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers as Record<string, string>,
+  }
+  
+  if (OPENCODE_SERVER_PASSWORD) {
+    const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
+    headers['Authorization'] = `Basic ${auth}`
+  }
+  
   const response = await fetch(`${OPENCODE_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   })
   
   if (!response.ok) {
@@ -48,16 +66,29 @@ async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> 
     throw new Error(`OpenCode API error: ${response.status} - ${errorBody}`)
   }
   
-  const data = await response.json()
+  const text = await response.text()
+  if (!text) {
+    console.log(`[OpenCode] Empty response`)
+    return {} as T
+  }
+  
+  const data = JSON.parse(text)
   console.log(`[OpenCode] Response:`, JSON.stringify(data, null, 2))
   return data as T
 }
 
 async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamEvent>, controller: AbortController }> {
   const controller = new AbortController()
+  const headers: Record<string, string> = { Accept: 'text/event-stream' }
+  
+  if (OPENCODE_SERVER_PASSWORD) {
+    const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
+    headers['Authorization'] = `Basic ${auth}`
+  }
+  
   const response = await fetch(`${OPENCODE_URL}/event`, {
     signal: controller.signal,
-    headers: { Accept: 'text/event-stream' }
+    headers
   })
   
   if (!response.ok) {
@@ -102,27 +133,38 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
   return { events: eventGenerator(), controller }
 }
 
-export async function askQuestion(question: string, existingSessionId?: string): Promise<{ sessionId: string; answer: string }> {
-  console.log('[OpenCode] askQuestion called:', { question: question.substring(0, 50), existingSessionId })
-  
-  let sessionId = existingSessionId
-  
-  if (!sessionId) {
-    console.log('[OpenCode] Creating new session...')
-    const session = await fetchAPI<Session>('/session', {
-      method: 'POST',
-      body: JSON.stringify({ title: question.substring(0, 100) }),
-    })
-    
-    if (!session.id) {
-      throw new Error('Failed to create session')
+export async function getOrCreateOpenCodeSession(sessionId?: string): Promise<string> {
+  if (sessionId) {
+    console.log('[OpenCode] Checking existing session:', sessionId)
+    try {
+      const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`)
+      if (response.ok) {
+        console.log('[OpenCode] Session exists:', sessionId)
+        return sessionId
+      }
+    } catch (error) {
+      console.log('[OpenCode] Session check failed, will create new one')
     }
-    
-    sessionId = session.id
-    console.log('[OpenCode] New session created:', sessionId)
-  } else {
-    console.log('[OpenCode] Using existing session:', sessionId)
   }
+  
+  console.log('[OpenCode] Creating new session...')
+  const session = await fetchAPI<Session>('/session', {
+    method: 'POST',
+    body: JSON.stringify({ title: 'OpenCode QA Session' }),
+  })
+  
+  if (!session.id) {
+    throw new Error('Failed to create OpenCode session')
+  }
+  
+  console.log('[OpenCode] New session created:', session.id)
+  return session.id
+}
+
+export async function askQuestion(question: string, opencodeSessionId?: string): Promise<{ sessionId: string; answer: string }> {
+  console.log('[OpenCode] askQuestion called:', { question: question.substring(0, 50), opencodeSessionId })
+  
+  const sessionId = await getOrCreateOpenCodeSession(opencodeSessionId)
   
   console.log('[OpenCode] Sending message to session:', sessionId)
   const result = await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {

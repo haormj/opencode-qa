@@ -6,35 +6,29 @@ const router = Router()
 
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { questionId, reason, contact } = req.body
-    const userId = req.user!.id
+    const { messageId, reason, contact } = req.body
 
-    if (!questionId || !reason) {
-      return res.status(400).json({ error: 'questionId and reason are required' })
+    if (!messageId || !reason) {
+      return res.status(400).json({ error: 'messageId and reason are required' })
     }
 
-    const question = await prisma.question.findFirst({
+    const message = await prisma.message.findFirst({
       where: {
-        id: questionId,
-        session: { userId }
+        id: messageId,
+        session: { userId: req.user!.id }
       }
     })
 
-    if (!question) {
-      return res.status(404).json({ error: 'Question not found' })
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' })
     }
 
     const feedback = await prisma.feedback.create({
       data: {
-        questionId,
+        messageId,
         reason,
         contact
       }
-    })
-
-    await prisma.question.update({
-      where: { id: questionId },
-      data: { status: 'unsolved' }
     })
 
     res.json(feedback)

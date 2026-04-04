@@ -16,7 +16,7 @@ model User {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
   sessions    Session[]
-  questions   Question[]
+  messages    Message[]
   userRoles   UserRole[]
 
   @@map("users")
@@ -44,43 +44,65 @@ model UserRole {
   @@map("user_roles")
 }
 
+model Bot {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String   @map("display_name")
+  avatar      String?
+  apiUrl      String   @map("api_url")
+  apiKey      String?  @map("api_key")
+  provider    String
+  model       String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  messages    Message[]
+
+  @@map("bots")
+}
+
 model Session {
-  id        String     @id @default(uuid())
-  userId    String     @map("user_id")
-  title     String
-  status    String     @default("active")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  questions Question[]
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  title           String
+  status          String    @default("active")
+  opencodeSessionId String? @map("opencode_session_id")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  messages        Message[]
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-model Question {
-  id           Int      @id @default(autoincrement())
-  userId       String   @map("user_id")
-  sessionId    String   @map("session_id")
-  question     String
-  answer       String?
-  status       String   @default("solved")
-  isAdminReply Boolean  @default(false) @map("is_admin_reply")
-  createdAt    DateTime @default(now()) @map("created_at")
-  feedback     Feedback?
-  session      Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Message {
+  id         String    @id @default(uuid())
+  sessionId  String    @map("session_id")
+  senderType String    @map("sender_type")
+  content    String
+  metadata   String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  
+  userId     String?   @map("user_id")
+  botId      String?   @map("bot_id")
+  
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bot        Bot?      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  feedback   Feedback?
 
-  @@map("questions")
+  @@map("messages")
 }
 
 model Feedback {
-  id         Int      @id @default(autoincrement())
-  questionId Int      @unique @map("question_id")
-  reason     String
-  contact    String?
-  resolved   Boolean  @default(false)
-  createdAt  DateTime @default(now()) @map("created_at")
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  messageId String   @unique @map("message_id")
+  reason    String
+  contact   String?
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@map("feedbacks")
 }

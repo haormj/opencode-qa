@@ -13,7 +13,7 @@ router.get('/', authMiddleware, async (req, res) => {
       orderBy: { updatedAt: 'desc' },
       include: {
         _count: {
-          select: { questions: true }
+          select: { messages: true }
         }
       }
     })
@@ -24,7 +24,7 @@ router.get('/', authMiddleware, async (req, res) => {
       status: s.status,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
-      questionCount: s._count.questions
+      messageCount: s._count.messages
     })))
   } catch (error) {
     console.error('Get sessions error:', error)
@@ -40,9 +40,17 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const session = await prisma.session.findFirst({
       where: { id, userId },
       include: {
-        questions: {
+        messages: {
           orderBy: { createdAt: 'asc' },
-          include: { feedback: true }
+          include: {
+            user: {
+              select: { id: true, displayName: true }
+            },
+            bot: {
+              select: { id: true, displayName: true, avatar: true }
+            },
+            feedback: true
+          }
         }
       }
     })
@@ -57,7 +65,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
       status: session.status,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
-      questions: session.questions
+      messages: session.messages.map(m => ({
+        id: m.id,
+        senderType: m.senderType,
+        content: m.content,
+        createdAt: m.createdAt,
+        user: m.user,
+        bot: m.bot,
+        feedback: m.feedback
+      }))
     })
   } catch (error) {
     console.error('Get session error:', error)

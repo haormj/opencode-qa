@@ -1,23 +1,21 @@
-export interface QuestionResponse {
-  id: number
+export interface MessageItem {
+  id: string
   sessionId: string
-  question: string
-  answer: string
-  status: string
+  senderType: 'user' | 'admin' | 'bot'
+  content: string
   createdAt: string
-}
-
-export interface QuestionItem {
-  id: number
-  userId: string
-  sessionId: string
-  question: string
-  answer: string | null
-  status: string
-  isAdminReply: boolean
-  createdAt: string
+  user?: {
+    id: string
+    displayName: string
+    username?: string
+  }
+  bot?: {
+    id: string
+    displayName: string
+    avatar?: string
+  }
   feedback?: {
-    id: number
+    id: string
     reason: string
     contact: string | null
     resolved: boolean
@@ -30,7 +28,7 @@ export interface Session {
   status: string
   createdAt: string
   updatedAt: string
-  questionCount: number
+  messageCount: number
 }
 
 export interface SessionDetail {
@@ -39,22 +37,22 @@ export interface SessionDetail {
   status: string
   createdAt: string
   updatedAt: string
-  questions: QuestionItem[]
+  messages: MessageItem[]
 }
 
 export interface HistoryItem {
-  id: number
-  userId: string
+  id: string
   sessionId: string
-  question: string
-  answer: string
-  status: string
+  senderType: string
+  content: string
   createdAt: string
-  feedback?: {
-    id: number
-    reason: string
-    contact: string | null
-    resolved: boolean
+  user?: {
+    id: string
+    displayName: string
+  }
+  bot?: {
+    id: string
+    displayName: string
   }
 }
 
@@ -78,13 +76,27 @@ export interface LoginResponse {
   user: User
 }
 
+export interface Bot {
+  id: string
+  name: string
+  displayName: string
+  avatar?: string
+  apiUrl: string
+  provider: string
+  model: string
+  description?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AdminSession {
   id: string
   title: string
   status: string
   createdAt: string
   updatedAt: string
-  questionCount: number
+  messageCount: number
   user: {
     id: string
     username: string
@@ -215,11 +227,11 @@ export function logout(): void {
   window.location.href = '/login'
 }
 
-export function askQuestionStream(
-  question: string,
+export function sendMessageStream(
+  content: string,
   sessionId: string | null,
   onText: (text: string) => void,
-  onDone: (result: QuestionResponse) => void,
+  onDone: (result: { id: string; sessionId: string; content: string; senderType: string; createdAt: string }) => void,
   onError: (error: Error) => void
 ): () => void {
   const controller = new AbortController()
@@ -233,10 +245,10 @@ export function askQuestionStream(
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  fetch(`${API_BASE}/chat/stream`, {
+  fetch(`${API_BASE}/messages/stream`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ question, sessionId: sessionId || undefined }),
+    body: JSON.stringify({ content, sessionId: sessionId || undefined }),
     signal: controller.signal,
   }).then(async (response) => {
     if (response.status === 401) {
@@ -275,7 +287,7 @@ export function askQuestionStream(
           if (eventType === 'text' && data.text) {
             onText(data.text)
           } else if (eventType === 'done') {
-            onDone(data as QuestionResponse)
+            onDone(data)
           } else if (eventType === 'error') {
             onError(new Error(data.error || 'Unknown error'))
           }
@@ -296,7 +308,7 @@ export async function getHistory(page: number = 1, pageSize: number = 20): Promi
 }
 
 export async function getSession(sessionId: string): Promise<SessionDetail> {
-  return request<SessionDetail>(`${API_BASE}/chat/${sessionId}`)
+  return request<SessionDetail>(`${API_BASE}/sessions/${sessionId}`)
 }
 
 export async function getSessions(): Promise<Session[]> {
@@ -345,10 +357,10 @@ export async function getAdminSessionDetail(sessionId: string): Promise<SessionD
   return request(`${API_BASE}/admin/sessions/${sessionId}`)
 }
 
-export async function adminReplyToSession(sessionId: string, answer: string): Promise<QuestionItem> {
+export async function adminReplyToSession(sessionId: string, content: string): Promise<MessageItem> {
   return request(`${API_BASE}/admin/sessions/${sessionId}/reply`, {
     method: 'POST',
-    body: JSON.stringify({ answer }),
+    body: JSON.stringify({ content }),
   })
 }
 
@@ -365,6 +377,34 @@ export async function addUserRole(userId: string, role: string): Promise<void> {
 
 export async function removeUserRole(userId: string, role: string): Promise<void> {
   await request(`${API_BASE}/admin/users/${userId}/roles/${role}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getBots(): Promise<Bot[]> {
+  return request(`${API_BASE}/bots`)
+}
+
+export async function getBot(id: string): Promise<Bot> {
+  return request(`${API_BASE}/bots/${id}`)
+}
+
+export async function createBot(data: Partial<Bot>): Promise<Bot> {
+  return request(`${API_BASE}/bots`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateBot(id: string, data: Partial<Bot>): Promise<Bot> {
+  return request(`${API_BASE}/bots/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteBot(id: string): Promise<void> {
+  await request(`${API_BASE}/bots/${id}`, {
     method: 'DELETE',
   })
 }

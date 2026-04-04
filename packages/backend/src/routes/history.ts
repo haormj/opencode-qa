@@ -12,22 +12,41 @@ router.get('/', authMiddleware, async (req, res) => {
     const pageSize = parseInt(req.query.pageSize as string) || 20
     const skip = (page - 1) * pageSize
 
-    const [total, items] = await Promise.all([
-      prisma.question.count({ where: { userId } }),
-      prisma.question.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: { feedback: true }
-      })
-    ])
+    const sessions = await prisma.session.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      skip,
+      take: pageSize,
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            user: {
+              select: { id: true, displayName: true }
+            },
+            bot: {
+              select: { id: true, displayName: true }
+            }
+          }
+        }
+      }
+    })
+
+    const messages = sessions.flatMap(s => s.messages)
 
     res.json({
-      total,
+      total: messages.length,
       page,
       pageSize,
-      items
+      items: messages.map(m => ({
+        id: m.id,
+        sessionId: m.sessionId,
+        senderType: m.senderType,
+        content: m.content,
+        createdAt: m.createdAt,
+        user: m.user,
+        bot: m.bot
+      }))
     })
   } catch (error) {
     console.error('History error:', error)

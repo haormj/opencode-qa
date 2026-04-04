@@ -55,11 +55,29 @@ async function main() {
     }
   })
 
+  const defaultBot = await prisma.bot.upsert({
+    where: { name: 'default' },
+    update: {},
+    create: {
+      name: 'default',
+      displayName: 'AI 助手',
+      avatar: '#52c41a',
+      apiUrl: process.env.OPENCODE_HOST && process.env.OPENCODE_PORT 
+        ? `http://${process.env.OPENCODE_HOST}:${process.env.OPENCODE_PORT}`
+        : 'http://127.0.0.1:4096',
+      provider: process.env.OPENCODE_PROVIDER || 'baiduqianfancodingplan',
+      model: process.env.OPENCODE_MODEL || 'glm-5',
+      description: '默认AI助手',
+      isActive: true
+    }
+  })
+
   console.log('Seed data created successfully')
   console.log(`Admin user: ${adminUsername}`)
   console.log(`Admin password: ${adminPassword}`)
-  console.log(`Admin role ID: ${adminRole.id}`)
-  console.log(`User role ID: ${userRole.id}`)
+  console.log(`Default bot ID: ${defaultBot.id}`)
+  console.log(`Default bot name: ${defaultBot.displayName}`)
+  console.log(`Default bot API: ${defaultBot.apiUrl}`)
 }
 
 main()

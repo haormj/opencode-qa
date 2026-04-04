@@ -4,12 +4,13 @@ config()
 import express from 'express'
 import cors from 'cors'
 import { PrismaClient } from '@prisma/client'
-import chatRoutes from './routes/chat.js'
+import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
 import feedbackRoutes from './routes/feedback.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
+import botRoutes from './routes/bot.js'
 
 export const prisma = new PrismaClient()
 
@@ -24,11 +25,12 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
-app.use('/api/chat', chatRoutes)
+app.use('/api/messages', messageRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/feedback', feedbackRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/bots', botRoutes)
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)

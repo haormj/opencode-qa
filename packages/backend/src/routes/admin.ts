@@ -40,7 +40,7 @@ router.get('/sessions', async (req, res) => {
         orderBy: { updatedAt: 'desc' },
         include: {
           _count: {
-            select: { questions: true }
+            select: { messages: true }
           }
         }
       })
@@ -63,7 +63,7 @@ router.get('/sessions', async (req, res) => {
         status: s.status,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-        questionCount: s._count.questions,
+        messageCount: s._count.messages,
         user: userMap.get(s.userId) || { id: s.userId, username: 'Unknown', displayName: 'Unknown' }
       }))
     })
@@ -80,9 +80,17 @@ router.get('/sessions/:id', async (req, res) => {
     const session = await prisma.session.findUnique({
       where: { id },
       include: {
-        questions: {
+        messages: {
           orderBy: { createdAt: 'asc' },
-          include: { feedback: true }
+          include: {
+            user: {
+              select: { id: true, displayName: true, username: true }
+            },
+            bot: {
+              select: { id: true, displayName: true, avatar: true }
+            },
+            feedback: true
+          }
         }
       }
     })
@@ -103,14 +111,14 @@ router.get('/sessions/:id', async (req, res) => {
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       user: user || { id: session.userId, username: 'Unknown', displayName: 'Unknown' },
-      questions: session.questions.map(q => ({
-        id: q.id,
-        question: q.question,
-        answer: q.answer,
-        status: q.status,
-        isAdminReply: q.isAdminReply,
-        createdAt: q.createdAt,
-        feedback: q.feedback
+      messages: session.messages.map(m => ({
+        id: m.id,
+        senderType: m.senderType,
+        content: m.content,
+        createdAt: m.createdAt,
+        user: m.user,
+        bot: m.bot,
+        feedback: m.feedback
       }))
     })
   } catch (error) {
@@ -122,11 +130,11 @@ router.get('/sessions/:id', async (req, res) => {
 router.post('/sessions/:id/reply', async (req, res) => {
   try {
     const { id } = req.params
-    const { answer } = req.body
+    const { content } = req.body
     const adminUser = req.user
 
-    if (!answer || typeof answer !== 'string') {
-      return res.status(400).json({ error: 'Answer is required' })
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: 'Content is required' })
     }
 
     const session = await prisma.session.findUnique({
@@ -137,14 +145,12 @@ router.post('/sessions/:id/reply', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    const question = await prisma.question.create({
+    const message = await prisma.message.create({
       data: {
-        userId: adminUser!.id,
         sessionId: id,
-        question: '管理员回复',
-        answer,
-        status: 'solved',
-        isAdminReply: true
+        senderType: 'admin',
+        content,
+        userId: adminUser!.id
       }
     })
 
@@ -157,10 +163,10 @@ router.post('/sessions/:id/reply', async (req, res) => {
     })
 
     res.json({
-      id: question.id,
-      answer: question.answer,
-      isAdminReply: question.isAdminReply,
-      createdAt: question.createdAt
+      id: message.id,
+      senderType: message.senderType,
+      content: message.content,
+      createdAt: message.createdAt
     })
   } catch (error) {
     console.error('Admin reply error:', error)

@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
-import { askQuestionStream, getSession, updateSessionStatus, getUsername, generateAvatarColor } from '../services/api'
-import type { QuestionItem, Session } from '../services/api'
+import { sendMessageStream, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
+import type { Session } from '../services/api'
 import './Home.css'
 
 function Home() {
@@ -41,37 +41,37 @@ function Home() {
     try {
       const session = await getSession(id)
       const loadedMessages: ExtendedMessageProps[] = []
-      const username = getUsername()
       
-      session.questions.forEach((q: QuestionItem) => {
+      session.messages.forEach((msg: MessageItem) => {
+        let senderName = '用户'
+        let senderColor = '#1890ff'
+        let senderType: 'user' | 'admin' | 'ai' = 'user'
+        
+        if (msg.senderType === 'bot' && msg.bot) {
+          senderName = msg.bot.displayName
+          senderColor = msg.bot.avatar || '#52c41a'
+          senderType = 'ai'
+        } else if (msg.senderType === 'admin') {
+          senderName = '管理员'
+          senderColor = '#1890ff'
+          senderType = 'admin'
+        } else if (msg.senderType === 'user' && msg.user) {
+          senderName = msg.user.displayName
+          senderColor = generateAvatarColor(msg.user.displayName)
+          senderType = 'user'
+        }
+        
         loadedMessages.push({
-          _id: `q-${q.id}`,
+          _id: msg.id,
           type: 'text',
-          content: { text: q.question },
-          position: 'right',
+          content: { text: msg.content },
+          position: msg.senderType === 'user' ? 'right' : 'left',
           sender: {
-            name: username,
-            color: generateAvatarColor(username),
-            type: 'user'
+            name: senderName,
+            color: senderColor,
+            type: senderType
           }
         })
-        if (q.answer) {
-          loadedMessages.push({
-            _id: `a-${q.id}`,
-            type: 'text',
-            content: { text: q.answer },
-            position: 'left',
-            sender: q.isAdminReply ? {
-              name: '管理员',
-              color: '#1890ff',
-              type: 'admin'
-            } : {
-              name: 'AI 助手',
-              color: '#52c41a',
-              type: 'ai'
-            }
-          })
-        }
       })
       
       setMessages(loadedMessages)
@@ -117,7 +117,7 @@ function Home() {
     setLoading(true)
 
     let isFirstChunk = true
-    askQuestionStream(
+    sendMessageStream(
       text,
       sessionId,
       (chunk: string) => {
@@ -141,7 +141,7 @@ function Home() {
           msg._id === assistantMessageId
             ? {
                 ...msg,
-                content: { text: result.answer }
+                content: { text: result.content }
               }
             : msg
         ))
@@ -149,7 +149,13 @@ function Home() {
       },
       (error) => {
         console.error('Stream error:', error)
-        message.error('提问失败，请稍后重试')
+        const errorMessage = error instanceof Error ? error.message : '提问失败，请稍后重试'
+        if (errorMessage.includes('Session has been closed') || errorMessage.includes('session has been closed')) {
+          message.error('会话已关闭（超过24小时未活动），请新建会话')
+          setSessionStatus('closed')
+        } else {
+          message.error(errorMessage)
+        }
         setMessages(prev => prev.filter(msg => msg._id !== assistantMessageId))
         setLoading(false)
       }

@@ -141,9 +141,19 @@ function ChatBox({
   }
 
   const isNeedHuman = sessionStatus === 'need_human'
+  const isClosed = sessionStatus === 'closed'
   const showActions = sessionId && sessionTitle && !hideHeader
   const showWelcome = messages.length === 0 && !sessionTitle && !hideHeader
-  const isInputDisabled = isAdminMode ? (sessionStatus !== 'need_human') : isNeedHuman
+  
+  const getPlaceholder = () => {
+    if (isClosed) return '会话已关闭（超过24小时未活动）'
+    if (isAdminMode) {
+      return isNeedHuman ? '请输入回复内容...' : '该会话未标记为需要人工处理，无法回复'
+    }
+    return isNeedHuman ? '会话已标记，等待人工处理...' : '请输入您的问题...'
+  }
+  
+  const isInputDisabled = isClosed || (isAdminMode ? !isNeedHuman : isNeedHuman)
 
   return (
     <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isInputDisabled ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
@@ -209,7 +219,7 @@ function ChatBox({
           messages={messages}
           renderMessageContent={renderMessageContent}
           onSend={handleSend}
-          placeholder={isInputDisabled ? (isAdminMode ? '该会话未标记为需要人工处理，无法回复' : '会话已标记，等待人工处理...') : '请输入您的问题...'}
+          placeholder={getPlaceholder()}
           isTyping={typing}
         />
       </div>
