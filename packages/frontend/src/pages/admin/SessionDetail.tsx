@@ -32,7 +32,13 @@ function AdminSessionDetail() {
       const result = await getAdminSessionDetail(id)
       setSession(result)
     } catch (error) {
-      message.error('加载会话详情失败')
+      const errorMessage = error instanceof Error ? error.message : '加载会话详情失败'
+      if (errorMessage.includes('Session not found')) {
+        message.error('会话不存在')
+        navigate('/admin')
+      } else {
+        message.error('加载会话详情失败')
+      }
     } finally {
       setLoading(false)
     }
