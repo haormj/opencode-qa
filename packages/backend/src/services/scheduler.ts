@@ -8,6 +8,10 @@ const HOURS_24 = 24 * 60 * 60 * 1000
 async function closeInactiveSessions(): Promise<number> {
   logger.info('开始执行关闭不活跃会话任务...')
 
+  const defaultBot = await prisma.bot.findFirst({
+    where: { isActive: true }
+  })
+
   const now = new Date()
   const threshold = new Date(now.getTime() - HOURS_24)
 
@@ -36,8 +40,8 @@ async function closeInactiveSessions(): Promise<number> {
         data: { status: 'closed' }
       })
 
-      if (session.opencodeSessionId) {
-        const deleted = await deleteOpenCodeSession(session.opencodeSessionId)
+      if (session.opencodeSessionId && defaultBot) {
+        const deleted = await deleteOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
         if (deleted) {
           logger.info(`会话 ${session.id} 已关闭，OpenCode Session ${session.opencodeSessionId} 已删除`)
         } else {

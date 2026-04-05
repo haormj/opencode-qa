@@ -145,6 +145,18 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
 
+    const bot = await prisma.bot.findUnique({
+      where: { id }
+    })
+
+    if (!bot) {
+      return res.status(404).json({ error: 'Bot not found' })
+    }
+
+    if (bot.name === 'default') {
+      return res.status(400).json({ error: 'Cannot delete default bot' })
+    }
+
     await prisma.bot.delete({
       where: { id }
     })

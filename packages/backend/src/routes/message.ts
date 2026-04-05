@@ -90,7 +90,15 @@ router.post('/stream', authMiddleware, async (req, res) => {
 
     const sessionId = session.id
 
+    const botConfig = {
+      apiUrl: defaultBot.apiUrl,
+      provider: defaultBot.provider,
+      model: defaultBot.model,
+      apiKey: defaultBot.apiKey || undefined
+    }
+
     const { sessionId: opencodeSessionId, needsRebuild } = await checkOrCreateOpenCodeSession(
+      botConfig.apiUrl,
       session.opencodeSessionId || undefined
     )
 
@@ -107,7 +115,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
         text: `${msg.senderType === 'user' ? '用户' : 'AI'}：${msg.content}`
       }))
       
-      await rebuildContext(opencodeSessionId, historyParts)
+      await rebuildContext(opencodeSessionId, historyParts, botConfig)
     }
 
     const userMessage = await prisma.message.create({
@@ -121,6 +129,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
 
     const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessage(
       content, 
+      botConfig,
       opencodeSessionId
     )
 

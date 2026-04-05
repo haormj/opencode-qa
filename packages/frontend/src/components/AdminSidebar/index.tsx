@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined, UserOutlined, BarChartOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined } from '@ant-design/icons'
 import './AdminSidebar.css'
 
 function AdminSidebar() {
@@ -19,6 +19,11 @@ function AdminSidebar() {
       label: '用户管理'
     },
     {
+      key: '/admin/bots',
+      icon: <RobotOutlined />,
+      label: '机器人管理'
+    },
+    {
       key: '/admin/statistics',
       icon: <BarChartOutlined />,
       label: '数据统计'
@@ -29,6 +34,7 @@ function AdminSidebar() {
     const pathname = location.pathname
     if (pathname.startsWith('/admin/sessions')) return '/admin/sessions'
     if (pathname.startsWith('/admin/users')) return '/admin/users'
+    if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/statistics')) return '/admin/statistics'
     return pathname
   }

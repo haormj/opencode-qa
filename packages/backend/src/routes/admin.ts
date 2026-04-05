@@ -200,7 +200,12 @@ router.patch('/sessions/:id/close', async (req, res) => {
     })
 
     if (session.opencodeSessionId) {
-      await deleteOpenCodeSession(session.opencodeSessionId)
+      const defaultBot = await prisma.bot.findFirst({
+        where: { isActive: true }
+      })
+      if (defaultBot) {
+        await deleteOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
+      }
     }
 
     res.json({

@@ -7,6 +7,7 @@ import AdminLayout from './pages/admin/Layout'
 import AdminSessions from './pages/admin/Sessions'
 import AdminSessionDetail from './pages/admin/SessionDetail'
 import AdminUsers from './pages/admin/Users'
+import AdminBots from './pages/admin/Bots'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -60,6 +61,7 @@ function App() {
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="sessions/:id" element={<AdminSessionDetail />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="bots" element={<AdminBots />} />
           <Route path="statistics" element={<StatisticsLayout />}>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<StatisticsOverview />} />

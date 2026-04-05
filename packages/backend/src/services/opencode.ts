@@ -1,20 +1,19 @@
-const OPENCODE_HOST = process.env.OPENCODE_HOST || '127.0.0.1'
-const OPENCODE_PORT = process.env.OPENCODE_PORT || '4096'
-const OPENCODE_URL = `http://${OPENCODE_HOST}:${OPENCODE_PORT}`
 const OPENCODE_SERVER_USERNAME = process.env.OPENCODE_SERVER_USERNAME || 'opencode'
 const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
-const DEFAULT_PROVIDER = process.env.OPENCODE_PROVIDER || 'baiduqianfancodingplan'
-const DEFAULT_MODEL = process.env.OPENCODE_MODEL || 'glm-5'
 const DEFAULT_AGENT = process.env.OPENCODE_AGENT || 'explore'
 
 console.log('[OpenCode Config]', {
-  OPENCODE_URL,
   OPENCODE_SERVER_USERNAME,
   OPENCODE_SERVER_PASSWORD: OPENCODE_SERVER_PASSWORD ? '***' : '(not set)',
-  DEFAULT_PROVIDER,
-  DEFAULT_MODEL,
   DEFAULT_AGENT
 })
+
+interface BotConfig {
+  apiUrl: string
+  provider: string
+  model: string
+  apiKey?: string
+}
 
 interface Session {
   id: string
@@ -42,7 +41,7 @@ interface StreamEvent {
   message?: MessageResponse
 }
 
-async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function fetchAPI<T>(apiUrl: string, path: string, options: RequestInit = {}): Promise<T> {
   console.log(`[OpenCode] Request: ${path}`, options.body)
   
   const headers: Record<string, string> = {
@@ -55,7 +54,7 @@ async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> 
     headers['Authorization'] = `Basic ${auth}`
   }
   
-  const response = await fetch(`${OPENCODE_URL}${path}`, {
+  const response = await fetch(`${apiUrl}${path}`, {
     ...options,
     headers,
   })
@@ -77,7 +76,7 @@ async function fetchAPI<T>(path: string, options: RequestInit = {}): Promise<T> 
   return data as T
 }
 
-async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamEvent>, controller: AbortController }> {
+async function createEventConnection(apiUrl: string): Promise<{ events: AsyncGenerator<StreamEvent>, controller: AbortController }> {
   const controller = new AbortController()
   const headers: Record<string, string> = { Accept: 'text/event-stream' }
   
@@ -86,7 +85,7 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
     headers['Authorization'] = `Basic ${auth}`
   }
   
-  const response = await fetch(`${OPENCODE_URL}/event`, {
+  const response = await fetch(`${apiUrl}/event`, {
     signal: controller.signal,
     headers
   })
@@ -133,11 +132,11 @@ async function createEventConnection(): Promise<{ events: AsyncGenerator<StreamE
   return { events: eventGenerator(), controller }
 }
 
-export async function checkOrCreateOpenCodeSession(sessionId?: string): Promise<{ sessionId: string; needsRebuild: boolean }> {
+export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: string): Promise<{ sessionId: string; needsRebuild: boolean }> {
   if (sessionId) {
     console.log('[OpenCode] Checking existing session:', sessionId)
     try {
-      const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`)
+      const response = await fetch(`${apiUrl}/session/${sessionId}`)
       if (response.ok) {
         console.log('[OpenCode] Session exists:', sessionId)
         return { sessionId, needsRebuild: false }
@@ -148,7 +147,7 @@ export async function checkOrCreateOpenCodeSession(sessionId?: string): Promise<
   }
   
   console.log('[OpenCode] Creating new session...')
-  const session = await fetchAPI<Session>('/session', {
+  const session = await fetchAPI<Session>(apiUrl, '/session', {
     method: 'POST',
     body: JSON.stringify({ title: 'OpenCode QA Session' }),
   })
@@ -163,16 +162,17 @@ export async function checkOrCreateOpenCodeSession(sessionId?: string): Promise<
 
 export async function rebuildContext(
   sessionId: string,
-  historyParts: Array<{ type: 'text'; text: string }>
+  historyParts: Array<{ type: 'text'; text: string }>,
+  botConfig: BotConfig
 ): Promise<void> {
   console.log('[OpenCode] Rebuilding context with', historyParts.length, 'messages')
   
-  await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {
+  await fetchAPI<MessageResponse>(botConfig.apiUrl, `/session/${sessionId}/message`, {
     method: 'POST',
     body: JSON.stringify({
       model: {
-        providerID: DEFAULT_PROVIDER,
-        modelID: DEFAULT_MODEL
+        providerID: botConfig.provider,
+        modelID: botConfig.model
       },
       agent: DEFAULT_AGENT,
       parts: historyParts,
@@ -185,19 +185,20 @@ export async function rebuildContext(
 
 export async function sendOpenCodeMessage(
   message: string, 
+  botConfig: BotConfig,
   opencodeSessionId?: string
 ): Promise<{ sessionId: string; answer: string }> {
   console.log('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
   
-  const { sessionId } = await checkOrCreateOpenCodeSession(opencodeSessionId)
+  const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
   
   console.log('[OpenCode] Sending message to session:', sessionId)
-  const result = await fetchAPI<MessageResponse>(`/session/${sessionId}/message`, {
+  const result = await fetchAPI<MessageResponse>(botConfig.apiUrl, `/session/${sessionId}/message`, {
     method: 'POST',
     body: JSON.stringify({
       model: {
-        providerID: DEFAULT_PROVIDER,
-        modelID: DEFAULT_MODEL
+        providerID: botConfig.provider,
+        modelID: botConfig.model
       },
       agent: DEFAULT_AGENT,
       parts: [{ type: 'text', text: message }]
@@ -227,11 +228,11 @@ export async function sendOpenCodeMessage(
   }
 }
 
-export async function getSessionMessages(sessionId: string) {
-  return fetchAPI<MessageResponse[]>(`/session/${sessionId}/message`)
+export async function getSessionMessages(apiUrl: string, sessionId: string) {
+  return fetchAPI<MessageResponse[]>(apiUrl, `/session/${sessionId}/message`)
 }
 
-export async function deleteOpenCodeSession(sessionId: string): Promise<boolean> {
+export async function deleteOpenCodeSession(apiUrl: string, sessionId: string): Promise<boolean> {
   console.log('[OpenCode] Deleting session:', sessionId)
   
   try {
@@ -241,7 +242,7 @@ export async function deleteOpenCodeSession(sessionId: string): Promise<boolean>
       headers['Authorization'] = `Basic ${auth}`
     }
 
-    const response = await fetch(`${OPENCODE_URL}/session/${sessionId}`, {
+    const response = await fetch(`${apiUrl}/session/${sessionId}`, {
       method: 'DELETE',
       headers
     })
