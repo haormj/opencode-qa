@@ -75,7 +75,9 @@ router.post('/register', async (req, res) => {
       })
     }
 
-    const token = await createToken(user.id, req.get('user-agent'), req.ip)
+    const userAgent = req.get('user-agent')
+    const ipAddress = req.ip || req.socket.remoteAddress
+    const token = await createToken(user.id, userAgent, ipAddress)
 
     res.json({
       token,
@@ -125,7 +127,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
-    const token = await createToken(user.id, req.get('user-agent'), req.ip)
+    const userAgent = req.get('user-agent')
+    const ipAddress = req.ip || req.socket.remoteAddress
+    const token = await createToken(user.id, userAgent, ipAddress)
 
     const roles = user.userRoles.map(ur => ur.role.name)
 
