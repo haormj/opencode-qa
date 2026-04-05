@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Spin, message } from 'antd'
-import { ssoCallback } from '../services/api'
+import { ssoCallback, setToken, setStoredUser } from '../services/api'
 
 function SsoCallback() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const hasCalled = useRef(false)
 
   useEffect(() => {
+    if (hasCalled.current) return
+    hasCalled.current = true
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
     const state = urlParams.get('state')
@@ -30,13 +33,17 @@ function SsoCallback() {
 
     ssoCallback(storedProvider, code, state, storedRedirectUri)
       .then(({ token, user }) => {
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(user))
+        setToken(token)
+        setStoredUser(user)
         sessionStorage.removeItem('sso_provider')
         sessionStorage.removeItem('sso_state')
         sessionStorage.removeItem('sso_redirect_uri')
+        
+        const storedFrom = sessionStorage.getItem('sso_from') || '/'
+        sessionStorage.removeItem('sso_from')
+        
         message.success('登录成功')
-        navigate('/')
+        navigate(storedFrom, { replace: true })
       })
       .catch((error) => {
         setError(error instanceof Error ? error.message : '登录失败')

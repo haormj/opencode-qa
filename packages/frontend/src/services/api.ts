@@ -464,10 +464,12 @@ export interface SsoProvider {
   iconMimeType?: string
   enabled: boolean
   sortOrder: number
+  type: string
   authorizeUrl: string
   tokenUrl: string
   userInfoUrl?: string
-  clientId: string
+  clientId?: string
+  appId?: string
   scope: string
   userIdField: string
   usernameField: string

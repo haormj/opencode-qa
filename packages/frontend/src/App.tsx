@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { isAuthenticated, isAdmin } from './services/api'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -14,15 +14,19 @@ import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
   return <>{children}</>
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
   if (!isAdmin()) {
     return <Navigate to="/" replace />

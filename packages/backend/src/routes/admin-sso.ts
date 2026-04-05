@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import multer from 'multer'
+import { SSO_PROVIDER_TYPES } from '../services/sso-processor.js'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -19,10 +20,12 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       iconMimeType: p.iconMimeType,
       enabled: p.enabled,
       sortOrder: p.sortOrder,
+      type: p.type,
       authorizeUrl: p.authorizeUrl,
       tokenUrl: p.tokenUrl,
       userInfoUrl: p.userInfoUrl,
       clientId: p.clientId,
+      appId: p.appId,
       scope: p.scope,
       userIdField: p.userIdField,
       usernameField: p.usernameField,
@@ -40,15 +43,30 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
 router.post('/', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const data = req.body
+    const type = data.type || SSO_PROVIDER_TYPES.GENERIC
+
+    if (type === SSO_PROVIDER_TYPES.GENERIC) {
+      if (!data.clientId || !data.clientSecret) {
+        return res.status(400).json({ error: 'Client ID and Client Secret are required for GENERIC type' })
+      }
+    } else if (type === SSO_PROVIDER_TYPES.FEISHU) {
+      if (!data.appId || !data.appSecret) {
+        return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
+      }
+    }
+
     const provider = await prisma.ssoProvider.create({
       data: {
         name: data.name,
         displayName: data.displayName,
+        type: type,
         authorizeUrl: data.authorizeUrl,
         tokenUrl: data.tokenUrl,
         userInfoUrl: data.userInfoUrl,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
+        appId: data.appId,
+        appSecret: data.appSecret,
         scope: data.scope || 'openid profile email',
         userIdField: data.userIdField || 'sub',
         usernameField: data.usernameField || 'preferred_username',
@@ -69,15 +87,31 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const data = req.body
+
+    if (data.type) {
+      if (data.type === SSO_PROVIDER_TYPES.GENERIC) {
+        if (!data.clientId || !data.clientSecret) {
+          return res.status(400).json({ error: 'Client ID and Client Secret are required for GENERIC type' })
+        }
+      } else if (data.type === SSO_PROVIDER_TYPES.FEISHU) {
+        if (!data.appId || !data.appSecret) {
+          return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
+        }
+      }
+    }
+
     const provider = await prisma.ssoProvider.update({
       where: { id },
       data: {
         displayName: data.displayName,
+        type: data.type,
         authorizeUrl: data.authorizeUrl,
         tokenUrl: data.tokenUrl,
         userInfoUrl: data.userInfoUrl,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
+        appId: data.appId,
+        appSecret: data.appSecret,
         scope: data.scope,
         userIdField: data.userIdField,
         usernameField: data.usernameField,
@@ -115,7 +149,7 @@ router.post('/:id/icon', authMiddleware, requireAdmin, upload.single('icon'), as
     }
 
     const base64 = file.buffer.toString('base64')
-    const provider = await prisma.ssoProvider.update({
+    await prisma.ssoProvider.update({
       where: { id },
       data: {
         icon: base64,

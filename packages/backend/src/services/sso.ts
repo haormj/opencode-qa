@@ -1,6 +1,10 @@
 import crypto from 'crypto'
 import { prisma } from '../index.js'
 import { createToken } from './token.js'
+import type { SsoProcessor, SsoProviderType } from './sso-processor.js'
+import { SSO_PROVIDER_TYPES } from './sso-processor.js'
+import GenericSsoProcessor from './sso-processors/generic.js'
+import FeishuSsoProcessor from './sso-processors/feishu.js'
 
 interface SsoState {
   nonce: string
@@ -17,6 +21,17 @@ function cleanupExpiredStates(): void {
     if (now - state.createdAt > STATE_EXPIRES_MS) {
       stateStore.delete(key)
     }
+  }
+}
+
+function getSsoProcessor(type: string): SsoProcessor {
+  switch (type) {
+    case SSO_PROVIDER_TYPES.GENERIC:
+      return GenericSsoProcessor
+    case SSO_PROVIDER_TYPES.FEISHU:
+      return FeishuSsoProcessor
+    default:
+      throw new Error(`Unknown SSO provider type: ${type}`)
   }
 }
 
@@ -59,15 +74,16 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
     createdAt: Date.now()
   })
 
-  const params = new URLSearchParams({
-    client_id: ssoProvider.clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
+  const processor = getSsoProcessor(ssoProvider.type)
+  const params = processor.getAuthorizeUrl({
+    clientId: ssoProvider.clientId || '',
+    redirectUri,
+    state,
     scope: ssoProvider.scope,
-    state
+    appId: ssoProvider.appId || undefined
   })
 
-  const authorizeUrl = `${ssoProvider.authorizeUrl}?${params.toString()}`
+  const authorizeUrl = `${ssoProvider.authorizeUrl}?${params}`
 
   return { authorizeUrl, state }
 }
@@ -99,47 +115,38 @@ export async function exchangeCodeForToken(
     throw new Error('SSO provider not found')
   }
 
-  const response = await fetch(provider.tokenUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
-      client_id: provider.clientId,
-      client_secret: provider.clientSecret
-    }).toString()
+  const processor = getSsoProcessor(provider.type)
+  const result = await processor.exchangeCode({
+    code,
+    redirectUri,
+    clientId: provider.clientId || undefined,
+    clientSecret: provider.clientSecret || undefined,
+    appId: provider.appId || undefined,
+    appSecret: provider.appSecret || undefined,
+    tokenUrl: provider.tokenUrl
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Token exchange failed: ${errorText}`)
-  }
-
-  const data = await response.json() as { access_token: string }
-  return data.access_token
+  return result.accessToken
 }
 
 export async function fetchUserInfo(providerName: string, accessToken: string): Promise<Record<string, unknown>> {
   const provider = await getSsoProvider(providerName)
-  if (!provider || !provider.userInfoUrl) {
-    throw new Error('SSO provider or user info URL not found')
+  if (!provider) {
+    throw new Error('SSO provider not found')
   }
 
-  const response = await fetch(provider.userInfoUrl, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
-    }
+  const processor = getSsoProcessor(provider.type)
+  const userInfo = await processor.getUserInfo({
+    accessToken,
+    userInfoUrl: provider.userInfoUrl || undefined
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to fetch user info: ${errorText}`)
+  return {
+    [provider.userIdField]: userInfo.id,
+    [provider.usernameField]: userInfo.username,
+    [provider.emailField]: userInfo.email,
+    [provider.displayNameField]: userInfo.displayName
   }
-
-  return response.json() as Promise<Record<string, unknown>>
 }
 
 export async function findOrCreateUser(
@@ -209,7 +216,7 @@ export async function findOrCreateUser(
       displayName,
       ssoProvider: providerName,
       ssoUserId,
-      password: null
+      password: ''
     }
   })
 

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload } from 'antd'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload, Select } from 'antd'
 import { ReloadOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAdminSsoProviders, createSsoProvider, updateSsoProvider, deleteSsoProvider, uploadSsoProviderIcon, type SsoProvider } from '../../services/api'
 import './Admin.css'
+
+const SSO_TYPES = [
+  { value: 'GENERIC', label: '通用 OAuth 2.0' },
+  { value: 'FEISHU', label: '飞书' }
+]
 
 function AdminSsoProviders() {
   const [loading, setLoading] = useState(false)
@@ -11,6 +16,7 @@ function AdminSsoProviders() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<SsoProvider | null>(null)
   const [form] = Form.useForm()
+  const [selectedType, setSelectedType] = useState<string>('GENERIC')
 
   const fetchProviders = async () => {
     setLoading(true)
@@ -30,6 +36,7 @@ function AdminSsoProviders() {
 
   const handleEdit = (provider: SsoProvider) => {
     setEditingProvider(provider)
+    setSelectedType(provider.type)
     form.setFieldsValue(provider)
     setModalOpen(true)
   }
@@ -83,6 +90,16 @@ function AdminSsoProviders() {
       dataIndex: 'name',
       key: 'name',
       width: 120,
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 120,
+      render: (type: string) => {
+        const typeInfo = SSO_TYPES.find(t => t.value === type)
+        return <Tag color={type === 'FEISHU' ? 'blue' : 'green'}>{typeInfo?.label || type}</Tag>
+      }
     },
     {
       title: '图标',
@@ -163,6 +180,7 @@ function AdminSsoProviders() {
             type="primary"
             onClick={() => {
               setEditingProvider(null)
+              setSelectedType('GENERIC')
               form.resetFields()
               setModalOpen(true)
             }}
@@ -211,69 +229,120 @@ function AdminSsoProviders() {
             <Input placeholder="如：企业统一登录" />
           </Form.Item>
           <Form.Item
-            name="authorizeUrl"
-            label="授权 URL"
-            rules={[{ required: true, message: '请输入授权 URL' }]}
+            name="type"
+            label="类型"
+            rules={[{ required: true, message: '请选择类型' }]}
           >
-            <Input placeholder="OAuth 授权端点 URL" />
+            <Select 
+              options={SSO_TYPES}
+              onChange={(value) => setSelectedType(value)}
+            />
           </Form.Item>
-          <Form.Item
-            name="tokenUrl"
-            label="Token URL"
-            rules={[{ required: true, message: '请输入 Token URL' }]}
-          >
-            <Input placeholder="OAuth Token 端点 URL" />
-          </Form.Item>
-          <Form.Item
-            name="userInfoUrl"
-            label="用户信息 URL"
-          >
-            <Input placeholder="用户信息端点 URL" />
-          </Form.Item>
-          <Form.Item
-            name="clientId"
-            label="Client ID"
-            rules={[{ required: true, message: '请输入 Client ID' }]}
-          >
-            <Input placeholder="OAuth Client ID" />
-          </Form.Item>
-          <Form.Item
-            name="clientSecret"
-            label="Client Secret"
-            rules={[{ required: !editingProvider, message: '请输入 Client Secret' }]}
-          >
-            <Input.Password placeholder="OAuth Client Secret" />
-          </Form.Item>
-          <Form.Item
-            name="scope"
-            label="Scope"
-          >
-            <Input placeholder="如：openid profile email" />
-          </Form.Item>
-          <Form.Item
-            name="userIdField"
-            label="用户 ID 字段"
-          >
-            <Input placeholder="默认：sub" />
-          </Form.Item>
-          <Form.Item
-            name="usernameField"
-            label="用户名字段"
-          >
-            <Input placeholder="默认：preferred_username" />
-          </Form.Item>
-          <Form.Item
-            name="emailField"
-            label="邮箱字段"
-          >
-            <Input placeholder="默认：email" />
-          </Form.Item>
-          <Form.Item
-            name="displayNameField"
-            label="显示名称字段"
-          >
-            <Input placeholder="默认：name" />
-          </Form.Item>
+          
+          {selectedType === 'GENERIC' && (
+            <>
+              <Form.Item
+                name="authorizeUrl"
+                label="授权 URL"
+                rules={[{ required: true, message: '请输入授权 URL' }]}
+              >
+                <Input placeholder="OAuth 授权端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="tokenUrl"
+                label="Token URL"
+                rules={[{ required: true, message: '请输入 Token URL' }]}
+              >
+                <Input placeholder="OAuth Token 端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="userInfoUrl"
+                label="用户信息 URL"
+              >
+                <Input placeholder="用户信息端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="clientId"
+                label="Client ID"
+                rules={[{ required: true, message: '请输入 Client ID' }]}
+              >
+                <Input placeholder="OAuth Client ID" />
+              </Form.Item>
+              <Form.Item
+                name="clientSecret"
+                label="Client Secret"
+                rules={[{ required: !editingProvider, message: '请输入 Client Secret' }]}
+              >
+                <Input.Password placeholder="OAuth Client Secret" />
+              </Form.Item>
+              <Form.Item
+                name="scope"
+                label="Scope"
+              >
+                <Input placeholder="如：openid profile email" />
+              </Form.Item>
+              <Form.Item
+                name="userIdField"
+                label="用户 ID 字段"
+              >
+                <Input placeholder="默认：sub" />
+              </Form.Item>
+              <Form.Item
+                name="usernameField"
+                label="用户名字段"
+              >
+                <Input placeholder="默认：preferred_username" />
+              </Form.Item>
+              <Form.Item
+                name="emailField"
+                label="邮箱字段"
+              >
+                <Input placeholder="默认：email" />
+              </Form.Item>
+              <Form.Item
+                name="displayNameField"
+                label="显示名称字段"
+              >
+                <Input placeholder="默认：name" />
+              </Form.Item>
+            </>
+          )}
+
+          {selectedType === 'FEISHU' && (
+            <>
+              <Form.Item
+                name="appId"
+                label="App ID"
+                rules={[{ required: true, message: '请输入 App ID' }]}
+              >
+                <Input placeholder="飞书应用 App ID" />
+              </Form.Item>
+              <Form.Item
+                name="appSecret"
+                label="App Secret"
+                rules={[{ required: !editingProvider, message: '请输入 App Secret' }]}
+              >
+                <Input.Password placeholder="飞书应用 App Secret" />
+              </Form.Item>
+              <Form.Item
+                name="authorizeUrl"
+                label="授权 URL"
+                rules={[{ required: true, message: '请输入授权 URL' }]}
+                initialValue="https://open.feishu.cn/open-apis/authen/v1/authorize"
+              >
+                <Input placeholder="飞书授权 URL（通常不需要修改）" />
+              </Form.Item>
+              <Form.Item
+                name="tokenUrl"
+                label="Token URL"
+                rules={[{ required: true, message: '请输入 Token URL' }]}
+                initialValue="https://open.feishu.cn/open-apis/authen/v1/oidc/access_token"
+              >
+                <Input placeholder="飞书 Token URL（通常不需要修改）" />
+              </Form.Item>
+            </>
+          )}
+
           <Form.Item
             name="enabled"
             label="状态"

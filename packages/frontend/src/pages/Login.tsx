@@ -20,7 +20,11 @@ function Login() {
 
   useEffect(() => {
     getSsoProviders().then(setSsoProviders).catch(() => {})
-  }, [])
+    
+    if (from && from !== '/') {
+      sessionStorage.setItem('sso_from', from)
+    }
+  }, [from])
 
   if (isAuthenticated()) {
     navigate(from, { replace: true })
@@ -34,6 +38,7 @@ function Login() {
       sessionStorage.setItem('sso_provider', providerName)
       sessionStorage.setItem('sso_state', state)
       sessionStorage.setItem('sso_redirect_uri', redirectUri)
+      sessionStorage.setItem('sso_from', from)
       window.location.href = authorizeUrl
     } catch (error) {
       message.error('SSO 登录失败')
