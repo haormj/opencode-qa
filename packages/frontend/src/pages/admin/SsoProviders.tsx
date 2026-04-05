@@ -324,22 +324,6 @@ function AdminSsoProviders() {
               >
                 <Input.Password placeholder="飞书应用 App Secret" />
               </Form.Item>
-              <Form.Item
-                name="authorizeUrl"
-                label="授权 URL"
-                rules={[{ required: true, message: '请输入授权 URL' }]}
-                initialValue="https://open.feishu.cn/open-apis/authen/v1/authorize"
-              >
-                <Input placeholder="飞书授权 URL（通常不需要修改）" />
-              </Form.Item>
-              <Form.Item
-                name="tokenUrl"
-                label="Token URL"
-                rules={[{ required: true, message: '请输入 Token URL' }]}
-                initialValue="https://open.feishu.cn/open-apis/authen/v1/oidc/access_token"
-              >
-                <Input placeholder="飞书 Token URL（通常不需要修改）" />
-              </Form.Item>
             </>
           )}
 

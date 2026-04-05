@@ -1,5 +1,11 @@
 import type { SsoProcessor, SsoUserInfo } from '../sso-processor.js'
 
+export const FEISHU_DEFAULTS = {
+  AUTHORIZE_URL: 'https://open.feishu.cn/open-apis/authen/v1/authorize',
+  TOKEN_URL: 'https://open.feishu.cn/open-apis/authen/v1/oidc/access_token',
+  USER_INFO_URL: 'https://open.feishu.cn/open-apis/authen/v1/user_info'
+}
+
 interface FeishuTokenResponse {
   code: number
   msg: string

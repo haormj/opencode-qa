@@ -3,6 +3,7 @@ import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import multer from 'multer'
 import { SSO_PROVIDER_TYPES } from '../services/sso-processor.js'
+import { FEISHU_DEFAULTS } from '../services/sso-processors/feishu.js'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -60,9 +61,9 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
         name: data.name,
         displayName: data.displayName,
         type: type,
-        authorizeUrl: data.authorizeUrl,
-        tokenUrl: data.tokenUrl,
-        userInfoUrl: data.userInfoUrl,
+        authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : data.authorizeUrl,
+        tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : data.tokenUrl,
+        userInfoUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.USER_INFO_URL : data.userInfoUrl,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
         appId: data.appId,
@@ -87,6 +88,7 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const data = req.body
+    const type = data.type || SSO_PROVIDER_TYPES.GENERIC
 
     if (data.type) {
       if (data.type === SSO_PROVIDER_TYPES.GENERIC) {
@@ -105,9 +107,9 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
       data: {
         displayName: data.displayName,
         type: data.type,
-        authorizeUrl: data.authorizeUrl,
-        tokenUrl: data.tokenUrl,
-        userInfoUrl: data.userInfoUrl,
+        authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : data.authorizeUrl,
+        tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : data.tokenUrl,
+        userInfoUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.USER_INFO_URL : data.userInfoUrl,
         clientId: data.clientId,
         clientSecret: data.clientSecret,
         appId: data.appId,
