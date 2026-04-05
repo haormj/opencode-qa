@@ -236,7 +236,11 @@ packages/
    taskkill /F /PID <PID>
    ```
 
-3. **启动服务**：在新的终端窗口运行 `npm run dev`
+3. **启动服务**：使用非阻塞方式启动，避免占用当前终端
+   ```powershell
+   # 在新窗口启动开发服务器（推荐）
+   Start-Process cmd -ArgumentList "/k cd /d D:\project\github.com\haormj\opencode-qa && npm run dev"
+   ```
 
 ## 修改后验证
 
