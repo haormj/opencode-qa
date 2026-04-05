@@ -162,7 +162,6 @@
 .chat-box-wrapper.session-locked .Composer,
 .chat-box-wrapper.session-locked .ChatUI-Composer {
   opacity: 0.6;
-  pointer-events: none;
 }
 
 .chat-box-wrapper.session-locked .Composer-input,
@@ -651,4 +650,72 @@
 
 .message-content::after {
   animation: caret-blink 1s step-end infinite;
+}
+
+.home-content-body .Composer,
+.chat-page-full .Composer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-content-body .Composer-inputWrap,
+.chat-page-full .Composer-inputWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.home-content-body .Composer-input,
+.chat-page-full .Composer-input {
+  resize: none;
+  line-height: 1.5;
+}
+
+.home-content-body .Composer-actions,
+.chat-page-full .Composer-actions {
+  flex-shrink: 0;
+  width: auto;
+}
+
+.home-content-body .Composer-input,
+.chat-page-full .Composer-input {
+  resize: none;
+  line-height: 22.5px;
+  padding: 10px 12px;
+  height: 42.5px;
+  overflow: hidden;
+}
+
+.Composer-sendBtn,
+.Composer-stopBtn {
+  border-radius: 8px;
+  min-width: 60px;
+  height: 36px;
+}
+
+.Composer-stopBtn {
+  background-color: #ff4d4f !important;
+  color: #fff !important;
+  border-color: #ff4d4f !important;
+  width: 60px;
+  transition: none !important;
+  box-shadow: none !important;
+}
+
+.Composer-stopBtn:hover,
+.Composer-stopBtn:focus,
+.Composer-stopBtn:focus:hover {
+  background-color: #ff7875 !important;
+  color: #fff !important;
+  border-color: #ff7875 !important;
+  box-shadow: none !important;
+}
+
+.Composer-stopBtn:active {
+  background-color: #d9363e !important;
+  color: #fff !important;
+  border-color: #d9363e !important;
+  box-shadow: none !important;
 }

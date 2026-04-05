@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
-import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
+import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext, abortOpenCodeSession } from '../services/opencode.js'
+import { eventSubscriptionManager } from '../services/event-subscription-manager.js'
 import { authMiddleware } from '../middleware/auth.js'
 import logger from '../services/logger.js'
 
@@ -8,11 +9,15 @@ const router = Router()
 
 router.post('/stream', authMiddleware, async (req, res) => {
   try {
-    const { content, sessionId: existingSessionId } = req.body
+    const { content, sessionId } = req.body
     const userId = req.user!.id
 
     if (!content || typeof content !== 'string') {
       return res.status(400).json({ error: 'Message content is required' })
+    }
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'Session ID is required' })
     }
 
     const defaultBot = await prisma.bot.findFirst({
@@ -23,73 +28,59 @@ router.post('/stream', authMiddleware, async (req, res) => {
       return res.status(500).json({ error: 'No active bot found' })
     }
 
-    let session
-    if (!existingSessionId) {
-      const title = content.length > 30 ? content.substring(0, 30) + '...' : content
-      session = await prisma.session.create({
+    const session = await prisma.session.findFirst({
+      where: { id: sessionId, userId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    })
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' })
+    }
+
+    if (session.status === 'closed') {
+      return res.status(400).json({ error: 'This session has been closed' })
+    }
+
+    if (session.status === 'human') {
+      const userMessage = await prisma.message.create({
         data: {
-          userId,
-          title,
-          status: 'active'
-        }
-      })
-    } else {
-      session = await prisma.session.findFirst({
-        where: { id: existingSessionId, userId },
-        include: {
-          messages: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
-          }
-        }
-      })
-
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' })
-      }
-
-      if (session.status === 'closed') {
-        return res.status(400).json({ error: 'This session has been closed' })
-      }
-
-      if (session.status === 'human') {
-        const userMessage = await prisma.message.create({
-          data: {
-            sessionId: session.id,
-            senderType: 'user',
-            content,
-            userId
-          }
-        })
-
-        return res.json({
-          id: userMessage.id,
           sessionId: session.id,
-          content: userMessage.content,
-          senderType: userMessage.senderType,
-          createdAt: userMessage.createdAt
-        })
-      }
-
-      const lastMessage = session.messages[0]
-      if (lastMessage) {
-        const hoursSinceLastMessage = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60)
-        if (hoursSinceLastMessage > 24) {
-          await prisma.session.update({
-            where: { id: session.id },
-            data: { status: 'closed' }
-          })
-          return res.status(400).json({ error: 'Session has been closed due to inactivity (over 24 hours)' })
+          senderType: 'user',
+          content,
+          userId
         }
-      }
+      })
 
-      session = await prisma.session.update({
-        where: { id: existingSessionId },
-        data: { updatedAt: new Date() }
+      return res.json({
+        id: userMessage.id,
+        sessionId: session.id,
+        content: userMessage.content,
+        senderType: userMessage.senderType,
+        createdAt: userMessage.createdAt
       })
     }
 
-    const sessionId = session.id
+    const lastMessage = session.messages[0]
+    if (lastMessage) {
+      const hoursSinceLastMessage = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60)
+      if (hoursSinceLastMessage > 24) {
+        await prisma.session.update({
+          where: { id: session.id },
+          data: { status: 'closed' }
+        })
+        return res.status(400).json({ error: 'Session has been closed due to inactivity (over 24 hours)' })
+      }
+    }
+
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() }
+    })
 
     const botConfig = {
       apiUrl: defaultBot.apiUrl,
@@ -103,6 +94,14 @@ router.post('/stream', authMiddleware, async (req, res) => {
       botConfig.apiUrl,
       session.opencodeSessionId || undefined
     )
+
+    // 立即保存 opencodeSessionId，确保可以提前停止
+    if (opencodeSessionId && opencodeSessionId !== session.opencodeSessionId) {
+      await prisma.session.update({
+        where: { id: sessionId },
+        data: { opencodeSessionId }
+      })
+    }
 
     if (needsRebuild) {
       logger.info('[Message] Rebuilding context, fetching history messages')
@@ -138,7 +137,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       res.write(`data: ${JSON.stringify(data)}\n\n`)
     }
 
-    sendEvent('session', { sessionId })
+    sendEvent('session', { sessionId, opencodeSessionId })
 
     let opencodeSessionIdFromStream: string | undefined
 
@@ -188,6 +187,40 @@ router.post('/stream', authMiddleware, async (req, res) => {
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+})
+
+router.post('/stop', authMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.body
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' })
+    }
+    
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId }
+    })
+    
+    if (!session || !session.opencodeSessionId) {
+      return res.status(404).json({ error: 'Session not found or no active generation' })
+    }
+    
+    const defaultBot = await prisma.bot.findFirst({
+      where: { isActive: true }
+    })
+    
+    if (!defaultBot) {
+      return res.status(500).json({ error: 'No active bot found' })
+    }
+    
+    await abortOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
+    eventSubscriptionManager.unregister(defaultBot.apiUrl, session.opencodeSessionId)
+    
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('[Stop] Error:', error)
+    res.status(500).json({ error: 'Failed to stop generation' })
   }
 })
 

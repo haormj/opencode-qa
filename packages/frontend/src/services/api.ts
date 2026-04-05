@@ -245,7 +245,8 @@ export function sendMessageStream(
   sessionId: string | null,
   onText: (text: string) => void,
   onDone: (result: { id: string; sessionId: string; content: string; senderType: string; createdAt: string }) => void,
-  onError: (error: Error) => void
+  onError: (error: Error) => void,
+  onSession?: (sessionId: string) => void
 ): () => void {
   const controller = new AbortController()
   const token = getToken()
@@ -290,22 +291,24 @@ export function sendMessageStream(
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
 
-      let eventType = ''
-      for (const line of lines) {
-        if (line.startsWith('event: ')) {
-          eventType = line.slice(7)
-        } else if (line.startsWith('data: ')) {
-          const data = JSON.parse(line.slice(6))
+        let eventType = ''
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7)
+          } else if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6))
 
-          if (eventType === 'text' && data.text) {
-            onText(data.text)
-          } else if (eventType === 'done') {
-            onDone(data)
-          } else if (eventType === 'error') {
-            onError(new Error(data.error || 'Unknown error'))
+            if (eventType === 'session' && data.sessionId) {
+              onSession?.(data.sessionId)
+            } else if (eventType === 'text' && data.text) {
+              onText(data.text)
+            } else if (eventType === 'done') {
+              onDone(data)
+            } else if (eventType === 'error') {
+              onError(new Error(data.error || 'Unknown error'))
+            }
           }
         }
-      }
     }
   }).catch((error) => {
     if (error.name !== 'AbortError') {
@@ -314,6 +317,13 @@ export function sendMessageStream(
   })
 
   return () => controller.abort()
+}
+
+export async function stopMessageStream(sessionId: string): Promise<void> {
+  await request(`${API_BASE}/messages/stop`, {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  })
 }
 
 export async function sendHumanMessage(
@@ -332,6 +342,13 @@ export async function getHistory(page: number = 1, pageSize: number = 20): Promi
 
 export async function getSession(sessionId: string): Promise<SessionDetail> {
   return request<SessionDetail>(`${API_BASE}/sessions/${sessionId}`)
+}
+
+export async function createSession(title?: string): Promise<Session> {
+  return request<Session>(`${API_BASE}/sessions`, {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  })
 }
 
 export async function getSessions(): Promise<Session[]> {

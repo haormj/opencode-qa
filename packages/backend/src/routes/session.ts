@@ -6,6 +6,36 @@ import logger from '../services/logger.js'
 
 const router = Router()
 
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user!.id
+    const { title } = req.body
+
+    const sessionTitle = title && typeof title === 'string' && title.trim()
+      ? (title.length > 30 ? title.substring(0, 30) + '...' : title)
+      : '新对话'
+
+    const session = await prisma.session.create({
+      data: {
+        userId,
+        title: sessionTitle,
+        status: 'active'
+      }
+    })
+
+    res.json({
+      id: session.id,
+      title: session.title,
+      status: session.status,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt
+    })
+  } catch (error) {
+    logger.error('Create session error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/public/:id/info', async (req, res) => {
   try {
     const { id } = req.params

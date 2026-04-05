@@ -243,4 +243,18 @@ export async function deleteOpenCodeSession(apiUrl: string, sessionId: string): 
   }
 }
 
+export async function abortOpenCodeSession(apiUrl: string, sessionId: string): Promise<boolean> {
+  logger.info('[OpenCode] Aborting session:', sessionId)
+  
+  try {
+    const client = getClient(apiUrl)
+    await client.session.abort({ sessionID: sessionId })
+    logger.info('[OpenCode] Session aborted:', sessionId)
+    return true
+  } catch (error) {
+    logger.error(`[OpenCode] Error aborting session ${sessionId}:`, error)
+    return false
+  }
+}
+
 export type { BotConfig }

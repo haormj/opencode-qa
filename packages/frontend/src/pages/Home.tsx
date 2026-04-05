@@ -4,7 +4,7 @@ import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
-import { sendMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
+import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, type MessageItem } from '../services/api'
 import type { Session } from '../services/api'
 import './Home.css'
 
@@ -30,16 +30,7 @@ function Home() {
     return session?.title || '新对话'
   }, [sessionId, sessions])
 
-  useEffect(() => {
-    if (sessionId) {
-      loadSession(sessionId)
-    } else {
-      setMessages([])
-      setSessionStatus('active')
-    }
-  }, [sessionId])
-
-  const loadSession = async (id: string) => {
+  const loadSession = useCallback(async (id: string) => {
     try {
       const session = await getSession(id)
       const loadedMessages: ExtendedMessageProps[] = []
@@ -89,14 +80,9 @@ function Home() {
         message.error('加载会话失败')
       }
     }
-  }
+  }, [setSearchParams])
 
-  const handleSend = useCallback((_type: string, text: string) => {
-    if (!text.trim()) {
-      message.warning('请输入问题')
-      return
-    }
-
+  const sendMessage = useCallback(async (text: string, currentSessionId: string) => {
     const username = getUsername()
     const userMessage: ExtendedMessageProps = {
       _id: Date.now().toString(),
@@ -110,10 +96,10 @@ function Home() {
       }
     }
 
-    if (sessionStatus === 'human' && sessionId) {
+    if (sessionStatus === 'human') {
       setMessages(prev => [...prev, userMessage])
       
-      sendHumanMessage(text, sessionId)
+      sendHumanMessage(text, currentSessionId)
         .then(() => {
           message.success('消息已发送，等待人工处理')
         })
@@ -144,7 +130,7 @@ function Home() {
     let isFirstChunk = true
     sendMessageStream(
       text,
-      sessionId,
+      currentSessionId,
       (chunk: string) => {
         setMessages(prev => prev.map(msg =>
           msg._id === assistantMessageId
@@ -157,16 +143,12 @@ function Home() {
         ))
         if (isFirstChunk) isFirstChunk = false
       },
-      (result) => {
-        if (!sessionId) {
-          setSearchParams({ sessionId: result.sessionId })
-          setRefreshTrigger(prev => prev + 1)
-        }
+      () => {
         setMessages(prev => prev.map(msg =>
           msg._id === assistantMessageId
             ? {
                 ...msg,
-                content: { text: result.content }
+                content: { text: msg.content.text }
               }
             : msg
         ))
@@ -185,7 +167,60 @@ function Home() {
         setLoading(false)
       }
     )
-  }, [sessionId, sessionStatus, setSearchParams])
+  }, [sessionStatus])
+
+  useEffect(() => {
+    if (sessionId) {
+      loadSession(sessionId)
+      
+      const pendingKey = `pendingMessage_${sessionId}`
+      const pendingMessage = sessionStorage.getItem(pendingKey)
+      if (pendingMessage) {
+        sessionStorage.removeItem(pendingKey)
+        setTimeout(() => {
+          sendMessage(pendingMessage, sessionId)
+        }, 100)
+      }
+    } else {
+      setMessages([])
+      setSessionStatus('active')
+    }
+  }, [sessionId, loadSession, sendMessage])
+
+  const handleSend = useCallback(async (_type: string, text: string) => {
+    if (!text.trim()) {
+      message.warning('请输入问题')
+      return
+    }
+
+    if (!sessionId) {
+      try {
+        const newSession = await createSession(text)
+        sessionStorage.setItem(`pendingMessage_${newSession.id}`, text)
+        setSearchParams({ sessionId: newSession.id })
+        setRefreshTrigger(prev => prev + 1)
+      } catch (error) {
+        console.error('Create session error:', error)
+        message.error('创建会话失败')
+      }
+      return
+    }
+
+    await sendMessage(text, sessionId)
+  }, [sessionId, sendMessage, setSearchParams])
+
+  const handleStop = useCallback(async () => {
+    const currentSessionId = sessionId || new URLSearchParams(window.location.search).get('sessionId')
+    if (!currentSessionId) return
+    
+    try {
+      await stopMessageStream(currentSessionId)
+      setLoading(false)
+    } catch (error) {
+      console.error('Stop error:', error)
+      setLoading(false)
+    }
+  }, [sessionId])
 
   const handleCopyLink = useCallback(() => {
     if (!sessionId) return
@@ -245,6 +280,7 @@ function Home() {
             messages={messages}
             typing={loading}
             onSend={handleSend}
+            onStop={handleStop}
             sessionStatus={sessionStatus}
           />
         </div>

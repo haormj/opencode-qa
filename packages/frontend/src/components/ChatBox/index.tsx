@@ -8,6 +8,7 @@ import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import { Avatar } from 'antd'
 import { RobotOutlined, UserOutlined } from '@ant-design/icons'
+import CustomComposer from './CustomComposer'
 import './ChatBox.css'
 
 export interface ExtendedMessageProps extends MessageProps {
@@ -23,6 +24,7 @@ interface ChatBoxProps {
   messages: ExtendedMessageProps[]
   typing?: boolean
   onSend: (type: string, text: string) => void
+  onStop?: () => void
   isAdminMode?: boolean
   sessionStatus?: string
 }
@@ -31,6 +33,7 @@ function ChatBox({
   messages, 
   typing, 
   onSend,
+  onStop,
   isAdminMode = false,
   sessionStatus = 'active'
 }: ChatBoxProps) {
@@ -118,6 +121,7 @@ function ChatBox({
   }
 
   function handleSend(type: string, text: string) {
+    if (typing) return
     if (isClosed) return
     if (isAdminMode && !isHuman) return
     if (type === 'text' && text.trim()) {
@@ -130,6 +134,7 @@ function ChatBox({
   const showWelcome = messages.length === 0
   
   const getPlaceholder = () => {
+    if (typing) return 'AI 正在回复中，请稍候...'
     if (isClosed) return '会话已关闭'
     if (isAdminMode) {
       return isHuman ? '请输入回复内容...' : '该会话未标记为需要人工处理，无法回复'
@@ -137,10 +142,11 @@ function ChatBox({
     return '请输入您的问题...'
   }
   
-  const isInputDisabled = isClosed || (isAdminMode && !isHuman)
+  const isInputDisabled = typing || isClosed || (isAdminMode && !isHuman)
+  const isSessionLocked = isClosed || (isAdminMode && !isHuman)
 
   return (
-    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isInputDisabled ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
+    <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isSessionLocked ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
       <div className="chat-content">
         {showWelcome && (
           <div className="welcome-message">
@@ -153,7 +159,14 @@ function ChatBox({
           onSend={handleSend}
           placeholder={getPlaceholder()}
           isTyping={typing}
-          key={sessionStatus}
+          Composer={(props) => (
+            <CustomComposer
+              {...props}
+              typing={typing}
+              onStop={onStop}
+              disabled={isInputDisabled}
+            />
+          )}
         />
       </div>
     </div>
