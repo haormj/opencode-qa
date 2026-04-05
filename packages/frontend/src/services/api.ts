@@ -79,6 +79,7 @@ export interface Bot {
   apiUrl: string
   provider: string
   model: string
+  agent: string
   description?: string
   isActive: boolean
   createdAt: string

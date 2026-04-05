@@ -3,18 +3,17 @@ import { eventSubscriptionManager } from './event-subscription-manager.js'
 
 const OPENCODE_SERVER_USERNAME = process.env.OPENCODE_SERVER_USERNAME || 'opencode'
 const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
-const DEFAULT_AGENT = process.env.OPENCODE_AGENT || 'explore'
 
 console.log('[OpenCode Config]', {
   OPENCODE_SERVER_USERNAME,
-  OPENCODE_SERVER_PASSWORD: OPENCODE_SERVER_PASSWORD ? '***' : '(not set)',
-  DEFAULT_AGENT
+  OPENCODE_SERVER_PASSWORD: OPENCODE_SERVER_PASSWORD ? '***' : '(not set)'
 })
 
 interface BotConfig {
   apiUrl: string
   provider: string
   model: string
+  agent: string
   apiKey?: string
 }
 
@@ -81,7 +80,7 @@ export async function rebuildContext(
       providerID: botConfig.provider,
       modelID: botConfig.model
     },
-    agent: DEFAULT_AGENT,
+    agent: botConfig.agent,
     noReply: true,
     parts: historyParts
   })
@@ -107,7 +106,7 @@ export async function sendOpenCodeMessage(
       providerID: botConfig.provider,
       modelID: botConfig.model
     },
-    agent: DEFAULT_AGENT,
+    agent: botConfig.agent,
     parts: [{ type: 'text', text: message }]
   })
   
@@ -184,7 +183,7 @@ export async function sendOpenCodeMessageStream(
         providerID: botConfig.provider,
         modelID: botConfig.model
       },
-      agent: DEFAULT_AGENT,
+      agent: botConfig.agent,
       parts: [{ type: 'text', text: message }]
     })
     

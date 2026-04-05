@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
       apiUrl: bot.apiUrl,
       provider: bot.provider,
       model: bot.model,
+      agent: bot.agent,
       description: bot.description,
       isActive: bot.isActive,
       createdAt: bot.createdAt,
@@ -52,6 +53,7 @@ router.get('/:id', async (req, res) => {
       apiKey: bot.apiKey,
       provider: bot.provider,
       model: bot.model,
+      agent: bot.agent,
       description: bot.description,
       isActive: bot.isActive,
       createdAt: bot.createdAt,
@@ -65,7 +67,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { name, displayName, avatar, apiUrl, apiKey, provider, model, description, isActive } = req.body
+    const { name, displayName, avatar, apiUrl, apiKey, provider, model, agent, description, isActive } = req.body
 
     if (!name || !displayName || !apiUrl || !provider || !model) {
       return res.status(400).json({ error: 'Missing required fields' })
@@ -80,6 +82,7 @@ router.post('/', requireAdmin, async (req, res) => {
         apiKey,
         provider,
         model,
+        agent: agent || 'plan',
         description,
         isActive: isActive ?? true
       }
@@ -93,6 +96,7 @@ router.post('/', requireAdmin, async (req, res) => {
       apiUrl: bot.apiUrl,
       provider: bot.provider,
       model: bot.model,
+      agent: bot.agent,
       description: bot.description,
       isActive: bot.isActive,
       createdAt: bot.createdAt
@@ -106,7 +110,7 @@ router.post('/', requireAdmin, async (req, res) => {
 router.patch('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, displayName, avatar, apiUrl, apiKey, provider, model, description, isActive } = req.body
+    const { name, displayName, avatar, apiUrl, apiKey, provider, model, agent, description, isActive } = req.body
 
     const bot = await prisma.bot.update({
       where: { id },
@@ -118,6 +122,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
         apiKey,
         provider,
         model,
+        agent,
         description,
         isActive
       }
@@ -131,6 +136,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
       apiUrl: bot.apiUrl,
       provider: bot.provider,
       model: bot.model,
+      agent: bot.agent,
       description: bot.description,
       isActive: bot.isActive,
       updatedAt: bot.updatedAt

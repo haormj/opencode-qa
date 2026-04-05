@@ -94,6 +94,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       apiUrl: defaultBot.apiUrl,
       provider: defaultBot.provider,
       model: defaultBot.model,
+      agent: defaultBot.agent,
       apiKey: defaultBot.apiKey || undefined
     }
 

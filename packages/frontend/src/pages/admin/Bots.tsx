@@ -107,6 +107,12 @@ function AdminBots() {
       width: 120
     },
     {
+      title: 'Agent',
+      dataIndex: 'agent',
+      key: 'agent',
+      width: 100
+    },
+    {
       title: 'API 地址',
       dataIndex: 'apiUrl',
       key: 'apiUrl',
@@ -242,6 +248,13 @@ function AdminBots() {
             rules={[{ required: true, message: '请输入模型名称' }]}
           >
             <Input placeholder="如：glm-5" />
+          </Form.Item>
+          <Form.Item
+            name="agent"
+            label="Agent"
+            rules={[{ required: true, message: '请输入 Agent 名称' }]}
+          >
+            <Input placeholder="如：plan、explore、build" />
           </Form.Item>
           <Form.Item
             name="description"

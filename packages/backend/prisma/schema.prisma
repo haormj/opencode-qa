@@ -53,6 +53,7 @@ model Bot {
   apiKey      String?  @map("api_key")
   provider    String
   model       String
+  agent       String   @default("plan")
   description String?
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
