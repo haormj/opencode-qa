@@ -29,9 +29,12 @@
 }
 
 .brand-text {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 18px;
-  color: #333;
+  background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .collapse-btn {
