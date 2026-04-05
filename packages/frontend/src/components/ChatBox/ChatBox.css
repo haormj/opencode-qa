@@ -638,3 +638,17 @@
   font-weight: 600;
   color: #262626;
 }
+
+/* Streamdown caret blinking animation */
+@keyframes caret-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.message-content::after {
+  animation: caret-blink 1s step-end infinite;
+}
