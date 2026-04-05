@@ -6,166 +6,11 @@ import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
 import { sendMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, type MessageItem } from '../services/api'
 import type { Session } from '../services/api'
-import { Streamdown } from 'streamdown'
-import { code } from '@streamdown/code'
-import { mermaid } from '@streamdown/mermaid'
-import { math } from '@streamdown/math'
-import { cjk } from '@streamdown/cjk'
 import './Home.css'
-
-const MERMAID_TEST = `
-## Mermaid 测试
-
-### 流程图
-
-\`\`\`mermaid
-graph TD
-    A[开始] --> B{判断}
-    B -->|是| C[执行]
-    B -->|否| D[跳过]
-    C --> E[结束]
-    D --> E
-\`\`\`
-
-### 时序图
-
-\`\`\`mermaid
-sequenceDiagram
-    participant U as 用户
-    participant F as 前端
-    participant B as 后端
-    U->>F: 输入问题
-    F->>B: POST /api/stream
-    B-->>F: SSE 响应
-    F-->>U: 显示回复
-\`\`\`
-`
-
-const TEST_MARKDOWN = `
-# Markdown 完整测试
-
-## 文本格式
-
-普通文本，**粗体**，*斜体*，~~删除线~~，\`行内代码\`。
-
----
-
-## 标题层级
-
-# H1 标题
-## H2 标题
-### H3 标题
-#### H4 标题
-##### H5 标题
-###### H6 标题
-
----
-
-## 列表
-
-### 无序列表
-- 项目 1
-- 项目 2
-  - 嵌套项目 2.1
-  - 嵌套项目 2.2
-- 项目 3
-
-### 有序列表
-1. 第一步
-2. 第二步
-3. 第三步
-
----
-
-## 代码块
-
-\`\`\`typescript
-interface User {
-  id: string
-  name: string
-}
-
-async function fetchUser(id: string): Promise<User> {
-  return await fetch(\`/api/users/\${id}\`).then(r => r.json())
-}
-\`\`\`
-
-\`\`\`python
-def fibonacci(n: int) -> list[int]:
-    if n <= 0: return []
-    if n == 1: return [0]
-    seq = [0, 1]
-    for i in range(2, n):
-        seq.append(seq[i-1] + seq[i-2])
-    return seq
-\`\`\`
-
----
-
-## Mermaid 流程图
-
-\`\`\`mermaid
-graph TD
-    A[开始] --> B{判断}
-    B -->|是| C[执行]
-    B -->|否| D[跳过]
-    C --> E[结束]
-    D --> E
-\`\`\`
-
-\`\`\`mermaid
-sequenceDiagram
-    participant U as 用户
-    participant F as 前端
-    participant B as 后端
-    U->>F: 输入问题
-    F->>B: POST /api/stream
-    B-->>F: SSE 响应
-    F-->>U: 显示回复
-\`\`\`
-
----
-
-## 表格
-
-| 功能 | 状态 | 说明 |
-|:-----|:----:|-----:|
-| Markdown | ✅ | 已支持 |
-| 代码高亮 | ✅ | Shiki |
-| Mermaid | ✅ | 图表 |
-| 数学公式 | ✅ | KaTeX |
-
----
-
-## 引用块
-
-> 这是一段引用。
-> 
-> 可以多行。
-
----
-
-## 数学公式
-
-行内：$E = mc^2$
-
-块级：
-
-$$
-\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}
-$$
-
----
-
-## 链接
-
-[OpenCode QA](https://github.com/haormj/opencode-qa)
-`
 
 function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionId = searchParams.get('sessionId')
-  const isTestMode = searchParams.get('test') === 'true'
 
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
@@ -186,42 +31,13 @@ function Home() {
   }, [sessionId, sessions])
 
   useEffect(() => {
-    if (isTestMode) {
-      const testMessages: ExtendedMessageProps[] = [
-        {
-          _id: 'test-user',
-          type: 'text',
-          content: { text: '请展示完整的 Markdown 测试内容' },
-          position: 'right',
-          sender: { name: '测试用户', color: '#1890ff', type: 'user' }
-        },
-        {
-          _id: 'test-ai',
-          type: 'text',
-          content: { text: TEST_MARKDOWN },
-          position: 'left',
-          sender: { name: 'AI 助手 (ChatBox 渲染)', color: '#52c41a', type: 'ai' }
-        },
-        {
-          _id: 'test-native',
-          type: 'text',
-          content: { text: MERMAID_TEST },
-          position: 'left',
-          sender: { name: '原生 Streamdown 渲染', color: '#722ed1', type: 'ai' }
-        }
-      ]
-      setMessages(testMessages)
-      setLoading(false)
-      return
-    }
-    
     if (sessionId) {
       loadSession(sessionId)
     } else {
       setMessages([])
       setSessionStatus('active')
     }
-  }, [sessionId, isTestMode])
+  }, [sessionId])
 
   const loadSession = async (id: string) => {
     try {
@@ -278,29 +94,6 @@ function Home() {
   const handleSend = useCallback((_type: string, text: string) => {
     if (!text.trim()) {
       message.warning('请输入问题')
-      return
-    }
-
-    if (isTestMode) {
-      const userMessage: ExtendedMessageProps = {
-        _id: Date.now().toString(),
-        type: 'text',
-        content: { text },
-        position: 'right',
-        sender: { name: '测试用户', color: '#1890ff', type: 'user' }
-      }
-      setMessages(prev => [...prev, userMessage])
-      
-      setTimeout(() => {
-        const aiMessage: ExtendedMessageProps = {
-          _id: (Date.now() + 1).toString(),
-          type: 'text',
-          content: { text: `**测试模式回复**\n\n你发送的内容是：\n\n> ${text}\n\n支持 **粗体**、*斜体*、\`代码\` 等格式。` },
-          position: 'left',
-          sender: { name: 'AI 助手', color: '#52c41a', type: 'ai' }
-        }
-        setMessages(prev => [...prev, aiMessage])
-      }, 500)
       return
     }
 
@@ -454,22 +247,6 @@ function Home() {
             onSend={handleSend}
             sessionStatus={sessionStatus}
           />
-          {isTestMode && (
-            <div style={{ 
-              padding: '20px', 
-              borderTop: '2px solid #722ed1',
-              background: '#fff',
-              maxHeight: '50vh',
-              overflow: 'auto'
-            }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#722ed1' }}>
-                🔬 原生 Streamdown 渲染（无 ChatBox 包装）
-              </h3>
-              <Streamdown plugins={{ code, mermaid, math, cjk }}>
-                {MERMAID_TEST}
-              </Streamdown>
-            </div>
-          )}
         </div>
       </div>
     </div>
