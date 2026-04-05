@@ -3,6 +3,7 @@ import { getSsoProviders, buildAuthorizeUrl, verifyState, ssoLogin } from '../se
 import { revokeToken } from '../services/token.js'
 import { authMiddleware } from '../middleware/auth.js'
 
+import logger from '../services/logger.js'
 const router = Router()
 
 router.get('/providers', async (req, res) => {
@@ -10,7 +11,7 @@ router.get('/providers', async (req, res) => {
     const providers = await getSsoProviders()
     res.json(providers)
   } catch (error) {
-    console.error('Get SSO providers error:', error)
+    logger.error('Get SSO providers error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -27,7 +28,7 @@ router.get('/:provider', async (req, res) => {
     const result = await buildAuthorizeUrl(provider, redirectUri)
     res.json(result)
   } catch (error) {
-    console.error('Build authorize URL error:', error)
+    logger.error('Build authorize URL error:', error)
     res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
   }
 })
@@ -65,7 +66,7 @@ router.post('/:provider/callback', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('SSO callback error:', error)
+    logger.error('SSO callback error:', error)
     res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
   }
 })
@@ -79,7 +80,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
     }
     res.json({ success: true })
   } catch (error) {
-    console.error('Logout error:', error)
+    logger.error('Logout error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

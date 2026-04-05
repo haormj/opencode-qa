@@ -1,10 +1,11 @@
 import { createOpencodeClient } from '@opencode-ai/sdk/v2'
 import { eventSubscriptionManager } from './event-subscription-manager.js'
 
+import logger from './logger.js'
 const OPENCODE_SERVER_USERNAME = process.env.OPENCODE_SERVER_USERNAME || 'opencode'
 const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
 
-console.log('[OpenCode Config]', {
+logger.info('[OpenCode Config]', {
   OPENCODE_SERVER_USERNAME,
   OPENCODE_SERVER_PASSWORD: OPENCODE_SERVER_PASSWORD ? '***' : '(not set)'
 })
@@ -40,19 +41,19 @@ export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: s
   const client = getClient(apiUrl)
   
   if (sessionId) {
-    console.log('[OpenCode] Checking existing session:', sessionId)
+    logger.info('[OpenCode] Checking existing session:', sessionId)
     try {
       const result = await client.session.get({ sessionID: sessionId })
       if (result.data) {
-        console.log('[OpenCode] Session exists:', sessionId)
+        logger.info('[OpenCode] Session exists:', sessionId)
         return { sessionId, needsRebuild: false }
       }
     } catch (error) {
-      console.log('[OpenCode] Session check failed, will create new one')
+      logger.info('[OpenCode] Session check failed, will create new one')
     }
   }
   
-  console.log('[OpenCode] Creating new session...')
+  logger.info('[OpenCode] Creating new session...')
   const result = await client.session.create({
     title: 'OpenCode QA Session'
   })
@@ -61,7 +62,7 @@ export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: s
     throw new Error('Failed to create OpenCode session')
   }
   
-  console.log('[OpenCode] New session created:', result.data.id)
+  logger.info('[OpenCode] New session created:', result.data.id)
   return { sessionId: result.data.id, needsRebuild: !!sessionId }
 }
 
@@ -70,7 +71,7 @@ export async function rebuildContext(
   historyParts: Array<{ type: 'text'; text: string }>,
   botConfig: BotConfig
 ): Promise<void> {
-  console.log('[OpenCode] Rebuilding context with', historyParts.length, 'messages')
+  logger.info(`[OpenCode] Rebuilding context with ${historyParts.length} messages`)
   
   const client = getClient(botConfig.apiUrl)
   
@@ -85,7 +86,7 @@ export async function rebuildContext(
     parts: historyParts
   })
   
-  console.log('[OpenCode] Context rebuilt successfully')
+  logger.info('[OpenCode] Context rebuilt successfully')
 }
 
 export async function sendOpenCodeMessage(
@@ -93,13 +94,13 @@ export async function sendOpenCodeMessage(
   botConfig: BotConfig,
   opencodeSessionId?: string
 ): Promise<{ sessionId: string; answer: string }> {
-  console.log('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
+  logger.info('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
   
   const client = getClient(botConfig.apiUrl)
   
-  console.log('[OpenCode] Sending message to session:', sessionId)
+  logger.info('[OpenCode] Sending message to session:', sessionId)
   const result = await client.session.prompt({
     sessionID: sessionId,
     model: {
@@ -110,7 +111,7 @@ export async function sendOpenCodeMessage(
     parts: [{ type: 'text', text: message }]
   })
   
-  console.log('[OpenCode] Message response:', {
+  logger.info('[OpenCode] Message response:', {
     hasData: !!result.data,
     hasParts: !!result.data?.parts,
     partsLength: result.data?.parts?.length
@@ -125,7 +126,7 @@ export async function sendOpenCodeMessage(
     }
   }
   
-  console.log('[OpenCode] Answer length:', answer.length)
+  logger.info('[OpenCode] Answer length:', answer.length)
   
   return {
     sessionId,
@@ -140,7 +141,7 @@ export async function sendOpenCodeMessageStream(
   onChunk: (chunk: string) => void,
   onSessionId: (sessionId: string) => void
 ): Promise<{ sessionId: string; answer: string }> {
-  console.log('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
+  logger.info('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
   onSessionId(sessionId)
@@ -161,7 +162,7 @@ export async function sendOpenCodeMessageStream(
   }
   
   const onComplete = () => {
-    console.log('[OpenCode] Message completed via event')
+    logger.info('[OpenCode] Message completed via event')
     messageCompleted = true
     completionResolver()
   }
@@ -170,13 +171,13 @@ export async function sendOpenCodeMessageStream(
   
   const timeoutId = setTimeout(() => {
     if (!messageCompleted) {
-      console.log('[OpenCode] Stream timeout (60s)')
+      logger.info('[OpenCode] Stream timeout (60s)')
       completionResolver()
     }
   }, 60000)
   
   try {
-    console.log('[OpenCode] Sending message to session:', sessionId)
+    logger.info('[OpenCode] Sending message to session:', sessionId)
     const promptPromise = client.session.prompt({
       sessionID: sessionId,
       model: {
@@ -191,10 +192,10 @@ export async function sendOpenCodeMessageStream(
     clearTimeout(timeoutId)
     
     if (!answer) {
-      console.log('[OpenCode] No answer from stream, trying prompt result')
+      logger.info('[OpenCode] No answer from stream, trying prompt result')
       try {
         const result = await promptPromise
-        console.log('[OpenCode] Prompt result:', {
+        logger.info('[OpenCode] Prompt result:', {
           hasData: !!result.data,
           hasParts: !!result.data?.parts,
           partsLength: result.data?.parts?.length
@@ -208,12 +209,12 @@ export async function sendOpenCodeMessageStream(
           }
         }
       } catch (error) {
-        console.error('[OpenCode] Prompt error:', error)
+        logger.error('[OpenCode] Prompt error:', error)
       }
     }
   } finally {
     eventSubscriptionManager.unregister(botConfig.apiUrl, sessionId)
-    console.log('[OpenCode] Stream answer length:', answer.length)
+    logger.info('[OpenCode] Stream answer length:', answer.length)
   }
   
   return {
@@ -229,15 +230,15 @@ export async function getSessionMessages(apiUrl: string, sessionId: string) {
 }
 
 export async function deleteOpenCodeSession(apiUrl: string, sessionId: string): Promise<boolean> {
-  console.log('[OpenCode] Deleting session:', sessionId)
+  logger.info('[OpenCode] Deleting session:', sessionId)
   
   try {
     const client = getClient(apiUrl)
     await client.session.delete({ sessionID: sessionId })
-    console.log('[OpenCode] Session deleted:', sessionId)
+    logger.info('[OpenCode] Session deleted:', sessionId)
     return true
   } catch (error) {
-    console.error(`[OpenCode] Error deleting session ${sessionId}:`, error)
+    logger.error(`[OpenCode] Error deleting session ${sessionId}:`, error)
     return false
   }
 }

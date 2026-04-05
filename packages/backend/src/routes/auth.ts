@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import { prisma } from '../index.js'
 import { authMiddleware, AuthUser } from '../middleware/auth.js'
 import { createToken } from '../services/token.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -89,7 +90,7 @@ router.post('/register', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Register error:', error)
+    logger.error('Register error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -144,7 +145,7 @@ router.post('/login', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Login error:', error)
+    logger.error('Login error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

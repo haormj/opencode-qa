@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
       updatedAt: bot.updatedAt
     })))
   } catch (error) {
-    console.error('Get bots error:', error)
+    logger.error('Get bots error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -60,7 +61,7 @@ router.get('/:id', async (req, res) => {
       updatedAt: bot.updatedAt
     })
   } catch (error) {
-    console.error('Get bot error:', error)
+    logger.error('Get bot error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -102,7 +103,7 @@ router.post('/', requireAdmin, async (req, res) => {
       createdAt: bot.createdAt
     })
   } catch (error) {
-    console.error('Create bot error:', error)
+    logger.error('Create bot error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -142,7 +143,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
       updatedAt: bot.updatedAt
     })
   } catch (error) {
-    console.error('Update bot error:', error)
+    logger.error('Update bot error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -169,7 +170,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 
     res.json({ success: true })
   } catch (error) {
-    console.error('Delete bot error:', error)
+    logger.error('Delete bot error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

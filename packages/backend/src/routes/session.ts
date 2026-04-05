@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware } from '../middleware/auth.js'
 import { deleteOpenCodeSession } from '../services/opencode.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -20,7 +21,7 @@ router.get('/public/:id/info', async (req, res) => {
 
     res.json(session)
   } catch (error) {
-    console.error('Get session info error:', error)
+    logger.error('Get session info error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -48,7 +49,7 @@ router.get('/', authMiddleware, async (req, res) => {
       messageCount: s._count.messages
     })))
   } catch (error) {
-    console.error('Get sessions error:', error)
+    logger.error('Get sessions error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -96,7 +97,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       }))
     })
   } catch (error) {
-    console.error('Get session error:', error)
+    logger.error('Get session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -130,7 +131,7 @@ router.patch('/:id', authMiddleware, async (req, res) => {
       updatedAt: updated.updatedAt
     })
   } catch (error) {
-    console.error('Update session error:', error)
+    logger.error('Update session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -164,7 +165,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
     res.json({ success: true })
   } catch (error) {
-    console.error('Delete session error:', error)
+    logger.error('Delete session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -204,7 +205,7 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       updatedAt: updated.updatedAt
     })
   } catch (error) {
-    console.error('Update session status error:', error)
+    logger.error('Update session status error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

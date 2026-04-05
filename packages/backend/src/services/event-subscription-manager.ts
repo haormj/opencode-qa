@@ -1,5 +1,6 @@
 import { createOpencodeClient, type OpencodeClient } from '@opencode-ai/sdk/v2'
 
+import logger from './logger.js'
 interface CallbackInfo {
   onChunk: (chunk: string) => void
   onComplete: () => void
@@ -29,18 +30,18 @@ class EventSubscriptionManager {
   private readonly STREAM_TIMEOUT_MS = 60000
 
   async initialize(): Promise<void> {
-    console.log('[EventSubscriptionManager] Initializing...')
+    logger.info('[EventSubscriptionManager] Initializing...')
     this.startCleanupTimer()
-    console.log('[EventSubscriptionManager] Initialized')
+    logger.info('[EventSubscriptionManager] Initialized')
   }
 
   register(apiUrl: string, sessionId: string, onChunk: (chunk: string) => void, onComplete: () => void = () => {}): void {
-    console.log('[EventSubscriptionManager] Registering callback for session:', sessionId)
+    logger.info('[EventSubscriptionManager] Registering callback for session:', sessionId)
     
     let subscription = this.subscriptions.get(apiUrl)
     
     if (!subscription) {
-      console.log('[EventSubscriptionManager] Creating new subscription for apiUrl:', apiUrl)
+      logger.info('[EventSubscriptionManager] Creating new subscription for apiUrl:', apiUrl)
       subscription = {
         apiUrl,
         client: this.createClient(apiUrl),
@@ -60,16 +61,16 @@ class EventSubscriptionManager {
       lastActive: Date.now()
     })
     
-    console.log('[EventSubscriptionManager] Callback registered. Total callbacks:', subscription.callbacks.size)
+    logger.info('[EventSubscriptionManager] Callback registered. Total callbacks:', subscription.callbacks.size)
   }
 
   unregister(apiUrl: string, sessionId: string): void {
-    console.log('[EventSubscriptionManager] Unregistering callback for session:', sessionId)
+    logger.info('[EventSubscriptionManager] Unregistering callback for session:', sessionId)
     
     const subscription = this.subscriptions.get(apiUrl)
     if (subscription) {
       subscription.callbacks.delete(sessionId)
-      console.log('[EventSubscriptionManager] Callback unregistered. Remaining callbacks:', subscription.callbacks.size)
+      logger.info('[EventSubscriptionManager] Callback unregistered. Remaining callbacks:', subscription.callbacks.size)
     }
   }
 
@@ -97,16 +98,16 @@ class EventSubscriptionManager {
   }
 
   private async startEventListener(subscription: Subscription): Promise<void> {
-    console.log('[EventSubscriptionManager] Starting event listener for:', subscription.apiUrl)
+    logger.info('[EventSubscriptionManager] Starting event listener for:', subscription.apiUrl)
     
     try {
       subscription.abortController = new AbortController()
       subscription.eventStream = await subscription.client.event.subscribe()
-      console.log('[EventSubscriptionManager] Event stream connected')
+      logger.info('[EventSubscriptionManager] Event stream connected')
       
       this.processEventStream(subscription)
     } catch (error) {
-      console.error('[EventSubscriptionManager] Failed to start event listener:', error)
+      logger.error('[EventSubscriptionManager] Failed to start event listener:', error)
       this.reconnect(subscription)
     }
   }
@@ -119,7 +120,7 @@ class EventSubscriptionManager {
         this.handleEvent(subscription, event)
       }
     } catch (error: any) {
-      console.error('[EventSubscriptionManager] Event stream error:', error.message || error)
+      logger.error('[EventSubscriptionManager] Event stream error:', error.message || error)
       if (!subscription.isReconnecting) {
         this.reconnect(subscription)
       }
@@ -143,26 +144,26 @@ class EventSubscriptionManager {
     }
     
     if (event.type === 'session.idle' || event.type === 'message.updated') {
-      console.log('[EventSubscriptionManager] Message completed for session:', sessionId)
+      logger.info('[EventSubscriptionManager] Message completed for session:', sessionId)
       callbackInfo.onComplete()
     }
   }
 
   private async reconnect(subscription: Subscription): Promise<void> {
     if (subscription.isReconnecting) {
-      console.log('[EventSubscriptionManager] Already reconnecting, skip')
+      logger.info('[EventSubscriptionManager] Already reconnecting, skip')
       return
     }
     
     subscription.isReconnecting = true
-    console.log('[EventSubscriptionManager] Starting reconnect, attempt:', subscription.reconnectAttempts + 1)
+    logger.info('[EventSubscriptionManager] Starting reconnect, attempt:', subscription.reconnectAttempts + 1)
     
     const delay = Math.min(
       this.INITIAL_RECONNECT_DELAY_MS * Math.pow(2, subscription.reconnectAttempts),
       this.MAX_RECONNECT_DELAY_MS
     )
     
-    console.log('[EventSubscriptionManager] Reconnect delay:', delay, 'ms')
+    logger.info(`[EventSubscriptionManager] Reconnect delay: ${delay}ms`)
     await new Promise(resolve => setTimeout(resolve, delay))
     
     try {
@@ -172,11 +173,11 @@ class EventSubscriptionManager {
       
       subscription.eventStream = await subscription.client.event.subscribe()
       subscription.reconnectAttempts = 0
-      console.log('[EventSubscriptionManager] Reconnected successfully')
+      logger.info('[EventSubscriptionManager] Reconnected successfully')
       
       this.processEventStream(subscription)
     } catch (error) {
-      console.error('[EventSubscriptionManager] Reconnect failed:', error)
+      logger.error('[EventSubscriptionManager] Reconnect failed:', error)
       subscription.reconnectAttempts++
     } finally {
       subscription.isReconnecting = false
@@ -205,21 +206,21 @@ class EventSubscriptionManager {
       for (const sessionId of sessionsToRemove) {
         subscription.callbacks.delete(sessionId)
         totalCleaned++
-        console.log('[EventSubscriptionManager] Cleaned inactive callback:', sessionId)
+        logger.info('[EventSubscriptionManager] Cleaned inactive callback:', sessionId)
       }
       
       if (subscription.callbacks.size === 0) {
-        console.log('[EventSubscriptionManager] No callbacks remaining, keeping subscription for reuse')
+        logger.info('[EventSubscriptionManager] No callbacks remaining, keeping subscription for reuse')
       }
     }
     
     if (totalCleaned > 0) {
-      console.log('[EventSubscriptionManager] Cleanup completed. Total cleaned:', totalCleaned)
+      logger.info('[EventSubscriptionManager] Cleanup completed. Total cleaned:', totalCleaned)
     }
   }
 
   async shutdown(): Promise<void> {
-    console.log('[EventSubscriptionManager] Shutting down...')
+    logger.info('[EventSubscriptionManager] Shutting down...')
     
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval)
@@ -234,7 +235,7 @@ class EventSubscriptionManager {
     }
     
     this.subscriptions.clear()
-    console.log('[EventSubscriptionManager] Shutdown completed')
+    logger.info('[EventSubscriptionManager] Shutdown completed')
   }
 
   getStats(): { apiUrl: string; callbackCount: number }[] {

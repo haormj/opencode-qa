@@ -15,6 +15,8 @@ import botRoutes from './routes/bot.js'
 import testRoutes from './routes/test.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
+import { accessLogger, errorLogger } from './middleware/logger.js'
+import logger from './services/logger.js'
 
 export const prisma = new PrismaClient()
 
@@ -23,6 +25,7 @@ const PORT = process.env.PORT || 8000
 
 app.set('trust proxy', true)
 
+app.use(accessLogger)
 app.use(cors())
 app.use(express.json())
 
@@ -40,8 +43,10 @@ app.use('/api/admin/sso-providers', adminSsoRoutes)
 app.use('/api/bots', botRoutes)
 app.use('/api/test', testRoutes)
 
+app.use(errorLogger)
+
 app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+  logger.info(`Server running on http://localhost:${PORT}`)
   await eventSubscriptionManager.initialize()
   startScheduler()
 })

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
 import { authMiddleware } from '../middleware/auth.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -104,7 +105,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
     )
 
     if (needsRebuild) {
-      console.log('[Message] Rebuilding context, fetching history messages')
+      logger.info('[Message] Rebuilding context, fetching history messages')
       
       const previousMessages = await prisma.message.findMany({
         where: { sessionId },
@@ -182,7 +183,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       // Client disconnected
     })
   } catch (error) {
-    console.error('[Stream] Error:', error)
+    logger.error('[Stream] Error:', error)
     res.status(500).json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'

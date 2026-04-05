@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import { deleteOpenCodeSession } from '../services/opencode.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -69,7 +70,7 @@ router.get('/sessions', async (req, res) => {
       }))
     })
   } catch (error) {
-    console.error('Admin get sessions error:', error)
+    logger.error('Admin get sessions error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -121,7 +122,7 @@ router.get('/sessions/:id', async (req, res) => {
       }))
     })
   } catch (error) {
-    console.error('Admin get session error:', error)
+    logger.error('Admin get session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -173,7 +174,7 @@ router.post('/sessions/:id/reply', async (req, res) => {
       createdAt: message.createdAt
     })
   } catch (error) {
-    console.error('Admin reply error:', error)
+    logger.error('Admin reply error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -214,7 +215,7 @@ router.patch('/sessions/:id/close', async (req, res) => {
       updatedAt: updated.updatedAt
     })
   } catch (error) {
-    console.error('Admin close session error:', error)
+    logger.error('Admin close session error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -250,7 +251,7 @@ router.get('/users', async (req, res) => {
       roles: u.userRoles.map(ur => ur.role.name)
     })))
   } catch (error) {
-    console.error('Admin get users error:', error)
+    logger.error('Admin get users error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -294,7 +295,7 @@ router.post('/users/:id/roles', async (req, res) => {
 
     res.json({ success: true })
   } catch (error) {
-    console.error('Admin assign role error:', error)
+    logger.error('Admin assign role error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -322,7 +323,7 @@ router.delete('/users/:id/roles/:role', async (req, res) => {
 
     res.json({ success: true })
   } catch (error) {
-    console.error('Admin remove role error:', error)
+    logger.error('Admin remove role error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -351,7 +352,7 @@ router.get('/statistics', async (req, res) => {
       users: { total: usersTotal }
     })
   } catch (error) {
-    console.error('Get statistics error:', error)
+    logger.error('Get statistics error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

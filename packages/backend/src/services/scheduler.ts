@@ -1,7 +1,7 @@
 import schedule from 'node-schedule'
 import { prisma } from '../index.js'
 import { deleteOpenCodeSession } from './opencode.js'
-import * as logger from './logger.js'
+import logger from './logger.js'
 
 const HOURS_24 = 24 * 60 * 60 * 1000
 

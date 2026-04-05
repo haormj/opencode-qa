@@ -5,6 +5,7 @@ import multer from 'multer'
 import { SSO_PROVIDER_TYPES } from '../services/sso-processor.js'
 import { FEISHU_DEFAULTS } from '../services/sso-processors/feishu.js'
 
+import logger from '../services/logger.js'
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -36,7 +37,7 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       updatedAt: p.updatedAt
     })))
   } catch (error) {
-    console.error('Get SSO providers error:', error)
+    logger.error('Get SSO providers error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -79,7 +80,7 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
     })
     res.json(provider)
   } catch (error) {
-    console.error('Create SSO provider error:', error)
+    logger.error('Create SSO provider error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -125,7 +126,7 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
     })
     res.json(provider)
   } catch (error) {
-    console.error('Update SSO provider error:', error)
+    logger.error('Update SSO provider error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -136,7 +137,7 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req, res) => {
     await prisma.ssoProvider.delete({ where: { id } })
     res.json({ success: true })
   } catch (error) {
-    console.error('Delete SSO provider error:', error)
+    logger.error('Delete SSO provider error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -161,7 +162,7 @@ router.post('/:id/icon', authMiddleware, requireAdmin, upload.single('icon'), as
 
     res.json({ success: true })
   } catch (error) {
-    console.error('Upload icon error:', error)
+    logger.error('Upload icon error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

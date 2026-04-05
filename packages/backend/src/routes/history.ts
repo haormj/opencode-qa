@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware } from '../middleware/auth.js'
+import logger from '../services/logger.js'
 
 const router = Router()
 
@@ -49,7 +50,7 @@ router.get('/', authMiddleware, async (req, res) => {
       }))
     })
   } catch (error) {
-    console.error('History error:', error)
+    logger.error('History error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
