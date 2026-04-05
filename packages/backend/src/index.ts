@@ -10,7 +10,9 @@ import historyRoutes from './routes/history.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import botRoutes from './routes/bot.js'
+import testRoutes from './routes/test.js'
 import { startScheduler } from './services/scheduler.js'
+import { eventSubscriptionManager } from './services/event-subscription-manager.js'
 
 export const prisma = new PrismaClient()
 
@@ -30,13 +32,22 @@ app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/bots', botRoutes)
+app.use('/api/test', testRoutes)
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`)
+  await eventSubscriptionManager.initialize()
   startScheduler()
 })
 
 process.on('SIGINT', async () => {
+  await eventSubscriptionManager.shutdown()
+  await prisma.$disconnect()
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  await eventSubscriptionManager.shutdown()
   await prisma.$disconnect()
   process.exit(0)
 })

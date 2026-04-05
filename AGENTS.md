@@ -222,11 +222,11 @@ packages/
 
 ### 启动服务流程
 
-在启动开发服务前，必须先检测端口占用情况：
+**重要：启动任何服务前，必须先检查端口占用情况并清理旧进程。**
 
 1. **检测端口占用**：
    ```bash
-   netstat -ano | findstr ":3000 :8000"
+   netstat -ano | findstr ":3000 :8000" | findstr "LISTENING"
    ```
 
 2. **如果端口已被占用**，终止对应进程：
@@ -236,7 +236,7 @@ packages/
    taskkill /F /PID <PID>
    ```
 
-3. **启动服务**：使用非阻塞方式启动，避免占用当前终端
+3. **确认端口释放后**，启动服务（使用非阻塞方式）：
    ```powershell
    # 在新窗口启动开发服务器（推荐）
    Start-Process cmd -ArgumentList "/k cd /d D:\project\github.com\haormj\opencode-qa && npm run dev"
