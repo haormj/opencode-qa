@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
-import { sendOpenCodeMessage, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
+import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext } from '../services/opencode.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
@@ -127,16 +127,35 @@ router.post('/stream', authMiddleware, async (req, res) => {
       }
     })
 
-    const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessage(
-      content, 
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+
+    const sendEvent = (event: string, data: Record<string, unknown>) => {
+      res.write(`event: ${event}\n`)
+      res.write(`data: ${JSON.stringify(data)}\n\n`)
+    }
+
+    sendEvent('session', { sessionId })
+
+    let opencodeSessionIdFromStream: string | undefined
+
+    const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessageStream(
+      content,
       botConfig,
-      opencodeSessionId
+      opencodeSessionId,
+      (chunk: string) => {
+        sendEvent('text', { text: chunk })
+      },
+      (sid: string) => {
+        opencodeSessionIdFromStream = sid
+      }
     )
 
-    if (!session.opencodeSessionId) {
+    if (!session.opencodeSessionId && opencodeSessionIdFromStream) {
       await prisma.session.update({
         where: { id: sessionId },
-        data: { opencodeSessionId: returnedSessionId }
+        data: { opencodeSessionId: opencodeSessionIdFromStream }
       })
     }
 
@@ -149,40 +168,17 @@ router.post('/stream', authMiddleware, async (req, res) => {
       }
     })
 
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Connection', 'keep-alive')
-
-    const sendEvent = (event: string, data: Record<string, unknown>) => {
-      res.write(`event: ${event}\n`)
-      res.write(`data: ${JSON.stringify(data)}\n\n`)
-    }
-
-    sendEvent('session', { sessionId })
-
-    const chars = answer.split('')
-    let index = 0
-
-    const interval = setInterval(() => {
-      if (index < chars.length) {
-        const chunk = chars.slice(index, index + 2).join('')
-        sendEvent('text', { text: chunk })
-        index += 2
-      } else {
-        clearInterval(interval)
-        sendEvent('done', {
-          id: botMessage.id,
-          sessionId,
-          content: botMessage.content,
-          senderType: botMessage.senderType,
-          createdAt: botMessage.createdAt
-        })
-        res.end()
-      }
-    }, 15)
+    sendEvent('done', {
+      id: botMessage.id,
+      sessionId,
+      content: botMessage.content,
+      senderType: botMessage.senderType,
+      createdAt: botMessage.createdAt
+    })
+    res.end()
 
     req.on('close', () => {
-      clearInterval(interval)
+      // Client disconnected
     })
   } catch (error) {
     console.error('[Stream] Error:', error)
