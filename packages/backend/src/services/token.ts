@@ -56,12 +56,8 @@ export async function revokeToken(token: string): Promise<void> {
 }
 
 export async function revokeAllUserTokens(userId: string): Promise<void> {
-  await prisma.userToken.updateMany({
-    where: {
-      userId,
-      revokedAt: null
-    },
-    data: { revokedAt: new Date() }
+  await prisma.userToken.deleteMany({
+    where: { userId }
   })
 }
 
