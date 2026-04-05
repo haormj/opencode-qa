@@ -18,7 +18,11 @@ router.get('/providers', async (req, res) => {
 router.get('/:provider', async (req, res) => {
   try {
     const { provider } = req.params
-    const redirectUri = `${req.protocol}://${req.get('host')}/sso/callback`
+    const { redirectUri } = req.query
+    
+    if (!redirectUri || typeof redirectUri !== 'string') {
+      return res.status(400).json({ error: 'redirectUri is required' })
+    }
     
     const result = await buildAuthorizeUrl(provider, redirectUri)
     res.json(result)
@@ -31,10 +35,14 @@ router.get('/:provider', async (req, res) => {
 router.post('/:provider/callback', async (req, res) => {
   try {
     const { provider } = req.params
-    const { code, state } = req.body
+    const { code, state, redirectUri } = req.body
 
     if (!code || !state) {
       return res.status(400).json({ error: 'Missing code or state' })
+    }
+    
+    if (!redirectUri) {
+      return res.status(400).json({ error: 'Missing redirectUri' })
     }
 
     const stateResult = verifyState(state)
@@ -42,7 +50,6 @@ router.post('/:provider/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid state' })
     }
 
-    const redirectUri = `${req.protocol}://${req.get('host')}/sso/callback`
     const userAgent = req.get('user-agent')
     const ipAddress = req.ip || req.socket.remoteAddress
 

@@ -481,14 +481,15 @@ export async function getSsoProviders(): Promise<SsoProvider[]> {
   return request(`${API_BASE}/auth/sso/providers`)
 }
 
-export async function getSsoAuthorizeUrl(provider: string): Promise<{ authorizeUrl: string; state: string }> {
-  return request(`${API_BASE}/auth/sso/${provider}`)
+export async function getSsoAuthorizeUrl(provider: string, redirectUri: string): Promise<{ authorizeUrl: string; state: string }> {
+  const params = new URLSearchParams({ redirectUri })
+  return request(`${API_BASE}/auth/sso/${provider}?${params.toString()}`)
 }
 
-export async function ssoCallback(provider: string, code: string, state: string): Promise<{ token: string; user: User }> {
+export async function ssoCallback(provider: string, code: string, state: string, redirectUri: string): Promise<{ token: string; user: User }> {
   return request(`${API_BASE}/auth/sso/${provider}/callback`, {
     method: 'POST',
-    body: JSON.stringify({ code, state }),
+    body: JSON.stringify({ code, state, redirectUri }),
   })
 }
 

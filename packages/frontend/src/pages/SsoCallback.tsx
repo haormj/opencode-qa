@@ -20,19 +20,21 @@ function SsoCallback() {
 
     const storedProvider = sessionStorage.getItem('sso_provider')
     const storedState = sessionStorage.getItem('sso_state')
+    const storedRedirectUri = sessionStorage.getItem('sso_redirect_uri')
 
-    if (!storedProvider || state !== storedState) {
+    if (!storedProvider || state !== storedState || !storedRedirectUri) {
       setError('State 验证失败')
       setTimeout(() => navigate('/login'), 2000)
       return
     }
 
-    ssoCallback(storedProvider, code, state)
+    ssoCallback(storedProvider, code, state, storedRedirectUri)
       .then(({ token, user }) => {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
         sessionStorage.removeItem('sso_provider')
         sessionStorage.removeItem('sso_state')
+        sessionStorage.removeItem('sso_redirect_uri')
         message.success('登录成功')
         navigate('/')
       })

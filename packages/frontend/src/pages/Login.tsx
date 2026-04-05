@@ -29,9 +29,11 @@ function Login() {
 
   const handleSsoLogin = async (providerName: string) => {
     try {
-      const { authorizeUrl, state } = await getSsoAuthorizeUrl(providerName)
+      const redirectUri = `${window.location.origin}/sso/callback`
+      const { authorizeUrl, state } = await getSsoAuthorizeUrl(providerName, redirectUri)
       sessionStorage.setItem('sso_provider', providerName)
       sessionStorage.setItem('sso_state', state)
+      sessionStorage.setItem('sso_redirect_uri', redirectUri)
       window.location.href = authorizeUrl
     } catch (error) {
       message.error('SSO 登录失败')
