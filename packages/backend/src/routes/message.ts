@@ -152,7 +152,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       }
     )
 
-    if (!session.opencodeSessionId && opencodeSessionIdFromStream) {
+    if (opencodeSessionIdFromStream && opencodeSessionIdFromStream !== session.opencodeSessionId) {
       await prisma.session.update({
         where: { id: sessionId },
         data: { opencodeSessionId: opencodeSessionIdFromStream }
