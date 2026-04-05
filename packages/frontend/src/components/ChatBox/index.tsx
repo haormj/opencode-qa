@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Chat, { Bubble, MessageProps } from '@chatui/core'
 import '@chatui/core/dist/index.css'
-import 'github-markdown-css/github-markdown-light.css'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
-import 'highlight.js/styles/github.css'
+import { Streamdown } from 'streamdown'
+import { code } from '@streamdown/code'
+import { mermaid } from '@streamdown/mermaid'
+import { math } from '@streamdown/math'
+import { cjk } from '@streamdown/cjk'
 import { Avatar } from 'antd'
 import { RobotOutlined, UserOutlined } from '@ant-design/icons'
 import './ChatBox.css'
@@ -77,6 +77,8 @@ function ChatBox({
     }
     
     const isUser = position === 'right'
+    const text = content.text || ''
+    const isAnimating = typing && !isUser
 
     return (
       <div className="message-wrapper">
@@ -98,18 +100,17 @@ function ChatBox({
         )}
         <Bubble
           type="text"
-          content={isUser ? content.text : ''}
+          content={isUser ? text : ''}
         >
-          {!isUser && (
-            <div className="markdown-body">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-              >
-                {content.text || ''}
-              </ReactMarkdown>
-            </div>
-          )}
+        {!isUser && (
+          <Streamdown
+            className="message-content"
+            plugins={{ code, mermaid, math, cjk }}
+            isAnimating={isAnimating}
+          >
+            {text}
+          </Streamdown>
+        )}
         </Bubble>
       </div>
     )
