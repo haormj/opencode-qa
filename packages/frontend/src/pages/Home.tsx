@@ -245,6 +245,7 @@ function Home() {
             messages={messages}
             typing={loading}
             onSend={handleSend}
+            sessionStatus={sessionStatus}
           />
         </div>
       </div>
