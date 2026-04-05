@@ -48,3 +48,34 @@
 .admin-sidebar-menu .ant-menu-item-selected {
   background: #d6e4ff;
 }
+
+.admin-sidebar-menu .ant-menu-submenu-title {
+  margin: 0 8px 4px;
+  border-radius: 8px;
+  padding-right: 24px;
+  position: relative;
+}
+
+.admin-sidebar-menu .ant-menu-submenu-title:hover {
+  background: #e8e8e8;
+}
+
+.admin-sidebar-menu .ant-menu-submenu-arrow {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+}
+
+.admin-sidebar-menu .ant-menu-sub {
+  background: transparent;
+}
+
+.admin-sidebar-menu .ant-menu-sub .ant-menu-item {
+  padding-left: 48px !important;
+}
+
+.admin-sidebar-menu .ant-menu-sub .ant-menu-item-selected {
+  background: #d6e4ff;
+}
