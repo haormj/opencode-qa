@@ -26,7 +26,13 @@ function AdminSidebar() {
     {
       key: '/admin/statistics',
       icon: <BarChartOutlined />,
-      label: '数据统计'
+      label: '数据统计',
+      children: [
+        {
+          key: '/admin/statistics/overview',
+          label: '概览'
+        }
+      ]
     },
     {
       key: '/admin/settings',
@@ -46,15 +52,17 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/sessions')) return '/admin/sessions'
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
-    if (pathname.startsWith('/admin/statistics')) return '/admin/statistics'
+    if (pathname.startsWith('/admin/statistics/overview')) return '/admin/statistics/overview'
     if (pathname.startsWith('/admin/settings/sso')) return '/admin/settings/sso'
     return pathname
   }
 
   const getOpenKeys = () => {
     const pathname = location.pathname
-    if (pathname.startsWith('/admin/settings')) return ['/admin/settings']
-    return []
+    const openKeys = []
+    if (pathname.startsWith('/admin/statistics')) openKeys.push('/admin/statistics')
+    if (pathname.startsWith('/admin/settings')) openKeys.push('/admin/settings')
+    return openKeys
   }
 
   return (
