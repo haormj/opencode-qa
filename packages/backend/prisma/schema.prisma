@@ -8,17 +8,21 @@ datasource db {
 }
 
 model User {
-  id          String     @id @default(uuid())
-  username    String     @unique
-  password    String
-  email       String?    @unique
-  displayName String     @map("display_name")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id          String      @id @default(uuid())
+  username    String      @unique
+  password    String?
+  email       String?     @unique
+  displayName String      @map("display_name")
+  ssoProvider String?     @map("sso_provider")
+  ssoUserId   String?     @map("sso_user_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
   sessions    Session[]
   messages    Message[]
   userRoles   UserRole[]
+  tokens      UserToken[]
 
+  @@unique([ssoProvider, ssoUserId])
   @@map("users")
 }
 
@@ -95,4 +99,44 @@ model Message {
   bot        Bot?      @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+model UserToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_tokens")
+}
+
+model SsoProvider {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  displayName     String
+  icon            String?
+  iconMimeType    String?  @map("icon_mime_type")
+  enabled         Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  authorizeUrl    String   @map("authorize_url")
+  tokenUrl        String   @map("token_url")
+  userInfoUrl     String?  @map("user_info_url")
+  clientId        String   @map("client_id")
+  clientSecret    String   @map("client_secret")
+  scope           String   @default("openid profile email")
+  userIdField     String   @default("sub") @map("user_id_field")
+  usernameField   String   @default("preferred_username") @map("username_field")
+  emailField      String   @default("email") @map("email_field")
+  displayNameField String  @default("name") @map("display_name_field")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("sso_providers")
 }

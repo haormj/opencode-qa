@@ -8,7 +8,9 @@ import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
 import authRoutes from './routes/auth.js'
+import authSsoRoutes from './routes/auth-sso.js'
 import adminRoutes from './routes/admin.js'
+import adminSsoRoutes from './routes/admin-sso.js'
 import botRoutes from './routes/bot.js'
 import testRoutes from './routes/test.js'
 import { startScheduler } from './services/scheduler.js'
@@ -27,10 +29,12 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/auth/sso', authSsoRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin/sso-providers', adminSsoRoutes)
 app.use('/api/bots', botRoutes)
 app.use('/api/test', testRoutes)
 

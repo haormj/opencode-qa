@@ -1,11 +1,10 @@
 import { Router, Response } from 'express'
 import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
 import { prisma } from '../index.js'
 import { authMiddleware, AuthUser } from '../middleware/auth.js'
+import { createToken } from '../services/token.js'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret'
 
 interface RegisterRequest {
   username: string
@@ -76,7 +75,7 @@ router.post('/register', async (req, res) => {
       })
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' })
+    const token = await createToken(user.id, req.get('user-agent'), req.ip)
 
     res.json({
       token,
@@ -116,13 +115,17 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
+    if (!user.password) {
+      return res.status(401).json({ error: 'Please use SSO login' })
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' })
+    const token = await createToken(user.id, req.get('user-agent'), req.ip)
 
     const roles = user.userRoles.map(ur => ur.role.name)
 

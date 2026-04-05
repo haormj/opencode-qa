@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons'
 import './AdminSidebar.css'
 
 function AdminSidebar() {
@@ -27,6 +27,17 @@ function AdminSidebar() {
       key: '/admin/statistics',
       icon: <BarChartOutlined />,
       label: '数据统计'
+    },
+    {
+      key: '/admin/settings',
+      icon: <SettingOutlined />,
+      label: '系统设置',
+      children: [
+        {
+          key: '/admin/settings/sso',
+          label: '统一登录'
+        }
+      ]
     }
   ]
 
@@ -36,7 +47,14 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/statistics')) return '/admin/statistics'
+    if (pathname.startsWith('/admin/settings/sso')) return '/admin/settings/sso'
     return pathname
+  }
+
+  const getOpenKeys = () => {
+    const pathname = location.pathname
+    if (pathname.startsWith('/admin/settings')) return ['/admin/settings']
+    return []
   }
 
   return (
@@ -49,6 +67,7 @@ function AdminSidebar() {
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
+          defaultOpenKeys={getOpenKeys()}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ border: 'none', background: 'transparent' }}

@@ -30,6 +30,18 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const token = authHeader.substring(7)
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
 
+    const tokenRecord = await prisma.userToken.findUnique({
+      where: { token }
+    })
+
+    if (!tokenRecord || tokenRecord.revokedAt || new Date() > tokenRecord.expiresAt) {
+      return res.status(401).json({ error: 'Token invalid or expired' })
+    }
+
+    if (tokenRecord.userId !== decoded.userId) {
+      return res.status(401).json({ error: 'Token mismatch' })
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       include: {

@@ -218,7 +218,14 @@ export async function getCurrentUser(): Promise<User> {
   return request<User>(`${API_BASE}/auth/me`)
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  try {
+    await request(`${API_BASE}/auth/sso/logout`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Logout API error:', error)
+  }
   removeToken()
   window.location.href = '/login'
 }
@@ -447,6 +454,80 @@ export function generateAvatarColor(name: string): string {
 export function getUsername(): string {
   const user = getStoredUser()
   return user?.displayName || user?.username || '用户'
+}
+
+export interface SsoProvider {
+  id: string
+  name: string
+  displayName: string
+  icon?: string
+  iconMimeType?: string
+  enabled: boolean
+  sortOrder: number
+  authorizeUrl: string
+  tokenUrl: string
+  userInfoUrl?: string
+  clientId: string
+  scope: string
+  userIdField: string
+  usernameField: string
+  emailField: string
+  displayNameField: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getSsoProviders(): Promise<SsoProvider[]> {
+  return request(`${API_BASE}/auth/sso/providers`)
+}
+
+export async function getSsoAuthorizeUrl(provider: string): Promise<{ authorizeUrl: string; state: string }> {
+  return request(`${API_BASE}/auth/sso/${provider}`)
+}
+
+export async function ssoCallback(provider: string, code: string, state: string): Promise<{ token: string; user: User }> {
+  return request(`${API_BASE}/auth/sso/${provider}/callback`, {
+    method: 'POST',
+    body: JSON.stringify({ code, state }),
+  })
+}
+
+export async function getAdminSsoProviders(): Promise<SsoProvider[]> {
+  return request(`${API_BASE}/admin/sso-providers`)
+}
+
+export async function createSsoProvider(data: Partial<SsoProvider>): Promise<SsoProvider> {
+  return request(`${API_BASE}/admin/sso-providers`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSsoProvider(id: string, data: Partial<SsoProvider>): Promise<SsoProvider> {
+  return request(`${API_BASE}/admin/sso-providers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteSsoProvider(id: string): Promise<void> {
+  await request(`${API_BASE}/admin/sso-providers/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function uploadSsoProviderIcon(id: string, file: File): Promise<void> {
+  const formData = new FormData()
+  formData.append('icon', file)
+  
+  const token = getToken()
+  await fetch(`${API_BASE}/admin/sso-providers/${id}/icon`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  })
 }
 
 export interface Statistics {

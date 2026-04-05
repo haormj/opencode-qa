@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Form, Input, Button, Card, message, Tabs } from 'antd'
+import { Form, Input, Button, Card, message, Tabs, Divider, Space } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
-import { login, register, isAuthenticated } from '../services/api'
+import { login, register, isAuthenticated, getSsoProviders, getSsoAuthorizeUrl, SsoProvider } from '../services/api'
 import './Login.css'
 
 interface LocationState {
@@ -14,12 +14,28 @@ function Login() {
   const location = useLocation()
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const [ssoProviders, setSsoProviders] = useState<SsoProvider[]>([])
 
   const from = (location.state as LocationState)?.from || '/'
+
+  useEffect(() => {
+    getSsoProviders().then(setSsoProviders).catch(() => {})
+  }, [])
 
   if (isAuthenticated()) {
     navigate(from, { replace: true })
     return null
+  }
+
+  const handleSsoLogin = async (providerName: string) => {
+    try {
+      const { authorizeUrl, state } = await getSsoAuthorizeUrl(providerName)
+      sessionStorage.setItem('sso_provider', providerName)
+      sessionStorage.setItem('sso_state', state)
+      window.location.href = authorizeUrl
+    } catch (error) {
+      message.error('SSO 登录失败')
+    }
   }
 
   const handleLogin = async (values: { username: string; password: string }) => {
@@ -96,6 +112,30 @@ function Login() {
                 </Button>
               </Form.Item>
             </Form>
+            {ssoProviders.length > 0 && (
+              <>
+                <Divider>或</Divider>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {ssoProviders.map(provider => (
+                    <Button
+                      key={provider.name}
+                      block
+                      size="large"
+                      onClick={() => handleSsoLogin(provider.name)}
+                      icon={provider.icon ? (
+                        <img 
+                          src={`data:${provider.iconMimeType};base64,${provider.icon}`}
+                          alt={provider.displayName}
+                          style={{ width: 16, height: 16, marginRight: 8 }}
+                        />
+                      ) : undefined}
+                    >
+                      {provider.displayName}
+                    </Button>
+                  ))}
+                </Space>
+              </>
+            )}
           </Tabs.TabPane>
           <Tabs.TabPane tab="注册" key="register">
             <Form onFinish={handleRegister} layout="vertical">

@@ -2,12 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { isAuthenticated, isAdmin } from './services/api'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import SsoCallback from './pages/SsoCallback'
 import SessionRedirect from './pages/SessionRedirect'
 import AdminLayout from './pages/admin/Layout'
 import AdminSessions from './pages/admin/Sessions'
 import AdminSessionDetail from './pages/admin/SessionDetail'
 import AdminUsers from './pages/admin/Users'
 import AdminBots from './pages/admin/Bots'
+import AdminSsoProviders from './pages/admin/SsoProviders'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -41,6 +43,7 @@ function App() {
           }
         />
         <Route path="/login" element={<Login />} />
+        <Route path="/sso/callback" element={<SsoCallback />} />
         <Route
           path="/session/:id"
           element={
@@ -62,6 +65,7 @@ function App() {
           <Route path="sessions/:id" element={<AdminSessionDetail />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="bots" element={<AdminBots />} />
+          <Route path="settings/sso" element={<AdminSsoProviders />} />
           <Route path="statistics" element={<StatisticsLayout />}>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<StatisticsOverview />} />
