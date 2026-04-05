@@ -12,7 +12,6 @@ import authSsoRoutes from './routes/auth-sso.js'
 import adminRoutes from './routes/admin.js'
 import adminSsoRoutes from './routes/admin-sso.js'
 import botRoutes from './routes/bot.js'
-import testRoutes from './routes/test.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
 import { accessLogger, errorLogger } from './middleware/logger.js'
@@ -41,7 +40,6 @@ app.use('/api/history', historyRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/admin/sso-providers', adminSsoRoutes)
 app.use('/api/bots', botRoutes)
-app.use('/api/test', testRoutes)
 
 app.use(errorLogger)
 
