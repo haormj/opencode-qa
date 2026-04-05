@@ -107,7 +107,6 @@ function ChatBox({
             className="message-content"
             plugins={{ code, mermaid, math, cjk }}
             isAnimating={isAnimating}
-            caret="block"
           >
             {text}
           </Streamdown>
