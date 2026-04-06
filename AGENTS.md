@@ -147,21 +147,26 @@ develop (开发分支)
     ↓ 拉取新分支
 feat/xxx 或 fix/xxx (特性/修复分支)
     ↓ 开发完成
+执行单元测试
+    ↓ 测试通过
 用户验证质量
     ↓ 质量通过
 合入 develop → 删除特性/修复分支
     ↓ 用户在 develop 验证
 用户决定合入 master
     ↓ 告知执行
+执行单元测试
+    ↓ 测试通过
 合入 master 并推送
 ```
 
 ### 关键规则
 
 1. **新特性/修复**：基于 develop 拉取新分支
-2. **质量把控**：用户决定是否合入 develop
-3. **分支清理**：合入 develop 后删除特性分支
-4. **master 合并**：只有用户验证 develop 后决定合入时才执行
+2. **单元测试**：开发完成后必须执行所有单元测试
+3. **质量把控**：用户决定是否合入 develop
+4. **分支清理**：合入 develop 后删除特性分支
+5. **master 合并**：用户验证 develop 后决定合入时执行，合入前需执行单元测试
 
 ### 示例流程
 
@@ -172,6 +177,9 @@ git checkout -b feat/new-feature
 
 # ... 开发修改 ...
 
+# 执行单元测试
+npm run test
+
 # 用户验证质量后决定合入 develop
 git checkout develop
 git merge feat/new-feature
@@ -179,6 +187,9 @@ git branch -d feat/new-feature
 git push origin develop
 
 # 用户在 develop 验证通过后，告知合入 master
+# 执行单元测试
+npm run test
+
 git checkout master
 git merge develop
 git push origin master
