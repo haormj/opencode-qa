@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext, abortOpenCodeSession } from '../services/opencode.js'
 import { eventSubscriptionManager, type ChunkType } from '../services/event-subscription-manager.js'
+import { sessionEventManager } from '../services/session-event-manager.js'
 import { authMiddleware } from '../middleware/auth.js'
 import logger from '../services/logger.js'
 
@@ -53,7 +54,23 @@ router.post('/stream', authMiddleware, async (req, res) => {
           senderType: 'user',
           content,
           userId
+        },
+        include: {
+          user: {
+            select: { id: true, displayName: true, username: true }
+          }
         }
+      })
+
+      // 触发实时事件，通知所有监听该会话的客户端
+      sessionEventManager.emitMessage(session.id, {
+        id: userMessage.id,
+        sessionId: userMessage.sessionId,
+        senderType: userMessage.senderType,
+        content: userMessage.content,
+        reasoning: userMessage.reasoning,
+        createdAt: userMessage.createdAt,
+        user: userMessage.user
       })
 
       return res.json({
@@ -171,8 +188,16 @@ router.post('/stream', authMiddleware, async (req, res) => {
         content: answer || '抱歉，我无法回答这个问题。',
         reasoning: reasoningContent || null,
         botId: defaultBot.id
+      },
+      include: {
+        bot: {
+          select: { id: true, displayName: true, avatar: true }
+        }
       }
     })
+
+    // 注意：bot 消息已通过流式响应完整传输给用户，不需要再通过 SSE 推送
+    // SSE 推送仅用于：管理员回复 → 用户页面，用户消息 → 管理员页面
 
     sendEvent('done', {
       id: botMessage.id,

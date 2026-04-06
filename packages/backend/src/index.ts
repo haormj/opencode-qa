@@ -12,6 +12,7 @@ import authSsoRoutes from './routes/auth-sso.js'
 import adminRoutes from './routes/admin.js'
 import adminSsoRoutes from './routes/admin-sso.js'
 import botRoutes from './routes/bot.js'
+import sessionEventsRoutes from './routes/session-events.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
 import { accessLogger, errorLogger } from './middleware/logger.js'
@@ -35,6 +36,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/auth/sso', authSsoRoutes)
 app.use('/api/messages', messageRoutes)
+app.use('/api/sessions', sessionEventsRoutes)  // 必须先注册，避免被 /:id 捕获
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/admin', adminRoutes)

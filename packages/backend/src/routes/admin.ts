@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../index.js'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import { deleteOpenCodeSession } from '../services/opencode.js'
+import { sessionEventManager } from '../services/session-event-manager.js'
 import logger from '../services/logger.js'
 
 const router = Router()
@@ -154,12 +155,17 @@ router.post('/sessions/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Cannot reply to a session that does not need human assistance' })
     }
 
-    const message = await prisma.message.create({
+    const createdMessage = await prisma.message.create({
       data: {
         sessionId: id,
         senderType: 'admin',
         content,
         userId: adminUser!.id
+      },
+      include: {
+        user: {
+          select: { id: true, displayName: true, username: true }
+        }
       }
     })
 
@@ -168,11 +174,22 @@ router.post('/sessions/:id/reply', async (req, res) => {
       data: { updatedAt: new Date() }
     })
 
+    // 触发实时事件，通知所有监听该会话的客户端
+    sessionEventManager.emitMessage(id, {
+      id: createdMessage.id,
+      sessionId: createdMessage.sessionId,
+      senderType: createdMessage.senderType,
+      content: createdMessage.content,
+      reasoning: createdMessage.reasoning,
+      createdAt: createdMessage.createdAt,
+      user: createdMessage.user
+    })
+
     res.json({
-      id: message.id,
-      senderType: message.senderType,
-      content: message.content,
-      createdAt: message.createdAt
+      id: createdMessage.id,
+      senderType: createdMessage.senderType,
+      content: createdMessage.content,
+      createdAt: createdMessage.createdAt
     })
   } catch (error) {
     logger.error('Admin reply error:', error)

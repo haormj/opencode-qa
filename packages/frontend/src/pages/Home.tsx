@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, type MessageItem } from '../services/api'
+import { useSessionEvents } from '../hooks/useSessionEvents'
 import type { Session } from '../services/api'
 import './Home.css'
 
@@ -270,6 +271,65 @@ function Home() {
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev)
   }, [])
+
+  // SSE 实时消息监听
+  const handleRealtimeMessage = useCallback((msgData: {
+    id: string
+    sessionId: string
+    senderType: string
+    content: string
+    reasoning?: string | null
+    createdAt: string
+    user?: { id: string; displayName: string; username: string } | null
+    bot?: { id: string; displayName: string; avatar: string | null } | null
+  }) => {
+    // 只处理来自 bot 或 admin 的消息（用户自己发的消息已经在本地添加了）
+    if (msgData.senderType === 'user') return
+
+    let senderName = 'AI 助手'
+    let senderColor = '#52c41a'
+    let senderType: 'user' | 'admin' | 'ai' = 'ai'
+
+    if (msgData.senderType === 'bot' && msgData.bot) {
+      senderName = msgData.bot.displayName
+      senderColor = msgData.bot.avatar || '#52c41a'
+      senderType = 'ai'
+    } else if (msgData.senderType === 'admin') {
+      senderName = '管理员'
+      senderColor = '#1890ff'
+      senderType = 'admin'
+    }
+
+    const newMessage: ExtendedMessageProps = {
+      _id: msgData.id,
+      type: 'text',
+      content: { text: msgData.content },
+      position: 'left',
+      sender: {
+        name: senderName,
+        color: senderColor,
+        type: senderType
+      },
+      reasoning: msgData.reasoning || undefined
+    }
+
+    setMessages(prev => {
+      // 检查消息是否已存在
+      const exists = prev.some(msg => msg._id === msgData.id)
+      if (exists) return prev
+      return [...prev, newMessage]
+    })
+  }, [])
+
+  const handleRealtimeStatus = useCallback((statusData: { sessionId: string; status: string }) => {
+    setSessionStatus(statusData.status)
+  }, [])
+
+  useSessionEvents({
+    sessionId,
+    onMessage: handleRealtimeMessage,
+    onStatus: handleRealtimeStatus
+  })
 
   return (
     <div className="home-layout">

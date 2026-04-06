@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tag, Button, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { getAdminSessionDetail, adminReplyToSession, type SessionDetail, type MessageItem, type User } from '../../services/api'
+import { useSessionEvents } from '../../hooks/useSessionEvents'
 import type { ExtendedMessageProps } from '../../components/ChatBox'
 import ChatBox from '../../components/ChatBox'
 import './Admin.css'
@@ -50,6 +51,55 @@ function AdminSessionDetail() {
   useEffect(() => {
     fetchSession()
   }, [id])
+
+  // SSE 实时消息监听
+  const handleRealtimeMessage = useCallback((msgData: {
+    id: string
+    sessionId: string
+    senderType: string
+    content: string
+    reasoning?: string | null
+    createdAt: string
+    user?: { id: string; displayName: string; username: string } | null
+    bot?: { id: string; displayName: string; avatar: string | null } | null
+  }) => {
+    // 只处理来自 user 或 bot 的消息（管理员自己发的消息已经在本地添加了）
+    if (msgData.senderType === 'admin') return
+
+    setSession(prev => {
+      if (!prev) return prev
+      
+      // 检查消息是否已存在
+      const exists = prev.messages.some(msg => msg.id === msgData.id)
+      if (exists) return prev
+
+        // 创建新消息对象
+      const newMessage: MessageItem = {
+        id: msgData.id,
+        sessionId: msgData.sessionId,
+        senderType: msgData.senderType as 'user' | 'admin' | 'bot',
+        content: msgData.content,
+        reasoning: msgData.reasoning || undefined,
+        createdAt: msgData.createdAt,
+        user: msgData.user || undefined,
+        bot: msgData.bot ? {
+          id: msgData.bot.id,
+          displayName: msgData.bot.displayName,
+          avatar: msgData.bot.avatar || undefined
+        } : undefined
+      }
+
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage]
+      }
+    })
+  }, [])
+
+  useSessionEvents({
+    sessionId: id || null,
+    onMessage: handleRealtimeMessage
+  })
 
   const convertMessagesToChatBox = (messages: MessageItem[]): ExtendedMessageProps[] => {
     return messages.map(msg => {
