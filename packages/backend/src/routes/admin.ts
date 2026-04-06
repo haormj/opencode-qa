@@ -12,7 +12,7 @@ router.use(requireAdmin)
 
 router.get('/sessions', async (req, res) => {
   try {
-    const { status, userId, search, page = '1', pageSize = '20' } = req.query
+    const { status, userId, search, needHuman, page = '1', pageSize = '20' } = req.query
 
     const pageNum = parseInt(page as string) || 1
     const pageSizeNum = parseInt(pageSize as string) || 20
@@ -32,6 +32,10 @@ router.get('/sessions', async (req, res) => {
       where.title = {
         contains: search
       }
+    }
+
+    if (needHuman !== undefined && typeof needHuman === 'string') {
+      where.needHuman = needHuman === 'true'
     }
 
     const [total, sessions] = await Promise.all([

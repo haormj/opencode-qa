@@ -31,6 +31,7 @@ function AdminSessions() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(
     searchParams.get('status') || undefined
   )
+  const [needHumanFilter, setNeedHumanFilter] = useState<boolean | undefined>(undefined)
 
   const fetchSessions = async () => {
     setLoading(true)
@@ -38,6 +39,7 @@ function AdminSessions() {
       const result = await getAdminSessions({
         status: statusFilter,
         search: searchText || undefined,
+        needHuman: needHumanFilter,
         page,
         pageSize
       })
@@ -52,7 +54,7 @@ function AdminSessions() {
 
   useEffect(() => {
     fetchSessions()
-  }, [page, pageSize, statusFilter])
+  }, [page, pageSize, statusFilter, needHumanFilter])
 
   const handleSearch = () => {
     setPage(1)
@@ -191,6 +193,20 @@ function AdminSessions() {
               { value: 'active', label: '进行中' },
               { value: 'human', label: '待人工' },
               { value: 'closed', label: '已关闭' }
+            ]}
+          />
+          <Select
+            placeholder="AI无法解决"
+            value={needHumanFilter}
+            onChange={(value) => {
+              setNeedHumanFilter(value)
+              setPage(1)
+            }}
+            allowClear
+            style={{ width: 130 }}
+            options={[
+              { value: true, label: '是' },
+              { value: false, label: '否' }
             ]}
           />
           <Button type="primary" onClick={handleSearch}>
