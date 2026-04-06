@@ -260,12 +260,14 @@ function Home() {
 
   const handleSelectSession = (id: string) => {
     setSearchParams({ sessionId: id })
+    setLoading(false)
   }
 
   const handleNewSession = () => {
     setSearchParams({})
     setMessages([])
     setSessionStatus('active')
+    setLoading(false)
   }
 
   const toggleSidebar = useCallback(() => {
