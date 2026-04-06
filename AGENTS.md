@@ -131,6 +131,60 @@ taskkill /F /PID <PID>
 cd packages/backend && npx prisma studio
 ```
 
+## 分支策略
+
+### 分支角色
+
+- **master** - 稳定分支（生产就绪代码）
+- **develop** - 开发分支（集成最新开发内容）
+- **feat/xxx** - 特性分支
+- **fix/xxx** - 修复分支
+
+### 工作流程
+
+```
+develop (开发分支)
+    ↓ 拉取新分支
+feat/xxx 或 fix/xxx (特性/修复分支)
+    ↓ 开发完成
+用户验证质量
+    ↓ 质量通过
+合入 develop → 删除特性/修复分支
+    ↓ 用户在 develop 验证
+用户决定合入 master
+    ↓ 告知执行
+合入 master 并推送
+```
+
+### 关键规则
+
+1. **新特性/修复**：基于 develop 拉取新分支
+2. **质量把控**：用户决定是否合入 develop
+3. **分支清理**：合入 develop 后删除特性分支
+4. **master 合并**：只有用户验证 develop 后决定合入时才执行
+
+### 示例流程
+
+```bash
+# 开发新特性
+git checkout develop
+git checkout -b feat/new-feature
+
+# ... 开发修改 ...
+
+# 用户验证质量后决定合入 develop
+git checkout develop
+git merge feat/new-feature
+git branch -d feat/new-feature
+git push origin develop
+
+# 用户在 develop 验证通过后，告知合入 master
+git checkout master
+git merge develop
+git push origin master
+git checkout develop
+```
+
 ## 提交前检查
 
 ```bash
