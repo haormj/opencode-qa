@@ -4,7 +4,7 @@
 
 - 前端地址：http://localhost:3000
 - 后端地址：http://localhost:8000
-- 管理员账号：admin / admin123456
+- 管理员账号：admin / admin123
 - 普通用户账号：testuser / test123456
 
 ---
@@ -21,7 +21,7 @@
 
 1. 使用 `chrome-devtools_navigate_page` 打开登录页 http://localhost:3000/login
 2. 使用 `chrome-devtools_fill` 填写用户名：`admin`
-3. 使用 `chrome-devtools_fill` 填写密码：`admin123456`
+3. 使用 `chrome-devtools_fill` 填写密码：`admin123`
 4. 使用 `chrome-devtools_click` 点击登录
 5. 使用 `chrome-devtools_wait_for` 等待跳转到首页
 6. 使用 `chrome-devtools_navigate_page` 访问管理后台 http://localhost:3000/admin

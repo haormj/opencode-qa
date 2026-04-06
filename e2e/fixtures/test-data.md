@@ -17,7 +17,7 @@
 | 字段 | 值 |
 |------|-----|
 | 用户名 | admin |
-| 密码 | admin123456 |
+| 密码 | admin123 |
 | 邮箱 | admin@example.com |
 | 显示名 | 管理员 |
 | 角色 | admin, user |
