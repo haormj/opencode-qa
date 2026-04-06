@@ -121,6 +121,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         id: m.id,
         senderType: m.senderType,
         content: m.content,
+        reasoning: m.reasoning,
         createdAt: m.createdAt,
         user: m.user,
         bot: m.bot
