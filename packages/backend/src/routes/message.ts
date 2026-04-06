@@ -209,7 +209,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
     res.end()
 
     req.on('close', () => {
-      // Client disconnected
+      logger.debug(`[Stream] Client disconnected for session: ${sessionId}, opencodeSessionId: ${opencodeSessionIdFromStream || opencodeSessionId}`)
     })
   } catch (error) {
     logger.error('[Stream] Error:', error)

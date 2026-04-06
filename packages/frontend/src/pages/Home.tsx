@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
-import ChatBox, { type ExtendedMessageProps } from '../components/ChatBox'
+import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, type MessageItem } from '../services/api'
 import { useSessionEvents } from '../hooks/useSessionEvents'
 import type { Session } from '../services/api'
@@ -13,13 +13,22 @@ function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionId = searchParams.get('sessionId')
 
-  const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [, forceUpdate] = useState(0)
   const notFoundRef = useRef(false)
+  const chatBoxRef = useRef<ChatBoxRef>(null)
+  const loadingStatesRef = useRef<Map<string, boolean>>(new Map())
+  const streamingMessagesRef = useRef<Map<string, ExtendedMessageProps[]>>(new Map())
+  const currentDisplaySessionIdRef = useRef<string | null>(null)
+
+  const setLoadingState = useCallback((id: string, loading: boolean) => {
+    loadingStatesRef.current.set(id, loading)
+    forceUpdate(n => n + 1)
+  }, [])
 
   const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
     setSessions(loadedSessions)
@@ -32,6 +41,11 @@ function Home() {
   }, [sessionId, sessions])
 
   const loadSession = useCallback(async (id: string) => {
+    if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
+      setMessages(streamingMessagesRef.current.get(id)!)
+      return
+    }
+    
     try {
       const session = await getSession(id)
       const loadedMessages: ExtendedMessageProps[] = []
@@ -127,51 +141,86 @@ function Home() {
       reasoning: ''
     }
 
-    setMessages(prev => [...prev, userMessage, assistantMessage])
-    setLoading(true)
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage, assistantMessage]
+      streamingMessagesRef.current.set(currentSessionId, newMessages)
+      return newMessages
+    })
+    setLoadingState(currentSessionId, true)
 
     let isFirstChunk = true
     let reasoningText = ''
+    const streamSessionId = currentSessionId
     sendMessageStream(
       text,
       currentSessionId,
       (chunk: string) => {
-        setMessages(prev => prev.map(msg =>
-          msg._id === assistantMessageId
-            ? {
-                ...msg,
-                type: isFirstChunk ? 'text' : msg.type,
-                content: { text: msg.content.text + chunk }
-              }
-            : msg
-        ))
+        const cached = streamingMessagesRef.current.get(streamSessionId)
+        if (cached) {
+          const msgIndex = cached.findIndex(m => m._id === assistantMessageId)
+          if (msgIndex !== -1) {
+            cached[msgIndex] = {
+              ...cached[msgIndex],
+              type: isFirstChunk ? 'text' : cached[msgIndex].type,
+              content: { text: cached[msgIndex].content.text + chunk }
+            }
+          }
+        }
+        if (currentDisplaySessionIdRef.current === streamSessionId) {
+          setMessages(prev => prev.map(msg =>
+            msg._id === assistantMessageId
+              ? {
+                  ...msg,
+                  type: isFirstChunk ? 'text' : msg.type,
+                  content: { text: msg.content.text + chunk }
+                }
+              : msg
+          ))
+        }
         if (isFirstChunk) isFirstChunk = false
       },
       (chunk: string) => {
         reasoningText += chunk
-        setMessages(prev => prev.map(msg =>
-          msg._id === assistantMessageId
-            ? {
-                ...msg,
-                type: isFirstChunk ? 'text' : msg.type,
-                reasoning: reasoningText
-              }
-            : msg
-        ))
+        const cached = streamingMessagesRef.current.get(streamSessionId)
+        if (cached) {
+          const msgIndex = cached.findIndex(m => m._id === assistantMessageId)
+          if (msgIndex !== -1) {
+            cached[msgIndex] = {
+              ...cached[msgIndex],
+              type: isFirstChunk ? 'text' : cached[msgIndex].type,
+              reasoning: reasoningText
+            }
+          }
+        }
+        if (currentDisplaySessionIdRef.current === streamSessionId) {
+          setMessages(prev => prev.map(msg =>
+            msg._id === assistantMessageId
+              ? {
+                  ...msg,
+                  type: isFirstChunk ? 'text' : msg.type,
+                  reasoning: reasoningText
+                }
+              : msg
+          ))
+        }
         if (isFirstChunk) isFirstChunk = false
       },
       () => {
-        setMessages(prev => prev.map(msg =>
-          msg._id === assistantMessageId
-            ? {
-                ...msg,
-                content: { text: msg.content.text }
-              }
-            : msg
-        ))
-        setLoading(false)
+        streamingMessagesRef.current.delete(streamSessionId)
+        if (currentDisplaySessionIdRef.current === streamSessionId) {
+          setMessages(prev => prev.map(msg =>
+            msg._id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: { text: msg.content.text }
+                }
+              : msg
+          ))
+        }
+        setLoadingState(currentSessionId, false)
       },
       (error) => {
+        streamingMessagesRef.current.delete(streamSessionId)
         console.error('Stream error:', error)
         const errorMessage = error instanceof Error ? error.message : '提问失败，请稍后重试'
         if (errorMessage.includes('Session has been closed') || errorMessage.includes('session has been closed')) {
@@ -180,13 +229,16 @@ function Home() {
         } else {
           message.error(errorMessage)
         }
-        setMessages(prev => prev.filter(msg => msg._id !== assistantMessageId))
-        setLoading(false)
+        if (currentDisplaySessionIdRef.current === streamSessionId) {
+          setMessages(prev => prev.filter(msg => msg._id !== assistantMessageId))
+        }
+        setLoadingState(currentSessionId, false)
       }
     )
-  }, [sessionStatus])
+  }, [sessionStatus, setLoadingState])
 
   useEffect(() => {
+    currentDisplaySessionIdRef.current = sessionId
     if (sessionId) {
       loadSession(sessionId)
       
@@ -232,12 +284,12 @@ function Home() {
     
     try {
       await stopMessageStream(currentSessionId)
-      setLoading(false)
     } catch (error) {
       console.error('Stop error:', error)
-      setLoading(false)
     }
-  }, [sessionId])
+    streamingMessagesRef.current.delete(currentSessionId)
+    setLoadingState(currentSessionId, false)
+  }, [sessionId, setLoadingState])
 
   const handleCopyLink = useCallback(() => {
     if (!sessionId) return
@@ -260,14 +312,17 @@ function Home() {
 
   const handleSelectSession = (id: string) => {
     setSearchParams({ sessionId: id })
-    setLoading(false)
+    if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
+      setMessages(streamingMessagesRef.current.get(id)!)
+    }
+    setTimeout(() => chatBoxRef.current?.focus(), 0)
   }
 
   const handleNewSession = () => {
     setSearchParams({})
     setMessages([])
     setSessionStatus('active')
-    setLoading(false)
+    setTimeout(() => chatBoxRef.current?.focus(), 0)
   }
 
   const toggleSidebar = useCallback(() => {
@@ -355,8 +410,9 @@ function Home() {
         />
         <div className="home-content-body">
           <ChatBox
+            ref={chatBoxRef}
             messages={messages}
-            typing={loading}
+            typing={sessionId ? loadingStatesRef.current.get(sessionId) || false : false}
             onSend={handleSend}
             onStop={handleStop}
             sessionStatus={sessionStatus}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import Chat, { Bubble, MessageProps } from '@chatui/core'
 import '@chatui/core/dist/index.css'
 import { Streamdown } from 'streamdown'
@@ -8,7 +8,7 @@ import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import { Avatar } from 'antd'
 import { RobotOutlined, UserOutlined } from '@ant-design/icons'
-import CustomComposer from './CustomComposer'
+import CustomComposer, { CustomComposerRef } from './CustomComposer'
 import './ChatBox.css'
 
 export interface ExtendedMessageProps extends MessageProps {
@@ -30,17 +30,20 @@ interface ChatBoxProps {
   sessionStatus?: string
 }
 
-function ChatBox({ 
-  messages, 
-  typing, 
-  onSend,
-  onStop,
-  isAdminMode = false,
-  sessionStatus = 'active'
-}: ChatBoxProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+export interface ChatBoxRef {
+  focus: () => void
+}
+
+const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
+  ({ messages, typing, onSend, onStop, isAdminMode = false, sessionStatus = 'active' }, ref) => {
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const composerRef = useRef<CustomComposerRef>(null)
+    const [isScrolling, setIsScrolling] = useState(false)
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    useImperativeHandle(ref, () => ({
+      focus: () => composerRef.current?.focus()
+    }))
 
   useEffect(() => {
     const wrapper = wrapperRef.current
@@ -179,6 +182,7 @@ function ChatBox({
           isTyping={typing}
           Composer={(props) => (
             <CustomComposer
+              ref={composerRef}
               {...props}
               typing={typing}
               onStop={onStop}
@@ -189,6 +193,8 @@ function ChatBox({
       </div>
     </div>
   )
-}
+})
+
+ChatBox.displayName = 'ChatBox'
 
 export default ChatBox

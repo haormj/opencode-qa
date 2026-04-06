@@ -41,15 +41,15 @@ export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: s
   const client = getClient(apiUrl)
   
   if (sessionId) {
-    logger.info('[OpenCode] Checking existing session:', sessionId)
+    logger.debug('[OpenCode] Checking existing session:', sessionId)
     try {
       const result = await client.session.get({ sessionID: sessionId })
       if (result.data) {
-        logger.info('[OpenCode] Session exists:', sessionId)
+        logger.debug('[OpenCode] Session exists:', sessionId)
         return { sessionId, needsRebuild: false }
       }
     } catch (error) {
-      logger.info('[OpenCode] Session check failed, will create new one')
+      logger.debug('[OpenCode] Session check failed, will create new one')
     }
   }
   
@@ -94,13 +94,13 @@ export async function sendOpenCodeMessage(
   botConfig: BotConfig,
   opencodeSessionId?: string
 ): Promise<{ sessionId: string; answer: string }> {
-  logger.info('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
+  logger.debug('[OpenCode] sendOpenCodeMessage called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
   
   const client = getClient(botConfig.apiUrl)
   
-  logger.info('[OpenCode] Sending message to session:', sessionId)
+  logger.debug('[OpenCode] Sending message to session:', sessionId)
   const result = await client.session.prompt({
     sessionID: sessionId,
     model: {
@@ -111,7 +111,7 @@ export async function sendOpenCodeMessage(
     parts: [{ type: 'text', text: message }]
   })
   
-  logger.info('[OpenCode] Message response:', {
+  logger.debug('[OpenCode] Message response:', {
     hasData: !!result.data,
     hasParts: !!result.data?.parts,
     partsLength: result.data?.parts?.length
@@ -126,7 +126,7 @@ export async function sendOpenCodeMessage(
     }
   }
   
-  logger.info('[OpenCode] Answer length:', answer.length)
+  logger.debug('[OpenCode] Answer length:', answer.length)
   
   return {
     sessionId,
@@ -141,7 +141,7 @@ export async function sendOpenCodeMessageStream(
   onChunk: (chunk: string, type: ChunkType) => void,
   onSessionId: (sessionId: string) => void
 ): Promise<{ sessionId: string; answer: string }> {
-  logger.info('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
+  logger.debug('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
   onSessionId(sessionId)
@@ -151,12 +151,24 @@ export async function sendOpenCodeMessageStream(
   let answer = ''
   let messageCompleted = false
   let completionResolver: () => void
+  let intervalId: NodeJS.Timeout | null = null
+  let lastActivityTime = Date.now()
+  let timeoutCount = 0
+  const MAX_TIMEOUT_COUNT = 3
   
   const completionPromise = new Promise<void>(resolve => {
-    completionResolver = resolve
+    completionResolver = () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+      resolve()
+    }
   })
   
   const wrappedOnChunk = (chunk: string, type: ChunkType) => {
+    lastActivityTime = Date.now()
+    timeoutCount = 0
     if (type === 'text') {
       answer += chunk
     }
@@ -170,16 +182,21 @@ export async function sendOpenCodeMessageStream(
   }
   
   eventSubscriptionManager.register(botConfig.apiUrl, sessionId, wrappedOnChunk, onComplete)
-  
-  const timeoutId = setTimeout(() => {
-    if (!messageCompleted) {
-      logger.info('[OpenCode] Stream timeout (60s)')
-      completionResolver()
+
+  intervalId = setInterval(() => {
+    const idleTime = Date.now() - lastActivityTime
+    if (idleTime >= 60000) {
+      timeoutCount++
+      logger.warn(`[OpenCode] Timeout check ${timeoutCount}/${MAX_TIMEOUT_COUNT} for session: ${sessionId}, idleTime: ${Math.round(idleTime / 1000)}s`)
+      if (timeoutCount >= MAX_TIMEOUT_COUNT) {
+        logger.warn(`[OpenCode] Max timeout reached for session: ${sessionId}`)
+        completionResolver()
+      }
     }
   }, 60000)
   
   try {
-    logger.info('[OpenCode] Sending message to session:', sessionId)
+    logger.debug('[OpenCode] Sending message to session:', sessionId)
     const promptPromise = client.session.prompt({
       sessionID: sessionId,
       model: {
@@ -191,13 +208,12 @@ export async function sendOpenCodeMessageStream(
     })
     
     await completionPromise
-    clearTimeout(timeoutId)
     
     if (!answer) {
-      logger.info('[OpenCode] No answer from stream, trying prompt result')
+      logger.debug('[OpenCode] No answer from stream, trying prompt result')
       try {
         const result = await promptPromise
-        logger.info('[OpenCode] Prompt result:', {
+        logger.debug('[OpenCode] Prompt result:', {
           hasData: !!result.data,
           hasParts: !!result.data?.parts,
           partsLength: result.data?.parts?.length
@@ -215,8 +231,12 @@ export async function sendOpenCodeMessageStream(
       }
     }
   } finally {
+    if (intervalId) {
+      clearInterval(intervalId)
+      intervalId = null
+    }
     eventSubscriptionManager.unregister(botConfig.apiUrl, sessionId)
-    logger.info('[OpenCode] Stream answer length:', answer.length)
+    logger.debug('[OpenCode] Stream answer length:', answer.length)
   }
   
   return {

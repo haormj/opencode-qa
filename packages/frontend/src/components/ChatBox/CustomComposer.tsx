@@ -13,6 +13,7 @@ interface CustomComposerProps {
 
 export interface CustomComposerRef {
   setText: (text: string) => void
+  focus: () => void
 }
 
 const CustomComposer = forwardRef<CustomComposerRef, CustomComposerProps>(
@@ -21,7 +22,8 @@ const CustomComposer = forwardRef<CustomComposerRef, CustomComposerProps>(
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
     useImperativeHandle(ref, () => ({
-      setText: (newText: string) => setText(newText)
+      setText: (newText: string) => setText(newText),
+      focus: () => inputRef.current?.focus()
     }))
 
     const handleSend = useCallback(() => {

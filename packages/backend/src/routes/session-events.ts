@@ -98,8 +98,12 @@ router.get('/:id/events', async (req, res) => {
   const heartbeatInterval = setInterval(() => {
     try {
       res.write(`event: heartbeat\ndata: ${JSON.stringify({ timestamp: new Date().toISOString() })}\n\n`)
-    } catch (error) {
-      logger.error(`[SSE] Heartbeat error for client ${clientId}:`, error)
+    } catch (error: any) {
+      if (error.message === 'aborted' || error.code === 'ECONNABORTED') {
+        logger.debug(`[SSE] Heartbeat aborted for client ${clientId}`)
+      } else {
+        logger.error(`[SSE] Heartbeat error for client ${clientId}:`, error)
+      }
       cleanup()
     }
   }, 30000) // 每 30 秒发送一次心跳
@@ -117,16 +121,20 @@ router.get('/:id/events', async (req, res) => {
 
   // 监听连接关闭
   req.on('close', () => {
-    logger.info(`[SSE] Client ${clientId} disconnected from session ${sessionId}`)
+    logger.debug(`[SSE] Client ${clientId} disconnected from session ${sessionId}`)
     cleanup()
   })
 
   req.on('error', (error) => {
-    logger.error(`[SSE] Connection error for client ${clientId}:`, error)
+    if (error.message === 'aborted' || (error as any).code === 'ECONNABORTED') {
+      logger.debug(`[SSE] Connection aborted for client ${clientId}`)
+    } else {
+      logger.error(`[SSE] Connection error for client ${clientId}:`, error)
+    }
     cleanup()
   })
 
-  logger.info(`[SSE] Client ${clientId} connected to session ${sessionId}`)
+  logger.debug(`[SSE] Client ${clientId} connected to session ${sessionId}`)
 })
 
 export default router

@@ -133,13 +133,26 @@ class EventSubscriptionManager {
   }
 
   private handleEvent(subscription: Subscription, event: any): void {
-    logger.info(`[EventSubscriptionManager] Raw event: ${JSON.stringify(event).substring(0, 500)}`)
+    const eventType = event.type
+    
+    if (eventType === 'server.heartbeat') {
+      return
+    }
+    
+    logger.debug(`[EventSubscriptionManager] Raw event: ${JSON.stringify(event).substring(0, 500)}`)
     
     const sessionId = event.properties?.sessionID
-    if (!sessionId) return
+    if (!sessionId) {
+      logger.warn(`[EventSubscriptionManager] Event missing sessionID, type: ${eventType}`)
+      return
+    }
     
     const callbackInfo = subscription.callbacks.get(sessionId)
-    if (!callbackInfo) return
+    if (!callbackInfo) {
+      logger.warn(`[EventSubscriptionManager] No callback found for session: ${sessionId}, event type: ${event.type}`)
+      logger.debug(`[EventSubscriptionManager] Current registered sessions: ${Array.from(subscription.callbacks.keys()).join(', ')}`)
+      return
+    }
     
     callbackInfo.lastActive = Date.now()
     
@@ -148,7 +161,7 @@ class EventSubscriptionManager {
       if (part?.id && part?.type) {
         const partType: ChunkType = part.type === 'reasoning' ? 'reasoning' : 'text'
         callbackInfo.partTypes.set(part.id, partType)
-        logger.info(`[EventSubscriptionManager] Part registered: ${part.id} -> ${partType}`)
+        logger.debug(`[EventSubscriptionManager] Part registered: ${part.id} -> ${partType}`)
       }
     }
     
@@ -158,7 +171,7 @@ class EventSubscriptionManager {
       
       if (partId && delta) {
         const type = callbackInfo.partTypes.get(partId) || 'text'
-        logger.info(`[EventSubscriptionManager] Part delta: partId=${partId}, type=${type}, delta=${delta.substring(0, 50)}`)
+        logger.debug(`[EventSubscriptionManager] Part delta: partId=${partId}, type=${type}, delta=${delta.substring(0, 50)}`)
         callbackInfo.onChunk(delta, type)
       }
     }
