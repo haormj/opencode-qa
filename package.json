@@ -12,6 +12,10 @@
     "dev:frontend": "npm run dev -w @opencode-qa/frontend",
     "build": "npm run build -w @opencode-qa/backend && npm run build -w @opencode-qa/frontend",
     "start": "npm run start -w @opencode-qa/backend",
+    "test": "npm run test -w @opencode-qa/backend && npm run test -w @opencode-qa/frontend",
+    "test:backend": "npm run test -w @opencode-qa/backend",
+    "test:frontend": "npm run test -w @opencode-qa/frontend",
+    "test:coverage": "npm run test:coverage -w @opencode-qa/backend && npm run test:coverage -w @opencode-qa/frontend",
     "db:generate": "npm run db:generate -w @opencode-qa/backend",
     "db:push": "npm run db:push -w @opencode-qa/backend",
     "db:migrate": "npm run db:migrate -w @opencode-qa/backend"

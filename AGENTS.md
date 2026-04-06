@@ -13,7 +13,63 @@ npm run db:push                # 推送数据库结构（开发环境）
 # 单独启动
 npm run dev:backend            # 仅后端 (http://localhost:8000)
 npm run dev:frontend           # 仅前端 (http://localhost:3000)
+
+# 测试
+npm run test                   # 运行所有测试
+npm run test:backend           # 仅后端测试
+npm run test:frontend          # 仅前端测试
+npm run test:coverage          # 运行测试并生成覆盖率报告
 ```
+
+## 测试规范
+
+**测试框架：** Vitest
+
+**测试原则：** 先写测试，再写功能（TDD）
+
+**测试文件位置：**
+- 后端：`packages/backend/tests/`
+- 前端：`packages/frontend/tests/`
+
+**测试命名规范：**
+- 测试文件：`*.test.ts` 或 `*.test.tsx`
+- 测试目录结构应与源码结构对应
+
+**运行测试：**
+```bash
+npm run test                   # 运行所有测试
+npm run test:watch             # 监听模式，文件变化自动重新运行
+npm run test:coverage          # 生成覆盖率报告
+```
+
+## E2E 端到端测试
+
+**测试方式：** MCP 浏览器自动化 + 提示词驱动
+
+**测试目录：** `e2e/`
+
+**测试场景：**
+- `e2e/scenarios/auth.prompt.md` - 用户认证流程（5 个用例）
+- `e2e/scenarios/chat.prompt.md` - 对话功能（8 个用例）
+- `e2e/scenarios/admin.prompt.md` - 管理后台（12 个用例）
+
+**执行测试：**
+```
+# 启动服务后，通过提示词执行：
+执行 e2e/scenarios/auth.prompt.md 中的 AUTH-002 测试用例
+
+# 或执行整个场景：
+执行 e2e/scenarios/auth.prompt.md 所有测试用例
+```
+
+**测试原则：**
+1. 功能改动前先编写或更新 E2E 测试用例
+2. 每个测试用例独立可执行
+3. 测试完成后清理数据
+
+**详细文档：**
+- 环境配置：`e2e/setup.md`
+- 测试数据：`e2e/fixtures/test-data.md`
 
 ## 前置条件
 
