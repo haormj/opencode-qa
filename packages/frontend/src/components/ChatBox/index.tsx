@@ -18,6 +18,7 @@ export interface ExtendedMessageProps extends MessageProps {
     color?: string
     type: 'user' | 'ai' | 'admin'
   }
+  reasoning?: string
 }
 
 interface ChatBoxProps {
@@ -73,10 +74,10 @@ function ChatBox({
   }, [])
 
   function renderMessageContent(msg: ExtendedMessageProps) {
-    const { type, content, position, sender } = msg
+    const { type, content, position, sender, reasoning } = msg
     
     if (type === 'typing') {
-      return <div className="typing-message">OpenCode 正在思考...</div>
+      return <div className="typing-message">正在等待回复...</div>
     }
     
     const isUser = position === 'right'
@@ -100,6 +101,23 @@ function ChatBox({
               {sender.avatar || sender.name[0]}
             </Avatar>
           </div>
+        )}
+        {!isUser && reasoning && (
+          <details className="reasoning-block">
+            <summary className="reasoning-summary">
+              💭 {isAnimating ? (
+                <>
+                  思考中
+                  <span className="reasoning-dots">
+                    <span className="reasoning-dot">.</span>
+                    <span className="reasoning-dot">.</span>
+                    <span className="reasoning-dot">.</span>
+                  </span>
+                </>
+              ) : '思考过程'}
+            </summary>
+            <div className="reasoning-content">{reasoning}</div>
+          </details>
         )}
         <Bubble
           type="text"

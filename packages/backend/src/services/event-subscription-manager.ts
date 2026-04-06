@@ -1,10 +1,14 @@
 import { createOpencodeClient, type OpencodeClient } from '@opencode-ai/sdk/v2'
 
 import logger from './logger.js'
+
+export type ChunkType = 'text' | 'reasoning'
+
 interface CallbackInfo {
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string, type: ChunkType) => void
   onComplete: () => void
   lastActive: number
+  partTypes: Map<string, ChunkType>
 }
 
 interface Subscription {
@@ -35,7 +39,7 @@ class EventSubscriptionManager {
     logger.info('[EventSubscriptionManager] Initialized')
   }
 
-  register(apiUrl: string, sessionId: string, onChunk: (chunk: string) => void, onComplete: () => void = () => {}): void {
+  register(apiUrl: string, sessionId: string, onChunk: (chunk: string, type: ChunkType) => void, onComplete: () => void = () => {}): void {
     logger.info('[EventSubscriptionManager] Registering callback for session:', sessionId)
     
     let subscription = this.subscriptions.get(apiUrl)
@@ -58,7 +62,8 @@ class EventSubscriptionManager {
     subscription.callbacks.set(sessionId, {
       onChunk,
       onComplete,
-      lastActive: Date.now()
+      lastActive: Date.now(),
+      partTypes: new Map()
     })
     
     logger.info('[EventSubscriptionManager] Callback registered. Total callbacks:', subscription.callbacks.size)
@@ -128,6 +133,8 @@ class EventSubscriptionManager {
   }
 
   private handleEvent(subscription: Subscription, event: any): void {
+    logger.info(`[EventSubscriptionManager] Raw event: ${JSON.stringify(event).substring(0, 500)}`)
+    
     const sessionId = event.properties?.sessionID
     if (!sessionId) return
     
@@ -136,14 +143,27 @@ class EventSubscriptionManager {
     
     callbackInfo.lastActive = Date.now()
     
-    if (event.type === 'message.part.delta') {
-      const delta = event.properties?.delta
-      if (delta) {
-        callbackInfo.onChunk(delta)
+    if (event.type === 'message.part.updated') {
+      const part = event.properties?.part
+      if (part?.id && part?.type) {
+        const partType: ChunkType = part.type === 'reasoning' ? 'reasoning' : 'text'
+        callbackInfo.partTypes.set(part.id, partType)
+        logger.info(`[EventSubscriptionManager] Part registered: ${part.id} -> ${partType}`)
       }
     }
     
-    if (event.type === 'session.idle' || event.type === 'message.updated') {
+    if (event.type === 'message.part.delta') {
+      const partId = event.properties?.partID
+      const delta = event.properties?.delta
+      
+      if (partId && delta) {
+        const type = callbackInfo.partTypes.get(partId) || 'text'
+        logger.info(`[EventSubscriptionManager] Part delta: partId=${partId}, type=${type}, delta=${delta.substring(0, 50)}`)
+        callbackInfo.onChunk(delta, type)
+      }
+    }
+    
+    if (event.type === 'session.idle') {
       logger.info('[EventSubscriptionManager] Message completed for session:', sessionId)
       callbackInfo.onComplete()
     }

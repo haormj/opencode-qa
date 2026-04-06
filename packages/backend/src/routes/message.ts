@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../index.js'
 import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext, abortOpenCodeSession } from '../services/opencode.js'
-import { eventSubscriptionManager } from '../services/event-subscription-manager.js'
+import { eventSubscriptionManager, type ChunkType } from '../services/event-subscription-manager.js'
 import { authMiddleware } from '../middleware/auth.js'
 import logger from '../services/logger.js'
 
@@ -140,13 +140,17 @@ router.post('/stream', authMiddleware, async (req, res) => {
     sendEvent('session', { sessionId, opencodeSessionId })
 
     let opencodeSessionIdFromStream: string | undefined
+    let reasoningContent = ''
 
     const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessageStream(
       content,
       botConfig,
       opencodeSessionId,
-      (chunk: string) => {
-        sendEvent('text', { text: chunk })
+      (chunk: string, type: ChunkType) => {
+        sendEvent(type, { text: chunk })
+        if (type === 'reasoning') {
+          reasoningContent += chunk
+        }
       },
       (sid: string) => {
         opencodeSessionIdFromStream = sid
@@ -165,6 +169,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
         sessionId,
         senderType: 'bot',
         content: answer || '抱歉，我无法回答这个问题。',
+        reasoning: reasoningContent || null,
         botId: defaultBot.id
       }
     })

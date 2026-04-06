@@ -3,6 +3,7 @@ export interface MessageItem {
   sessionId: string
   senderType: 'user' | 'admin' | 'bot'
   content: string
+  reasoning?: string
   createdAt: string
   user?: {
     id: string
@@ -244,6 +245,7 @@ export function sendMessageStream(
   content: string,
   sessionId: string | null,
   onText: (text: string) => void,
+  onReasoning: (text: string) => void,
   onDone: (result: { id: string; sessionId: string; content: string; senderType: string; createdAt: string }) => void,
   onError: (error: Error) => void,
   onSession?: (sessionId: string) => void
@@ -302,6 +304,8 @@ export function sendMessageStream(
               onSession?.(data.sessionId)
             } else if (eventType === 'text' && data.text) {
               onText(data.text)
+            } else if (eventType === 'reasoning' && data.text) {
+              onReasoning(data.text)
             } else if (eventType === 'done') {
               onDone(data)
             } else if (eventType === 'error') {

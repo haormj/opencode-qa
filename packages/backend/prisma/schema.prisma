@@ -88,6 +88,7 @@ model Message {
   sessionId  String    @map("session_id")
   senderType String    @map("sender_type")
   content    String
+  reasoning  String?
   metadata   String?
   createdAt  DateTime  @default(now()) @map("created_at")
   

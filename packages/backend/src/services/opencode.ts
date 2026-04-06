@@ -1,5 +1,5 @@
 import { createOpencodeClient } from '@opencode-ai/sdk/v2'
-import { eventSubscriptionManager } from './event-subscription-manager.js'
+import { eventSubscriptionManager, type ChunkType } from './event-subscription-manager.js'
 
 import logger from './logger.js'
 const OPENCODE_SERVER_USERNAME = process.env.OPENCODE_SERVER_USERNAME || 'opencode'
@@ -138,7 +138,7 @@ export async function sendOpenCodeMessageStream(
   message: string,
   botConfig: BotConfig,
   opencodeSessionId: string | undefined,
-  onChunk: (chunk: string) => void,
+  onChunk: (chunk: string, type: ChunkType) => void,
   onSessionId: (sessionId: string) => void
 ): Promise<{ sessionId: string; answer: string }> {
   logger.info('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
@@ -156,9 +156,11 @@ export async function sendOpenCodeMessageStream(
     completionResolver = resolve
   })
   
-  const wrappedOnChunk = (chunk: string) => {
-    answer += chunk
-    onChunk(chunk)
+  const wrappedOnChunk = (chunk: string, type: ChunkType) => {
+    if (type === 'text') {
+      answer += chunk
+    }
+    onChunk(chunk, type)
   }
   
   const onComplete = () => {
@@ -204,7 +206,7 @@ export async function sendOpenCodeMessageStream(
           for (const part of result.data.parts) {
             if (part.type === 'text' && 'text' in part && part.text) {
               answer += part.text
-              onChunk(part.text)
+              onChunk(part.text, 'text')
             }
           }
         }

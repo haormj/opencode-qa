@@ -63,7 +63,8 @@ function Home() {
             name: senderName,
             color: senderColor,
             type: senderType
-          }
+          },
+          reasoning: msg.reasoning
         })
       })
       
@@ -121,13 +122,15 @@ function Home() {
         name: 'AI 助手',
         color: '#52c41a',
         type: 'ai'
-      }
+      },
+      reasoning: ''
     }
 
     setMessages(prev => [...prev, userMessage, assistantMessage])
     setLoading(true)
 
     let isFirstChunk = true
+    let reasoningText = ''
     sendMessageStream(
       text,
       currentSessionId,
@@ -138,6 +141,19 @@ function Home() {
                 ...msg,
                 type: isFirstChunk ? 'text' : msg.type,
                 content: { text: msg.content.text + chunk }
+              }
+            : msg
+        ))
+        if (isFirstChunk) isFirstChunk = false
+      },
+      (chunk: string) => {
+        reasoningText += chunk
+        setMessages(prev => prev.map(msg =>
+          msg._id === assistantMessageId
+            ? {
+                ...msg,
+                type: isFirstChunk ? 'text' : msg.type,
+                reasoning: reasoningText
               }
             : msg
         ))
