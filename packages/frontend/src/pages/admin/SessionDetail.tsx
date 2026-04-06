@@ -75,6 +75,7 @@ function AdminSessionDetail() {
         _id: msg.id,
         type: 'text',
         content: { text: msg.content },
+        reasoning: msg.reasoning,
         position: msg.senderType === 'user' ? 'right' : 'left',
         sender: {
           name: senderName,
