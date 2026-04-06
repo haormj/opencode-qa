@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Tag, Input, Select, Button, Space, Avatar, Tooltip, message, Popconfirm } from 'antd'
-import { SearchOutlined, EyeOutlined, StopOutlined } from '@ant-design/icons'
+import { SearchOutlined, EyeOutlined, PoweroffOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAdminSessions, closeAdminSession, generateAvatarColor, type AdminSession } from '../../services/api'
 import './Admin.css'
@@ -155,7 +155,7 @@ function AdminSessions() {
                 <Button
                   type="text"
                   danger
-                  icon={<StopOutlined />}
+                  icon={<PoweroffOutlined />}
                 />
               </Tooltip>
             </Popconfirm>
