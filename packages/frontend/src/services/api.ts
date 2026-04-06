@@ -407,6 +407,7 @@ export async function getAdminSessions(params?: {
   status?: string
   userId?: string
   search?: string
+  needHuman?: boolean
   page?: number
   pageSize?: number
 }): Promise<AdminSessionListResponse> {
@@ -414,6 +415,7 @@ export async function getAdminSessions(params?: {
   if (params?.status) searchParams.set('status', params.status)
   if (params?.userId) searchParams.set('userId', params.userId)
   if (params?.search) searchParams.set('search', params.search)
+  if (params?.needHuman !== undefined) searchParams.set('needHuman', params.needHuman.toString())
   if (params?.page) searchParams.set('page', params.page.toString())
   if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
 
