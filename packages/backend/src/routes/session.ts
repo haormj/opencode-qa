@@ -1,5 +1,7 @@
 import { Router } from 'express'
-import { prisma } from '../index.js'
+import { db, sessions, messages, users, bots } from '../db/index.js'
+import { eq, and, desc, asc, sql } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { authMiddleware } from '../middleware/auth.js'
 import { deleteOpenCodeSession } from '../services/opencode.js'
 import logger from '../services/logger.js'
@@ -15,13 +17,15 @@ router.post('/', authMiddleware, async (req, res) => {
       ? (title.length > 30 ? title.substring(0, 30) + '...' : title)
       : '新对话'
 
-    const session = await prisma.session.create({
-      data: {
-        userId,
-        title: sessionTitle,
-        status: 'active'
-      }
-    })
+    const now = new Date()
+    const [session] = await db.insert(sessions).values({
+      id: randomUUID(),
+      userId,
+      title: sessionTitle,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now
+    }).returning()
 
     res.json({
       id: session.id,
@@ -40,10 +44,7 @@ router.get('/public/:id/info', async (req, res) => {
   try {
     const { id } = req.params
 
-    const session = await prisma.session.findUnique({
-      where: { id },
-      select: { id: true, userId: true, status: true }
-    })
+    const session = await db.select({ id: sessions.id, userId: sessions.userId, status: sessions.status }).from(sessions).where(eq(sessions.id, id)).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
@@ -60,24 +61,21 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id
 
-    const sessions = await prisma.session.findMany({
-      where: { userId, isDeleted: false },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        _count: {
-          select: { messages: true }
-        }
-      }
-    })
+    const sessionList = await db.select().from(sessions).where(and(eq(sessions.userId, userId), eq(sessions.isDeleted, false))).orderBy(desc(sessions.updatedAt))
 
-    res.json(sessions.map(s => ({
-      id: s.id,
-      title: s.title,
-      status: s.status,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-      messageCount: s._count.messages
-    })))
+    const sessionsWithCounts = await Promise.all(sessionList.map(async (s) => {
+      const countResult = await db.select({ count: sql<number>`count(*)` }).from(messages).where(eq(messages.sessionId, s.id)).get()
+      return {
+        id: s.id,
+        title: s.title,
+        status: s.status,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+        messageCount: countResult?.count || 0
+      }
+    }))
+
+    res.json(sessionsWithCounts)
   } catch (error) {
     logger.error('Get sessions error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -89,26 +87,44 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params
     const userId = req.user!.id
 
-    const session = await prisma.session.findFirst({
-      where: { id, userId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            user: {
-              select: { id: true, displayName: true }
-            },
-            bot: {
-              select: { id: true, displayName: true, avatar: true }
-            }
-          }
-        }
-      }
-    })
+    const session = await db.select().from(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, userId))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
+
+    const sessionMessages = await db.select({
+      id: messages.id,
+      senderType: messages.senderType,
+      content: messages.content,
+      reasoning: messages.reasoning,
+      createdAt: messages.createdAt,
+      userId: messages.userId,
+      botId: messages.botId
+    }).from(messages).where(eq(messages.sessionId, id)).orderBy(asc(messages.createdAt))
+
+    const messagesWithDetails = await Promise.all(sessionMessages.map(async (m) => {
+      let user = null
+      let bot = null
+
+      if (m.userId) {
+        user = await db.select({ id: users.id, displayName: users.displayName }).from(users).where(eq(users.id, m.userId)).get()
+      }
+
+      if (m.botId) {
+        bot = await db.select({ id: bots.id, displayName: bots.displayName, avatar: bots.avatar }).from(bots).where(eq(bots.id, m.botId)).get()
+      }
+
+      return {
+        id: m.id,
+        senderType: m.senderType,
+        content: m.content,
+        reasoning: m.reasoning,
+        createdAt: m.createdAt,
+        user,
+        bot
+      }
+    }))
 
     res.json({
       id: session.id,
@@ -117,15 +133,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       needHuman: session.needHuman,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
-      messages: session.messages.map(m => ({
-        id: m.id,
-        senderType: m.senderType,
-        content: m.content,
-        reasoning: m.reasoning,
-        createdAt: m.createdAt,
-        user: m.user,
-        bot: m.bot
-      }))
+      messages: messagesWithDetails
     })
   } catch (error) {
     logger.error('Get session error:', error)
@@ -143,18 +151,13 @@ router.patch('/:id', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Title is required' })
     }
 
-    const session = await prisma.session.findFirst({
-      where: { id, userId }
-    })
+    const session = await db.select().from(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, userId))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    const updated = await prisma.session.update({
-      where: { id },
-      data: { title }
-    })
+    const [updated] = await db.update(sessions).set({ title, updatedAt: new Date() }).where(eq(sessions.id, id)).returning()
 
     res.json({
       id: updated.id,
@@ -172,23 +175,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params
     const userId = req.user!.id
 
-    const session = await prisma.session.findFirst({
-      where: { id, userId, isDeleted: false }
-    })
+    const session = await db.select().from(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, userId), eq(sessions.isDeleted, false))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    await prisma.session.update({
-      where: { id },
-      data: { isDeleted: true, status: 'closed' }
-    })
+    await db.update(sessions).set({ isDeleted: true, status: 'closed', updatedAt: new Date() }).where(eq(sessions.id, id))
 
     if (session.opencodeSessionId) {
-      const defaultBot = await prisma.bot.findFirst({
-        where: { isActive: true }
-      })
+      const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
       if (defaultBot) {
         await deleteOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
       }
@@ -211,23 +207,18 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Valid status is required (active, human, closed)' })
     }
 
-    const session = await prisma.session.findFirst({
-      where: { id, userId }
-    })
+    const session = await db.select().from(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, userId))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    const updateData: { status: string; needHuman?: boolean } = { status }
+    const updateData: { status: string; needHuman?: boolean; updatedAt: Date } = { status, updatedAt: new Date() }
     if (status === 'human') {
       updateData.needHuman = true
     }
 
-    const updated = await prisma.session.update({
-      where: { id },
-      data: updateData
-    })
+    const [updated] = await db.update(sessions).set(updateData).where(eq(sessions.id, id)).returning()
 
     res.json({
       id: updated.id,

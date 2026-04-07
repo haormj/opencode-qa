@@ -1,5 +1,7 @@
 import crypto from 'crypto'
-import { prisma } from '../index.js'
+import { db, ssoProviders, users, roles, userRoles } from '../db/index.js'
+import { eq, and } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { createToken } from './token.js'
 import type { SsoProcessor, SsoProviderType } from './sso-processor.js'
 import { SSO_PROVIDER_TYPES } from './sso-processor.js'
@@ -36,24 +38,18 @@ function getSsoProcessor(type: string): SsoProcessor {
 }
 
 export async function getSsoProviders() {
-  const providers = await prisma.ssoProvider.findMany({
-    where: { enabled: true },
-    orderBy: { sortOrder: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      displayName: true,
-      icon: true,
-      iconMimeType: true
-    }
-  })
-  return providers
+  const providerList = await db.select({
+    id: ssoProviders.id,
+    name: ssoProviders.name,
+    displayName: ssoProviders.displayName,
+    icon: ssoProviders.icon,
+    iconMimeType: ssoProviders.iconMimeType
+  }).from(ssoProviders).where(eq(ssoProviders.enabled, true)).orderBy(ssoProviders.sortOrder)
+  return providerList
 }
 
 export async function getSsoProvider(name: string) {
-  const provider = await prisma.ssoProvider.findUnique({
-    where: { name, enabled: true }
-  })
+  const provider = await db.select().from(ssoProviders).where(and(eq(ssoProviders.name, name), eq(ssoProviders.enabled, true))).get()
   return provider
 }
 
@@ -163,12 +159,7 @@ export async function findOrCreateUser(
     throw new Error('SSO user ID not found in user info')
   }
 
-  let user = await prisma.user.findFirst({
-    where: {
-      ssoProvider: providerName,
-      ssoUserId
-    }
-  })
+  let user = await db.select().from(users).where(and(eq(users.ssoProvider, providerName), eq(users.ssoUserId, ssoUserId))).get()
 
   if (user) {
     return {
@@ -180,18 +171,15 @@ export async function findOrCreateUser(
   }
 
   if (email) {
-    user = await prisma.user.findUnique({
-      where: { email }
-    })
+    user = await db.select().from(users).where(eq(users.email, email)).get()
 
     if (user) {
-      const updatedUser = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          ssoProvider: providerName,
-          ssoUserId
-        }
-      })
+      const now = new Date()
+      const [updatedUser] = await db.update(users).set({
+        ssoProvider: providerName,
+        ssoUserId,
+        updatedAt: now
+      }).where(eq(users.id, user.id)).returning()
 
       return {
         id: updatedUser.id,
@@ -204,32 +192,31 @@ export async function findOrCreateUser(
 
   let uniqueUsername = username
   let counter = 1
-  while (await prisma.user.findUnique({ where: { username: uniqueUsername } })) {
+  while (await db.select().from(users).where(eq(users.username, uniqueUsername)).get()) {
     uniqueUsername = `${username}_${counter}`
     counter++
   }
 
-  const newUser = await prisma.user.create({
-    data: {
-      username: uniqueUsername,
-      email,
-      displayName,
-      ssoProvider: providerName,
-      ssoUserId,
-      password: ''
-    }
-  })
+  const now = new Date()
+  const [newUser] = await db.insert(users).values({
+    id: randomUUID(),
+    username: uniqueUsername,
+    email,
+    displayName,
+    ssoProvider: providerName,
+    ssoUserId,
+    password: '',
+    createdAt: now,
+    updatedAt: now
+  }).returning()
 
-  const userRole = await prisma.role.findUnique({
-    where: { name: 'user' }
-  })
+  const userRole = await db.select().from(roles).where(eq(roles.name, 'user')).get()
 
   if (userRole) {
-    await prisma.userRole.create({
-      data: {
-        userId: newUser.id,
-        roleId: userRole.id
-      }
+    await db.insert(userRoles).values({
+      userId: newUser.id,
+      roleId: userRole.id,
+      assignedAt: now
     })
   }
 

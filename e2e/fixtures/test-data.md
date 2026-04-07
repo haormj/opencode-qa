@@ -59,12 +59,6 @@
 npm run db:seed -w @opencode-qa/backend
 ```
 
-或通过 Prisma Studio 手动创建：
-
-```bash
-cd packages/backend && npx prisma studio
-```
-
 ## 数据清理
 
 测试完成后，建议清理创建的测试数据：

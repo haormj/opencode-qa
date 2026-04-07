@@ -1,5 +1,6 @@
 import schedule from 'node-schedule'
-import { prisma } from '../index.js'
+import { db, bots, sessions, messages } from '../db/index.js'
+import { eq, and, not, desc } from 'drizzle-orm'
 import { deleteOpenCodeSession } from './opencode.js'
 import logger from './logger.js'
 
@@ -8,37 +9,22 @@ const HOURS_24 = 24 * 60 * 60 * 1000
 async function closeInactiveSessions(): Promise<number> {
   logger.info('开始执行关闭不活跃会话任务...')
 
-  const defaultBot = await prisma.bot.findFirst({
-    where: { isActive: true }
-  })
+  const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
 
   const now = new Date()
   const threshold = new Date(now.getTime() - HOURS_24)
 
-  const sessions = await prisma.session.findMany({
-    where: {
-      status: { not: 'closed' },
-      isDeleted: false
-    },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'desc' },
-        take: 1
-      }
-    }
-  })
+  const sessionList = await db.select().from(sessions).where(and(not(eq(sessions.status, 'closed')), eq(sessions.isDeleted, false)))
 
   let closedCount = 0
 
-  for (const session of sessions) {
-    const lastMessage = session.messages[0]
+  for (const session of sessionList) {
+    const lastMessage = await db.select().from(messages).where(eq(messages.sessionId, session.id)).orderBy(desc(messages.createdAt)).limit(1).get()
+
     if (!lastMessage) continue
 
     if (new Date(lastMessage.createdAt) < threshold) {
-      await prisma.session.update({
-        where: { id: session.id },
-        data: { status: 'closed' }
-      })
+      await db.update(sessions).set({ status: 'closed', updatedAt: new Date() }).where(eq(sessions.id, session.id))
 
       if (session.opencodeSessionId && defaultBot) {
         const deleted = await deleteOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)

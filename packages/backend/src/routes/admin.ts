@@ -1,5 +1,7 @@
 import { Router } from 'express'
-import { prisma } from '../index.js'
+import { db, users, roles, userRoles, bots, sessions, messages } from '../db/index.js'
+import { eq, and, or, desc, asc, sql, like, inArray } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import { deleteOpenCodeSession } from '../services/opencode.js'
 import { sessionEventManager } from '../services/session-event-manager.js'
@@ -16,61 +18,58 @@ router.get('/sessions', async (req, res) => {
 
     const pageNum = parseInt(page as string) || 1
     const pageSizeNum = parseInt(pageSize as string) || 20
-    const skip = (pageNum - 1) * pageSizeNum
+    const offset = (pageNum - 1) * pageSizeNum
 
-    const where: Record<string, unknown> = {}
+    const conditions = []
 
     if (status && typeof status === 'string') {
-      where.status = status
+      conditions.push(eq(sessions.status, status))
     }
 
     if (userId && typeof userId === 'string') {
-      where.userId = userId
+      conditions.push(eq(sessions.userId, userId))
     }
 
     if (search && typeof search === 'string') {
-      where.title = {
-        contains: search
-      }
+      conditions.push(like(sessions.title, `%${search}%`))
     }
 
     if (needHuman !== undefined && typeof needHuman === 'string') {
-      where.needHuman = needHuman === 'true'
+      conditions.push(eq(sessions.needHuman, needHuman === 'true'))
     }
 
-    const [total, sessions] = await Promise.all([
-      prisma.session.count({ where }),
-      prisma.session.findMany({
-        where,
-        skip,
-        take: pageSizeNum,
-        orderBy: { updatedAt: 'desc' },
-        include: {
-          _count: {
-            select: { messages: true }
-          }
-        }
-      })
-    ])
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    const userIds = [...new Set(sessions.map(s => s.userId))]
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, username: true, displayName: true }
-    })
-    const userMap = new Map(users.map(u => [u.id, u]))
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(whereClause).get()
+    const total = countResult?.count || 0
+
+    const sessionList = await db.select().from(sessions).where(whereClause).orderBy(desc(sessions.updatedAt)).limit(pageSizeNum).offset(offset)
+
+    const sessionsWithCounts = await Promise.all(sessionList.map(async (s) => {
+      const countResult = await db.select({ count: sql<number>`count(*)` }).from(messages).where(eq(messages.sessionId, s.id)).get()
+      return {
+        ...s,
+        messageCount: countResult?.count || 0
+      }
+    }))
+
+    const userIds = [...new Set(sessionList.map(s => s.userId))]
+    const userList = userIds.length > 0 
+      ? await db.select({ id: users.id, username: users.username, displayName: users.displayName }).from(users).where(inArray(users.id, userIds))
+      : []
+    const userMap = new Map(userList.map(u => [u.id, u]))
 
     res.json({
       total,
       page: pageNum,
       pageSize: pageSizeNum,
-      items: sessions.map(s => ({
+      items: sessionsWithCounts.map(s => ({
         id: s.id,
         title: s.title,
         status: s.status,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-        messageCount: s._count.messages,
+        messageCount: s.messageCount,
         user: userMap.get(s.userId) || { id: s.userId, username: 'Unknown', displayName: 'Unknown' }
       }))
     })
@@ -84,31 +83,46 @@ router.get('/sessions/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    const session = await prisma.session.findUnique({
-      where: { id },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            user: {
-              select: { id: true, displayName: true, username: true }
-            },
-            bot: {
-              select: { id: true, displayName: true, avatar: true }
-            }
-          }
-        }
-      }
-    })
+    const session = await db.select().from(sessions).where(eq(sessions.id, id)).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { id: true, username: true, displayName: true }
-    })
+    const sessionMessages = await db.select({
+      id: messages.id,
+      senderType: messages.senderType,
+      content: messages.content,
+      reasoning: messages.reasoning,
+      createdAt: messages.createdAt,
+      userId: messages.userId,
+      botId: messages.botId
+    }).from(messages).where(eq(messages.sessionId, id)).orderBy(asc(messages.createdAt))
+
+    const messagesWithDetails = await Promise.all(sessionMessages.map(async (m) => {
+      let user = null
+      let bot = null
+
+      if (m.userId) {
+        user = await db.select({ id: users.id, displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, m.userId)).get()
+      }
+
+      if (m.botId) {
+        bot = await db.select({ id: bots.id, displayName: bots.displayName, avatar: bots.avatar }).from(bots).where(eq(bots.id, m.botId)).get()
+      }
+
+      return {
+        id: m.id,
+        senderType: m.senderType,
+        content: m.content,
+        reasoning: m.reasoning,
+        createdAt: m.createdAt,
+        user,
+        bot
+      }
+    }))
+
+    const sessionUser = await db.select({ id: users.id, username: users.username, displayName: users.displayName }).from(users).where(eq(users.id, session.userId)).get()
 
     res.json({
       id: session.id,
@@ -116,16 +130,8 @@ router.get('/sessions/:id', async (req, res) => {
       status: session.status,
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
-      user: user || { id: session.userId, username: 'Unknown', displayName: 'Unknown' },
-      messages: session.messages.map(m => ({
-        id: m.id,
-        senderType: m.senderType,
-        content: m.content,
-        reasoning: m.reasoning,
-        createdAt: m.createdAt,
-        user: m.user,
-        bot: m.bot
-      }))
+      user: sessionUser || { id: session.userId, username: 'Unknown', displayName: 'Unknown' },
+      messages: messagesWithDetails
     })
   } catch (error) {
     logger.error('Admin get session error:', error)
@@ -143,9 +149,7 @@ router.post('/sessions/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' })
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id }
-    })
+    const session = await db.select().from(sessions).where(eq(sessions.id, id)).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
@@ -159,26 +163,20 @@ router.post('/sessions/:id/reply', async (req, res) => {
       return res.status(400).json({ error: 'Cannot reply to a session that does not need human assistance' })
     }
 
-    const createdMessage = await prisma.message.create({
-      data: {
-        sessionId: id,
-        senderType: 'admin',
-        content,
-        userId: adminUser!.id
-      },
-      include: {
-        user: {
-          select: { id: true, displayName: true, username: true }
-        }
-      }
-    })
+    const now = new Date()
+    const [createdMessage] = await db.insert(messages).values({
+      id: randomUUID(),
+      sessionId: id,
+      senderType: 'admin',
+      content,
+      userId: adminUser!.id,
+      createdAt: now
+    }).returning()
 
-    await prisma.session.update({
-      where: { id },
-      data: { updatedAt: new Date() }
-    })
+    const user = await db.select({ id: users.id, displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, adminUser!.id)).get()
 
-    // 触发实时事件，通知所有监听该会话的客户端
+    await db.update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, id))
+
     sessionEventManager.emitMessage(id, {
       id: createdMessage.id,
       sessionId: createdMessage.sessionId,
@@ -186,7 +184,7 @@ router.post('/sessions/:id/reply', async (req, res) => {
       content: createdMessage.content,
       reasoning: createdMessage.reasoning,
       createdAt: createdMessage.createdAt,
-      user: createdMessage.user
+      user: user ? { id: user.id, displayName: user.displayName, username: user.username } : null
     })
 
     res.json({
@@ -205,9 +203,7 @@ router.patch('/sessions/:id/close', async (req, res) => {
   try {
     const { id } = req.params
 
-    const session = await prisma.session.findUnique({
-      where: { id }
-    })
+    const session = await db.select().from(sessions).where(eq(sessions.id, id)).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
@@ -217,15 +213,10 @@ router.patch('/sessions/:id/close', async (req, res) => {
       return res.status(400).json({ error: 'Session is already closed' })
     }
 
-    const updated = await prisma.session.update({
-      where: { id },
-      data: { status: 'closed' }
-    })
+    const [updated] = await db.update(sessions).set({ status: 'closed', updatedAt: new Date() }).where(eq(sessions.id, id)).returning()
 
     if (session.opencodeSessionId) {
-      const defaultBot = await prisma.bot.findFirst({
-        where: { isActive: true }
-      })
+      const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
       if (defaultBot) {
         await deleteOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
       }
@@ -244,34 +235,23 @@ router.patch('/sessions/:id/close', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        displayName: true,
-        createdAt: true,
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+    const userList = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      displayName: users.displayName,
+      createdAt: users.createdAt
+    }).from(users).orderBy(desc(users.createdAt))
 
-    res.json(users.map(u => ({
-      id: u.id,
-      username: u.username,
-      email: u.email,
-      displayName: u.displayName,
-      createdAt: u.createdAt,
-      roles: u.userRoles.map(ur => ur.role.name)
-    })))
+    const usersWithRoles = await Promise.all(userList.map(async (u) => {
+      const roleList = await db.select({ roleName: roles.name }).from(userRoles).innerJoin(roles, eq(userRoles.roleId, roles.id)).where(eq(userRoles.userId, u.id))
+      return {
+        ...u,
+        roles: roleList.map(r => r.roleName)
+      }
+    }))
+
+    res.json(usersWithRoles)
   } catch (error) {
     logger.error('Admin get users error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -287,32 +267,22 @@ router.post('/users/:id/roles', async (req, res) => {
       return res.status(400).json({ error: 'Role is required' })
     }
 
-    const roleRecord = await prisma.role.findUnique({
-      where: { name: role }
-    })
+    const roleRecord = await db.select().from(roles).where(eq(roles.name, role)).get()
 
     if (!roleRecord) {
       return res.status(404).json({ error: 'Role not found' })
     }
 
-    const existingUserRole = await prisma.userRole.findUnique({
-      where: {
-        userId_roleId: {
-          userId: id,
-          roleId: roleRecord.id
-        }
-      }
-    })
+    const existingUserRole = await db.select().from(userRoles).where(and(eq(userRoles.userId, id), eq(userRoles.roleId, roleRecord.id))).get()
 
     if (existingUserRole) {
       return res.status(400).json({ error: 'User already has this role' })
     }
 
-    await prisma.userRole.create({
-      data: {
-        userId: id,
-        roleId: roleRecord.id
-      }
+    await db.insert(userRoles).values({
+      userId: id,
+      roleId: roleRecord.id,
+      assignedAt: new Date()
     })
 
     res.json({ success: true })
@@ -326,22 +296,13 @@ router.delete('/users/:id/roles/:role', async (req, res) => {
   try {
     const { id, role } = req.params
 
-    const roleRecord = await prisma.role.findUnique({
-      where: { name: role }
-    })
+    const roleRecord = await db.select().from(roles).where(eq(roles.name, role)).get()
 
     if (!roleRecord) {
       return res.status(404).json({ error: 'Role not found' })
     }
 
-    await prisma.userRole.delete({
-      where: {
-        userId_roleId: {
-          userId: id,
-          roleId: roleRecord.id
-        }
-      }
-    })
+    await db.delete(userRoles).where(and(eq(userRoles.userId, id), eq(userRoles.roleId, roleRecord.id)))
 
     res.json({ success: true })
   } catch (error) {
@@ -352,21 +313,25 @@ router.delete('/users/:id/roles/:role', async (req, res) => {
 
 router.get('/statistics', async (req, res) => {
   try {
-    const [total, active, human, closed] = await Promise.all([
-      prisma.session.count(),
-      prisma.session.count({ where: { status: 'active' } }),
-      prisma.session.count({ where: { status: 'human' } }),
-      prisma.session.count({ where: { status: 'closed' } })
-    ])
+    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).get()
+    const activeResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(eq(sessions.status, 'active')).get()
+    const humanResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(eq(sessions.status, 'human')).get()
+    const closedResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(eq(sessions.status, 'closed')).get()
 
-    const closedWithNeedHuman = await prisma.session.count({
-      where: { status: 'closed', needHuman: true }
-    })
+    const total = totalResult?.count || 0
+    const active = activeResult?.count || 0
+    const human = humanResult?.count || 0
+    const closed = closedResult?.count || 0
+
+    const closedWithNeedHumanResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, 'closed'), eq(sessions.needHuman, true))).get()
+    const closedWithNeedHuman = closedWithNeedHumanResult?.count || 0
+
     const interceptionRate = closed > 0
       ? parseFloat(((1 - closedWithNeedHuman / closed) * 100).toFixed(1))
       : 100
 
-    const usersTotal = await prisma.user.count()
+    const usersTotalResult = await db.select({ count: sql<number>`count(*)` }).from(users).get()
+    const usersTotal = usersTotalResult?.count || 0
 
     res.json({
       interceptionRate,

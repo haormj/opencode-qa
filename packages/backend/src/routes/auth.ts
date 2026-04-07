@@ -1,6 +1,8 @@
 import { Router, Response } from 'express'
 import bcrypt from 'bcrypt'
-import { prisma } from '../index.js'
+import { db, users, roles, userRoles } from '../db/index.js'
+import { eq } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { authMiddleware, AuthUser } from '../middleware/auth.js'
 import { createToken } from '../services/token.js'
 import logger from '../services/logger.js'
@@ -35,44 +37,39 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { username }
-    })
+    const existingUser = await db.select().from(users).where(eq(users.username, username)).get()
 
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' })
     }
 
     if (email) {
-      const existingEmail = await prisma.user.findUnique({
-        where: { email }
-      })
+      const existingEmail = await db.select().from(users).where(eq(users.email, email)).get()
       if (existingEmail) {
         return res.status(400).json({ error: 'Email already exists' })
       }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
+    const now = new Date()
 
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        email,
-        displayName: displayName || username
-      }
-    })
+    const [user] = await db.insert(users).values({
+      id: randomUUID(),
+      username,
+      password: hashedPassword,
+      email,
+      displayName: displayName || username,
+      createdAt: now,
+      updatedAt: now
+    }).returning()
 
-    const userRole = await prisma.role.findUnique({
-      where: { name: 'user' }
-    })
+    const userRole = await db.select().from(roles).where(eq(roles.name, 'user')).get()
 
     if (userRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: user.id,
-          roleId: userRole.id
-        }
+      await db.insert(userRoles).values({
+        userId: user.id,
+        roleId: userRole.id,
+        assignedAt: now
       })
     }
 
@@ -103,16 +100,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: {
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    })
+    const user = await db.select().from(users).where(eq(users.username, username)).get()
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' })
@@ -132,7 +120,13 @@ router.post('/login', async (req, res) => {
     const ipAddress = req.ip || req.socket.remoteAddress
     const token = await createToken(user.id, userAgent, ipAddress)
 
-    const roles = user.userRoles.map(ur => ur.role.name)
+    const userRoleRecords = await db
+      .select({ role: roles })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, user.id))
+
+    const rolesList = userRoleRecords.map(ur => ur.role.name)
 
     res.json({
       token,
@@ -141,7 +135,7 @@ router.post('/login', async (req, res) => {
         username: user.username,
         email: user.email,
         displayName: user.displayName,
-        roles
+        roles: rolesList
       }
     })
   } catch (error) {

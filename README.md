@@ -129,8 +129,11 @@ opencode-qa/
 │       │   │   ├── logger.ts        # 日志服务
 │       │   │   └── event-subscription-manager.ts
 │       │   └── middleware/          # 中间件
-│       └── prisma/
-│           └── schema.prisma        # 数据模型
+│       ├── data/                    # 数据库文件
+│       │   └── data.db              # SQLite 数据库
+│       └── src/db/                  # 数据库模块
+│           ├── schema.ts            # 数据模型
+│           └── seed.ts              # 种子数据
 │
 ├── AGENTS.md                        # AI Agent 开发指南
 ├── docker-compose.yml
@@ -183,7 +186,7 @@ npm run dev:backend      # 仅启动后端
 npm run dev:frontend     # 仅启动前端
 npm run build            # 构建生产版本
 npm run start            # 启动生产服务器
-npm run db:generate      # 生成 Prisma 客户端
+npm run db:generate      # 生成 Drizzle 迁移文件
 npm run db:push          # 推送数据库变更（开发）
 npm run db:migrate       # 数据库迁移（生产）
 
@@ -191,7 +194,7 @@ npm run db:migrate       # 数据库迁移（生产）
 cd packages/backend
 npm run dev              # tsx watch 热重载
 npm run build            # 编译到 dist/
-npx prisma studio        # 数据库 GUI
+npm run db:studio        # 数据库 GUI
 
 # 前端单独命令
 cd packages/frontend

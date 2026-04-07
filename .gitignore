@@ -4,6 +4,7 @@ dist
 *.db
 *.db-journal
 *.db.backup
+data/
 
 # Logs
 *.log

@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken'
-import { prisma } from '../index.js'
+import { db, userTokens } from '../db/index.js'
+import { eq, or, lt, isNotNull, and } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret'
 const TOKEN_EXPIRES_DAYS = 7
@@ -16,14 +18,14 @@ export async function createToken(
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + TOKEN_EXPIRES_DAYS)
 
-  await prisma.userToken.create({
-    data: {
-      userId,
-      token,
-      userAgent,
-      ipAddress,
-      expiresAt
-    }
+  await db.insert(userTokens).values({
+    id: randomUUID(),
+    userId,
+    token,
+    userAgent,
+    ipAddress,
+    expiresAt,
+    createdAt: new Date()
   })
 
   return token
@@ -33,9 +35,7 @@ export async function validateToken(token: string): Promise<boolean> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
     
-    const tokenRecord = await prisma.userToken.findUnique({
-      where: { token }
-    })
+    const tokenRecord = await db.select().from(userTokens).where(eq(userTokens.token, token)).get()
 
     if (!tokenRecord) return false
     if (tokenRecord.revokedAt) return false
@@ -49,25 +49,18 @@ export async function validateToken(token: string): Promise<boolean> {
 }
 
 export async function revokeToken(token: string): Promise<void> {
-  await prisma.userToken.update({
-    where: { token },
-    data: { revokedAt: new Date() }
-  })
+  await db.update(userTokens).set({ revokedAt: new Date() }).where(eq(userTokens.token, token))
 }
 
 export async function revokeAllUserTokens(userId: string): Promise<void> {
-  await prisma.userToken.deleteMany({
-    where: { userId }
-  })
+  await db.delete(userTokens).where(eq(userTokens.userId, userId))
 }
 
 export async function cleanupExpiredTokens(): Promise<void> {
-  await prisma.userToken.deleteMany({
-    where: {
-      OR: [
-        { expiresAt: { lt: new Date() } },
-        { revokedAt: { not: null } }
-      ]
-    }
-  })
+  await db.delete(userTokens).where(
+    or(
+      lt(userTokens.expiresAt, new Date()),
+      isNotNull(userTokens.revokedAt)
+    )
+  )
 }

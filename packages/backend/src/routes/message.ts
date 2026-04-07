@@ -1,5 +1,7 @@
 import { Router } from 'express'
-import { prisma } from '../index.js'
+import { db, bots, sessions, messages, users } from '../db/index.js'
+import { eq, and, desc, asc } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext, abortOpenCodeSession } from '../services/opencode.js'
 import { eventSubscriptionManager, type ChunkType } from '../services/event-subscription-manager.js'
 import { sessionEventManager } from '../services/session-event-manager.js'
@@ -21,48 +23,37 @@ router.post('/stream', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Session ID is required' })
     }
 
-    const defaultBot = await prisma.bot.findFirst({
-      where: { isActive: true }
-    })
+    const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
 
     if (!defaultBot) {
       return res.status(500).json({ error: 'No active bot found' })
     }
 
-    const session = await prisma.session.findFirst({
-      where: { id: sessionId, userId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
-    })
+    const session = await db.select().from(sessions).where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
+
+    const lastMessage = await db.select().from(messages).where(eq(messages.sessionId, sessionId)).orderBy(desc(messages.createdAt)).limit(1).get()
 
     if (session.status === 'closed') {
       return res.status(400).json({ error: 'This session has been closed' })
     }
 
     if (session.status === 'human') {
-      const userMessage = await prisma.message.create({
-        data: {
-          sessionId: session.id,
-          senderType: 'user',
-          content,
-          userId
-        },
-        include: {
-          user: {
-            select: { id: true, displayName: true, username: true }
-          }
-        }
-      })
+      const now = new Date()
+      const [userMessage] = await db.insert(messages).values({
+        id: randomUUID(),
+        sessionId: session.id,
+        senderType: 'user',
+        content,
+        userId,
+        createdAt: now
+      }).returning()
 
-      // 触发实时事件，通知所有监听该会话的客户端
+      const user = await db.select({ id: users.id, displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, userId)).get()
+
       sessionEventManager.emitMessage(session.id, {
         id: userMessage.id,
         sessionId: userMessage.sessionId,
@@ -70,7 +61,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
         content: userMessage.content,
         reasoning: userMessage.reasoning,
         createdAt: userMessage.createdAt,
-        user: userMessage.user
+        user: user ? { id: user.id, displayName: user.displayName, username: user.username } : null
       })
 
       return res.json({
@@ -82,22 +73,15 @@ router.post('/stream', authMiddleware, async (req, res) => {
       })
     }
 
-    const lastMessage = session.messages[0]
     if (lastMessage) {
       const hoursSinceLastMessage = (Date.now() - new Date(lastMessage.createdAt).getTime()) / (1000 * 60 * 60)
       if (hoursSinceLastMessage > 24) {
-        await prisma.session.update({
-          where: { id: session.id },
-          data: { status: 'closed' }
-        })
+        await db.update(sessions).set({ status: 'closed', updatedAt: new Date() }).where(eq(sessions.id, session.id))
         return res.status(400).json({ error: 'Session has been closed due to inactivity (over 24 hours)' })
       }
     }
 
-    await prisma.session.update({
-      where: { id: sessionId },
-      data: { updatedAt: new Date() }
-    })
+    await db.update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sessionId))
 
     const botConfig = {
       apiUrl: defaultBot.apiUrl,
@@ -112,21 +96,14 @@ router.post('/stream', authMiddleware, async (req, res) => {
       session.opencodeSessionId || undefined
     )
 
-    // 立即保存 opencodeSessionId，确保可以提前停止
     if (opencodeSessionId && opencodeSessionId !== session.opencodeSessionId) {
-      await prisma.session.update({
-        where: { id: sessionId },
-        data: { opencodeSessionId }
-      })
+      await db.update(sessions).set({ opencodeSessionId }).where(eq(sessions.id, sessionId))
     }
 
     if (needsRebuild) {
       logger.info('[Message] Rebuilding context, fetching history messages')
       
-      const previousMessages = await prisma.message.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: 'asc' }
-      })
+      const previousMessages = await db.select().from(messages).where(eq(messages.sessionId, sessionId)).orderBy(asc(messages.createdAt))
       
       const historyParts = previousMessages.map(msg => ({
         type: 'text' as const,
@@ -136,14 +113,15 @@ router.post('/stream', authMiddleware, async (req, res) => {
       await rebuildContext(opencodeSessionId, historyParts, botConfig)
     }
 
-    const userMessage = await prisma.message.create({
-      data: {
-        sessionId,
-        senderType: 'user',
-        content,
-        userId
-      }
-    })
+    const now = new Date()
+    const [userMessage] = await db.insert(messages).values({
+      id: randomUUID(),
+      sessionId,
+      senderType: 'user',
+      content,
+      userId,
+      createdAt: now
+    }).returning()
 
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
@@ -175,29 +153,18 @@ router.post('/stream', authMiddleware, async (req, res) => {
     )
 
     if (opencodeSessionIdFromStream && opencodeSessionIdFromStream !== session.opencodeSessionId) {
-      await prisma.session.update({
-        where: { id: sessionId },
-        data: { opencodeSessionId: opencodeSessionIdFromStream }
-      })
+      await db.update(sessions).set({ opencodeSessionId: opencodeSessionIdFromStream }).where(eq(sessions.id, sessionId))
     }
 
-    const botMessage = await prisma.message.create({
-      data: {
-        sessionId,
-        senderType: 'bot',
-        content: answer || '抱歉，我无法回答这个问题。',
-        reasoning: reasoningContent || null,
-        botId: defaultBot.id
-      },
-      include: {
-        bot: {
-          select: { id: true, displayName: true, avatar: true }
-        }
-      }
-    })
-
-    // 注意：bot 消息已通过流式响应完整传输给用户，不需要再通过 SSE 推送
-    // SSE 推送仅用于：管理员回复 → 用户页面，用户消息 → 管理员页面
+    const [botMessage] = await db.insert(messages).values({
+      id: randomUUID(),
+      sessionId,
+      senderType: 'bot',
+      content: answer || '抱歉，我无法回答这个问题。',
+      reasoning: reasoningContent || null,
+      botId: defaultBot.id,
+      createdAt: new Date()
+    }).returning()
 
     sendEvent('done', {
       id: botMessage.id,
@@ -228,17 +195,13 @@ router.post('/stop', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'sessionId is required' })
     }
     
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId }
-    })
+    const session = await db.select().from(sessions).where(eq(sessions.id, sessionId)).get()
     
     if (!session || !session.opencodeSessionId) {
       return res.status(404).json({ error: 'Session not found or no active generation' })
     }
     
-    const defaultBot = await prisma.bot.findFirst({
-      where: { isActive: true }
-    })
+    const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
     
     if (!defaultBot) {
       return res.status(500).json({ error: 'No active bot found' })

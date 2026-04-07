@@ -3,7 +3,7 @@ config()
 
 import express from 'express'
 import cors from 'cors'
-import { PrismaClient } from '@prisma/client'
+import { db } from './db/index.js'
 import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
@@ -18,7 +18,7 @@ import { eventSubscriptionManager } from './services/event-subscription-manager.
 import { accessLogger, errorLogger } from './middleware/logger.js'
 import logger from './services/logger.js'
 
-export const prisma = new PrismaClient()
+export { db }
 
 const app = express()
 const PORT = process.env.PORT || 8000
@@ -53,12 +53,10 @@ app.listen(PORT, async () => {
 
 process.on('SIGINT', async () => {
   await eventSubscriptionManager.shutdown()
-  await prisma.$disconnect()
   process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
   await eventSubscriptionManager.shutdown()
-  await prisma.$disconnect()
   process.exit(0)
 })

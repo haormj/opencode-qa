@@ -92,7 +92,7 @@ curl -X POST http://localhost:8000/api/auth/register \
 
 ```bash
 # 重置数据库
-rm packages/backend/prisma/dev.db
+rm packages/backend/data/data.db
 npm run db:push
 ```
 

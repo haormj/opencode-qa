@@ -96,8 +96,40 @@ cp packages/backend/.env.dev packages/backend/.env
 
 本地导入**必须**加 `.js` 后缀：
 ```typescript
-import { prisma } from '../index.js'  // 正确
-import { prisma } from '../index'     // 错误
+import { db } from '../db/index.js'  // 正确
+import { db } from '../db/index'     // 错误
+```
+
+### Drizzle ORM
+
+项目使用 Drizzle ORM 作为数据库层，特点：
+- 纯 JavaScript 实现，无二进制依赖
+- TypeScript 优先，类型安全
+- SQL-like 查询语法
+
+**数据库 Schema**：`packages/backend/src/db/schema.ts`
+
+**常用查询模式**：
+```typescript
+// 查询
+const user = await db.select().from(users).where(eq(users.id, id)).get()
+const allUsers = await db.select().from(users).orderBy(desc(users.createdAt))
+
+// 插入
+const [newUser] = await db.insert(users).values({
+  id: randomUUID(),
+  username: 'test',
+  displayName: 'Test User',
+  createdAt: new Date(),
+  updatedAt: new Date()
+}).returning()
+
+// 更新
+await db.update(users).set({ displayName: 'New Name', updatedAt: new Date() })
+  .where(eq(users.id, id))
+
+// 删除
+await db.delete(users).where(eq(users.id, id))
 ```
 
 ### 前端路径别名
@@ -125,10 +157,17 @@ netstat -ano | findstr ":3000 :8000" | findstr "LISTENING"
 taskkill /F /PID <PID>
 ```
 
-### Prisma 数据库 GUI
+### Drizzle 数据库工具
 
 ```bash
-cd packages/backend && npx prisma studio
+# 推送 schema 变更
+npm run db:push --workspace=@opencode-qa/backend
+
+# 生成迁移文件
+npm run db:generate --workspace=@opencode-qa/backend
+
+# 数据库 Studio (如果支持)
+npm run db:studio --workspace=@opencode-qa/backend
 ```
 
 ## 分支策略
@@ -216,7 +255,11 @@ packages/
 │   │   ├── index.ts          # 入口
 │   │   ├── routes/           # API 路由
 │   │   └── services/         # 业务逻辑
-│   └── prisma/schema.prisma  # 数据模型
+│   ├── data/                 # 数据库文件目录
+│   │   └── data.db           # SQLite 数据库
+│   └── src/db/               # 数据库模块
+│       ├── schema.ts         # 数据模型
+│       └── seed.ts           # 种子数据
 └── frontend/
     └── src/
         ├── components/       # 组件（ChatBox 使用 Streamdown）

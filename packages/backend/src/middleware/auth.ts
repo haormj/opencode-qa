@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { prisma } from '../index.js'
+import { db, users, userTokens, roles, userRoles } from '../db/index.js'
+import { eq } from 'drizzle-orm'
 import logger from '../services/logger.js'
 
 export interface AuthUser {
@@ -31,9 +32,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const token = authHeader.substring(7)
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
 
-    const tokenRecord = await prisma.userToken.findUnique({
-      where: { token }
-    })
+    const tokenRecord = await db.select().from(userTokens).where(eq(userTokens.token, token)).get()
 
     if (!tokenRecord || tokenRecord.revokedAt || new Date() > tokenRecord.expiresAt) {
       return res.status(401).json({ error: 'Token invalid or expired' })
@@ -43,23 +42,20 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       return res.status(401).json({ error: 'Token mismatch' })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: {
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    })
+    const user = await db.select().from(users).where(eq(users.id, decoded.userId)).get()
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' })
     }
 
-    const roles = user.userRoles.map(ur => ur.role.name)
-    const permissions = user.userRoles.flatMap(ur => {
+    const userRoleRecords = await db
+      .select({ role: roles })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, user.id))
+
+    const rolesList = userRoleRecords.map(ur => ur.role.name)
+    const permissions = userRoleRecords.flatMap(ur => {
       try {
         return JSON.parse(ur.role.permissions) as string[]
       } catch {
@@ -71,7 +67,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      roles,
+      roles: rolesList,
       permissions
     }
 
