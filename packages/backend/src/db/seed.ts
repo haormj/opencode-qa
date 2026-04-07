@@ -1,7 +1,14 @@
-import { db, users, roles, userRoles, bots } from './index.js'
+import { db, users, roles, userRoles, bots, ssoProviders } from './index.js'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
+import { FEISHU_DEFAULTS } from '../services/sso-processors/feishu.js'
+import { SSO_PROVIDER_TYPES } from '../services/sso-processor.js'
+
+const FEISHU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3370FF">
+  <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5L19 8l-7 3.5L5 8l7-3.5zM4 9.5l7 3.5v6.5l-7-3.5V9.5zm16 0v6.5l-7 3.5v-6.5l7-3.5z"/>
+</svg>`
+const FEISHU_ICON_BASE64 = Buffer.from(FEISHU_ICON_SVG).toString('base64')
 
 async function main() {
   const existingUsers = await db.select().from(users).limit(1)
@@ -104,6 +111,37 @@ async function main() {
   console.log(`Default bot ID: ${defaultBot.id}`)
   console.log(`Default bot name: ${defaultBot.displayName}`)
   console.log(`Default bot API: ${defaultBot.apiUrl}`)
+
+  // Upsert Feishu SSO provider
+  const existingFeishuProvider = await db.select().from(ssoProviders)
+    .where(eq(ssoProviders.name, 'feishu'))
+    .get()
+
+  if (!existingFeishuProvider) {
+    await db.insert(ssoProviders).values({
+      id: randomUUID(),
+      name: 'feishu',
+      displayName: '飞书',
+      type: SSO_PROVIDER_TYPES.FEISHU,
+      authorizeUrl: FEISHU_DEFAULTS.AUTHORIZE_URL,
+      tokenUrl: FEISHU_DEFAULTS.TOKEN_URL,
+      userInfoUrl: FEISHU_DEFAULTS.USER_INFO_URL,
+      icon: FEISHU_ICON_BASE64,
+      iconMimeType: 'image/svg+xml',
+      enabled: false,
+      sortOrder: 0,
+      scope: 'openid',
+      userIdField: 'open_id',
+      usernameField: 'en_name',
+      emailField: 'email',
+      displayNameField: 'name',
+      createdAt: now,
+      updatedAt: now
+    })
+    console.log('Feishu SSO provider created (disabled by default)')
+  } else {
+    console.log('Feishu SSO provider already exists, skipping')
+  }
 }
 
 main()
