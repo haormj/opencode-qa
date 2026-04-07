@@ -7,6 +7,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { db } from './db/index.js'
 import { autoMigrate } from './db/auto-migrate.js'
+import { seed } from './db/seed.js'
 import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
@@ -60,6 +61,7 @@ app.get('*', (_req, res) => {
 
 app.listen(PORT, async () => {
   await autoMigrate()
+  await seed()
   logger.info(`Server running on http://localhost:${PORT}`)
   await eventSubscriptionManager.initialize()
   startScheduler()

@@ -4,17 +4,13 @@ import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
 import { FEISHU_DEFAULTS } from '../services/sso-processors/feishu.js'
 import { SSO_PROVIDER_TYPES } from '../services/sso-processor.js'
-import { autoMigrate } from './auto-migrate.js'
 
 const FEISHU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3370FF">
   <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5L19 8l-7 3.5L5 8l7-3.5zM4 9.5l7 3.5v6.5l-7-3.5V9.5zm16 0v6.5l-7 3.5v-6.5l7-3.5z"/>
 </svg>`
 const FEISHU_ICON_BASE64 = Buffer.from(FEISHU_ICON_SVG).toString('base64')
 
-async function main() {
-  // Auto migrate database
-  await autoMigrate()
-  
+export async function seed() {
   const existingUsers = await db.select().from(users).limit(1)
   
   if (existingUsers.length > 0) {
@@ -148,7 +144,8 @@ async function main() {
   }
 }
 
-main()
+// Run seed if executed directly
+seed()
   .catch((e) => {
     console.error(e)
     process.exit(1)
