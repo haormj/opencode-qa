@@ -11,11 +11,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:generate": "cross-env NODE_PATH=../../node_modules drizzle-kit generate",
+    "db:push": "cross-env NODE_PATH=../../node_modules drizzle-kit push",
+    "db:migrate": "cross-env NODE_PATH=../../node_modules drizzle-kit migrate",
+    "db:studio": "cross-env NODE_PATH=../../node_modules drizzle-kit studio",
+    "db:init": "tsx src/db/auto-init.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:setup": "npm run db:init && npm run db:seed"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
@@ -41,6 +43,7 @@
     "@types/node-schedule": "^2.1.8",
     "@types/supertest": "^7.2.0",
     "@vitest/coverage-v8": "^4.1.2",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.10",
     "supertest": "^7.2.2",
     "tsx": "^4.7.1",

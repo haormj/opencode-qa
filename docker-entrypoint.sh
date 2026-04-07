@@ -5,8 +5,8 @@ cd /app
 
 mkdir -p /app/data
 
-echo "Running database migrations..."
-node dist/db/migrate.js
+echo "Initializing database..."
+node dist/db/auto-init.js
 
 echo "Running database seed..."
 node dist/db/seed.js
