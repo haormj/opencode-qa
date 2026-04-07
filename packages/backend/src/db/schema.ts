@@ -87,11 +87,11 @@ export const userTokens = sqliteTable('user_tokens', {
 export const ssoProviders = sqliteTable('sso_providers', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
-  displayName: text('display_name').notNull(),
+  displayName: text('displayName').notNull(),
   icon: text('icon'),
   iconMimeType: text('icon_mime_type'),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  sortOrder: integer('sort_order').notNull().default(0),
+  sortOrder: integer('sortOrder').notNull().default(0),
   type: text('type').notNull().default('GENERIC'),
   authorizeUrl: text('authorize_url').notNull(),
   tokenUrl: text('token_url').notNull(),

@@ -3,6 +3,8 @@ config()
 
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { db } from './db/index.js'
 import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
@@ -19,6 +21,9 @@ import { accessLogger, errorLogger } from './middleware/logger.js'
 import logger from './services/logger.js'
 
 export { db }
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 8000
@@ -44,6 +49,13 @@ app.use('/api/admin/sso-providers', adminSsoRoutes)
 app.use('/api/bots', botRoutes)
 
 app.use(errorLogger)
+
+const publicPath = path.join(__dirname, '../public')
+app.use(express.static(publicPath))
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'))
+})
 
 app.listen(PORT, async () => {
   logger.info(`Server running on http://localhost:${PORT}`)

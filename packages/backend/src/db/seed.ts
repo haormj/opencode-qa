@@ -4,6 +4,14 @@ import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
 
 async function main() {
+  const existingUsers = await db.select().from(users).limit(1)
+  
+  if (existingUsers.length > 0) {
+    console.log('Database already initialized, skipping seed')
+    return
+  }
+
+  console.log('Initializing database...')
   const now = new Date()
   
   // Upsert admin role

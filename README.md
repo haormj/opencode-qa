@@ -16,7 +16,7 @@
 | 类型 | 技术 |
 |------|------|
 | **前端** | React 18 + Vite + TypeScript + Ant Design + Tailwind CSS v4 |
-| **后端** | Express + TypeScript + Prisma + Winston Logger |
+| **后端** | Express + TypeScript + Drizzle ORM + Winston Logger |
 | **Markdown** | Streamdown (Shiki + Mermaid + KaTeX) |
 | **数据库** | SQLite (开发) / PostgreSQL (生产) |
 | **SDK** | @opencode-ai/sdk |
@@ -136,7 +136,6 @@ opencode-qa/
 │           └── seed.ts              # 种子数据
 │
 ├── AGENTS.md                        # AI Agent 开发指南
-├── docker-compose.yml
 └── package.json                     # npm workspaces 配置
 ```
 
@@ -205,21 +204,48 @@ npm run preview          # 预览生产构建
 
 ## Docker 部署
 
+### 构建镜像
+
 ```bash
-# 构建并启动
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
+docker build -t opencode-qa .
 ```
 
-生产环境建议：
-1. 使用 PostgreSQL 数据库
-2. 修改所有默认密码和密钥
-3. 配置 HTTPS 反向代理
+### 运行容器
+
+```bash
+# 基本运行
+docker run -d -p 8000:8000 -v opencode-qa-data:/app/data opencode-qa
+
+# 生产环境运行
+docker run -d \
+  -p 8000:8000 \
+  -v opencode-qa-data:/app/data \
+  -e JWT_SECRET=your-secure-secret \
+  -e ADMIN_PASSWORD=your-admin-password \
+  opencode-qa
+```
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `PORT` | 服务端口 | 8000 |
+| `DATABASE_URL` | 数据库路径 | `file:./data/data.db` |
+| `JWT_SECRET` | JWT 密钥 | **生产必须配置** |
+| `ADMIN_USERNAME` | 管理员用户名 | admin |
+| `ADMIN_PASSWORD` | 管理员密码 | **生产必须配置** |
+| `ADMIN_EMAIL` | 管理员邮箱 | - |
+| `LOG_*` | 日志配置 | 见 `.env.example` |
+
+### 数据持久化
+
+容器内数据库位于 `/app/data/data.db`，建议挂载 volume 保证数据安全。
+
+### 注意事项
+
+1. OpenCode 服务需独立运行（不在容器内）
+2. 生产环境必须修改 `JWT_SECRET` 和 `ADMIN_PASSWORD`
+3. 建议配置 HTTPS 反向代理
 
 ## Markdown 渲染支持
 
