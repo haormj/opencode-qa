@@ -1,5 +1,7 @@
 import { Router } from 'express'
-import { prisma } from '../index.js'
+import { db, bots } from '../db/index.js'
+import { eq, desc } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import logger from '../services/logger.js'
 
@@ -9,11 +11,9 @@ router.use(authMiddleware)
 
 router.get('/', async (req, res) => {
   try {
-    const bots = await prisma.bot.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
+    const allBots = await db.select().from(bots).orderBy(desc(bots.createdAt))
 
-    res.json(bots.map(bot => ({
+    res.json(allBots.map(bot => ({
       id: bot.id,
       name: bot.name,
       displayName: bot.displayName,
@@ -37,9 +37,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    const bot = await prisma.bot.findUnique({
-      where: { id }
-    })
+    const bot = await db.select().from(bots).where(eq(bots.id, id)).get()
 
     if (!bot) {
       return res.status(404).json({ error: 'Bot not found' })
@@ -74,20 +72,22 @@ router.post('/', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    const bot = await prisma.bot.create({
-      data: {
-        name,
-        displayName,
-        avatar,
-        apiUrl,
-        apiKey,
-        provider,
-        model,
-        agent: agent || 'plan',
-        description,
-        isActive: isActive ?? true
-      }
-    })
+    const now = new Date()
+    const [bot] = await db.insert(bots).values({
+      id: randomUUID(),
+      name,
+      displayName,
+      avatar,
+      apiUrl,
+      apiKey,
+      provider,
+      model,
+      agent: agent || 'plan',
+      description,
+      isActive: isActive ?? true,
+      createdAt: now,
+      updatedAt: now
+    }).returning()
 
     res.json({
       id: bot.id,
@@ -113,21 +113,23 @@ router.patch('/:id', requireAdmin, async (req, res) => {
     const { id } = req.params
     const { name, displayName, avatar, apiUrl, apiKey, provider, model, agent, description, isActive } = req.body
 
-    const bot = await prisma.bot.update({
-      where: { id },
-      data: {
-        name,
-        displayName,
-        avatar,
-        apiUrl,
-        apiKey,
-        provider,
-        model,
-        agent,
-        description,
-        isActive
-      }
-    })
+    const [bot] = await db.update(bots).set({
+      name,
+      displayName,
+      avatar,
+      apiUrl,
+      apiKey,
+      provider,
+      model,
+      agent,
+      description,
+      isActive,
+      updatedAt: new Date()
+    }).where(eq(bots.id, id)).returning()
+
+    if (!bot) {
+      return res.status(404).json({ error: 'Bot not found' })
+    }
 
     res.json({
       id: bot.id,
@@ -152,9 +154,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
 
-    const bot = await prisma.bot.findUnique({
-      where: { id }
-    })
+    const bot = await db.select().from(bots).where(eq(bots.id, id)).get()
 
     if (!bot) {
       return res.status(404).json({ error: 'Bot not found' })
@@ -164,9 +164,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Cannot delete default bot' })
     }
 
-    await prisma.bot.delete({
-      where: { id }
-    })
+    await db.delete(bots).where(eq(bots.id, id))
 
     res.json({ success: true })
   } catch (error) {

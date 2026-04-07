@@ -3,7 +3,11 @@ config()
 
 import express from 'express'
 import cors from 'cors'
-import { PrismaClient } from '@prisma/client'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { db } from './db/index.js'
+import { autoMigrate } from './db/auto-migrate.js'
+import { seed } from './db/seed.js'
 import messageRoutes from './routes/message.js'
 import sessionRoutes from './routes/session.js'
 import historyRoutes from './routes/history.js'
@@ -18,7 +22,10 @@ import { eventSubscriptionManager } from './services/event-subscription-manager.
 import { accessLogger, errorLogger } from './middleware/logger.js'
 import logger from './services/logger.js'
 
-export const prisma = new PrismaClient()
+export { db }
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 8000
@@ -45,7 +52,16 @@ app.use('/api/bots', botRoutes)
 
 app.use(errorLogger)
 
+const publicPath = path.join(__dirname, '../public')
+app.use(express.static(publicPath))
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'))
+})
+
 app.listen(PORT, async () => {
+  await autoMigrate()
+  await seed()
   logger.info(`Server running on http://localhost:${PORT}`)
   await eventSubscriptionManager.initialize()
   startScheduler()
@@ -53,12 +69,10 @@ app.listen(PORT, async () => {
 
 process.on('SIGINT', async () => {
   await eventSubscriptionManager.shutdown()
-  await prisma.$disconnect()
   process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
   await eventSubscriptionManager.shutdown()
-  await prisma.$disconnect()
   process.exit(0)
 })

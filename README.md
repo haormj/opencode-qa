@@ -16,7 +16,7 @@
 | 类型 | 技术 |
 |------|------|
 | **前端** | React 18 + Vite + TypeScript + Ant Design + Tailwind CSS v4 |
-| **后端** | Express + TypeScript + Prisma + Winston Logger |
+| **后端** | Express + TypeScript + Drizzle ORM + Winston Logger |
 | **Markdown** | Streamdown (Shiki + Mermaid + KaTeX) |
 | **数据库** | SQLite (开发) / PostgreSQL (生产) |
 | **SDK** | @opencode-ai/sdk |
@@ -129,12 +129,14 @@ opencode-qa/
 │       │   │   ├── logger.ts        # 日志服务
 │       │   │   └── event-subscription-manager.ts
 │       │   └── middleware/          # 中间件
-│       └── prisma/
-│           └── schema.prisma        # 数据模型
+│       ├── data/                    # 数据库文件
+│       │   └── data.db              # SQLite 数据库
+│       └── src/db/                  # 数据库模块
+│           ├── schema.ts            # 数据模型
+│           └── seed.ts              # 种子数据
 │
 ├── AGENTS.md                        # AI Agent 开发指南
-├── docker-compose.yml
-└── package.json                     # npm workspaces 配置
+└── package.json                     # 根目录配置
 ```
 
 ## API 接口
@@ -183,7 +185,7 @@ npm run dev:backend      # 仅启动后端
 npm run dev:frontend     # 仅启动前端
 npm run build            # 构建生产版本
 npm run start            # 启动生产服务器
-npm run db:generate      # 生成 Prisma 客户端
+npm run db:generate      # 生成 Drizzle 迁移文件
 npm run db:push          # 推送数据库变更（开发）
 npm run db:migrate       # 数据库迁移（生产）
 
@@ -191,7 +193,7 @@ npm run db:migrate       # 数据库迁移（生产）
 cd packages/backend
 npm run dev              # tsx watch 热重载
 npm run build            # 编译到 dist/
-npx prisma studio        # 数据库 GUI
+npm run db:studio        # 数据库 GUI
 
 # 前端单独命令
 cd packages/frontend
@@ -202,21 +204,48 @@ npm run preview          # 预览生产构建
 
 ## Docker 部署
 
+### 构建镜像
+
 ```bash
-# 构建并启动
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
+docker build -t opencode-qa .
 ```
 
-生产环境建议：
-1. 使用 PostgreSQL 数据库
-2. 修改所有默认密码和密钥
-3. 配置 HTTPS 反向代理
+### 运行容器
+
+```bash
+# 基本运行
+docker run -d -p 8000:8000 -v opencode-qa-data:/app/data opencode-qa
+
+# 生产环境运行
+docker run -d \
+  -p 8000:8000 \
+  -v opencode-qa-data:/app/data \
+  -e JWT_SECRET=your-secure-secret \
+  -e ADMIN_PASSWORD=your-admin-password \
+  opencode-qa
+```
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `PORT` | 服务端口 | 8000 |
+| `DATABASE_URL` | 数据库路径 | `file:./data/data.db` |
+| `JWT_SECRET` | JWT 密钥 | **生产必须配置** |
+| `ADMIN_USERNAME` | 管理员用户名 | admin |
+| `ADMIN_PASSWORD` | 管理员密码 | **生产必须配置** |
+| `ADMIN_EMAIL` | 管理员邮箱 | - |
+| `LOG_*` | 日志配置 | 见 `.env.example` |
+
+### 数据持久化
+
+容器内数据库位于 `/app/data/data.db`，建议挂载 volume 保证数据安全。
+
+### 注意事项
+
+1. OpenCode 服务需独立运行（不在容器内）
+2. 生产环境必须修改 `JWT_SECRET` 和 `ADMIN_PASSWORD`
+3. 建议配置 HTTPS 反向代理
 
 ## Markdown 渲染支持
 

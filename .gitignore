@@ -1,9 +1,11 @@
 node_modules
 dist
+public
 .env
 *.db
 *.db-journal
 *.db.backup
+data/
 
 # Logs
 *.log

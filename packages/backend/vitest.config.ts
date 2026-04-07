@@ -12,7 +12,6 @@ export default defineConfig({
         'node_modules/',
         'tests/',
         'dist/',
-        'prisma/',
       ],
     },
     setupFiles: ['tests/setup.ts'],
