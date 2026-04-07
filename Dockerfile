@@ -2,33 +2,33 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
-COPY package.json ./
 COPY packages/frontend/package.json ./packages/frontend/
-RUN npm install -w @opencode-qa/frontend
+WORKDIR /app/packages/frontend
+RUN npm install
 
-COPY packages/frontend ./packages/frontend
-RUN npm run build -w @opencode-qa/frontend
+COPY packages/frontend ./
+RUN npm run build
 
 FROM node:20-alpine AS backend-builder
 
 WORKDIR /app
 
-COPY package.json ./
 COPY packages/backend/package.json ./packages/backend/
-RUN npm install -w @opencode-qa/backend
+WORKDIR /app/packages/backend
+RUN npm install
 
-COPY packages/backend ./packages/backend
-RUN npm run build -w @opencode-qa/backend
+COPY packages/backend ./
+RUN npm run build
 
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/packages/backend
 
-COPY package.json ./
-COPY packages/backend/package.json ./packages/backend/
-RUN npm install -w @opencode-qa/backend --omit=dev
+COPY packages/backend/package.json ./
+RUN npm install --omit=dev
 
 COPY --from=backend-builder /app/packages/backend/dist ./dist
+COPY --from=backend-builder /app/packages/backend/drizzle ./drizzle
 COPY --from=frontend-builder /app/packages/frontend/dist ./public
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
