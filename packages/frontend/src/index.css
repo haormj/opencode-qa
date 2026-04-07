@@ -215,3 +215,8 @@ body {
 .font-medium { font-weight: 500 !important; }
 .text-primary { color: var(--color-primary) !important; }
 .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+
+/* Fix Streamdown heading style override - let Tailwind utility classes take effect */
+[data-streamdown^="heading-"] {
+  font-size: revert !important;
+}
