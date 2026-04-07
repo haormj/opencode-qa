@@ -77,7 +77,9 @@ export async function seed() {
   // Upsert default bot
   const apiUrl = process.env.OPENCODE_HOST && process.env.OPENCODE_PORT 
     ? `http://${process.env.OPENCODE_HOST}:${process.env.OPENCODE_PORT}`
-    : 'http://127.0.0.1:4096'
+    : process.env.OPENCODE_HOST 
+      ? `http://${process.env.OPENCODE_HOST}:4096`
+      : 'http://127.0.0.1:4096'
 
   const [defaultBot] = await db.insert(bots).values({
     id: randomUUID(),
@@ -145,8 +147,10 @@ export async function seed() {
 }
 
 // Run seed if executed directly
-seed()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed()
+    .catch((e) => {
+      console.error(e)
+      process.exit(1)
+    })
+}
