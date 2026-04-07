@@ -200,13 +200,14 @@ taskkill /F /PID <PID>
 
 ```bash
 # 推送 schema 变更
-npm run db:push --workspace=@opencode-qa/backend
+cd packages/backend
+npm run db:push
 
 # 生成迁移文件
-npm run db:generate --workspace=@opencode-qa/backend
+npm run db:generate
 
 # 数据库 Studio (如果支持)
-npm run db:studio --workspace=@opencode-qa/backend
+npm run db:studio
 ```
 
 ## 分支策略
