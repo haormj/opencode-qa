@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-@source "../../../node_modules/streamdown/dist/*.js";
-@source "../../../node_modules/@streamdown/code/dist/*.js";
-@source "../../../node_modules/@streamdown/mermaid/dist/*.js";
-@source "../../../node_modules/@streamdown/math/dist/*.js";
-@source "../../../node_modules/@streamdown/cjk/dist/*.js";
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
+@source "../node_modules/@streamdown/mermaid/dist/*.js";
+@source "../node_modules/@streamdown/math/dist/*.js";
+@source "../node_modules/@streamdown/cjk/dist/*.js";
 
 /* Tailwind v4 无法识别函数参数中的类名，使用 inline 强制生成 */
 @source inline("-mt-10");
@@ -215,3 +215,8 @@ body {
 .font-medium { font-weight: 500 !important; }
 .text-primary { color: var(--color-primary) !important; }
 .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+
+/* Fix Streamdown heading style override - let Tailwind utility classes take effect */
+[data-streamdown^="heading-"] {
+  font-size: revert !important;
+}

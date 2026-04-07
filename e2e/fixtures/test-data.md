@@ -56,7 +56,8 @@
 
 ```bash
 # 运行种子脚本创建测试数据
-npm run db:seed -w @opencode-qa/backend
+cd packages/backend
+npm run db:seed
 ```
 
 ## 数据清理

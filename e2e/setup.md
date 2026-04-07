@@ -14,10 +14,11 @@ OpenCode 服务必须先启动，用于 AI 对话功能。
 
 ```bash
 # 推送数据库结构
+cd packages/backend
 npm run db:push
 
 # (可选) 填充种子数据
-npm run db:seed -w @opencode-qa/backend
+npm run db:seed
 ```
 
 ### 3. 环境变量

@@ -1,18 +1,25 @@
 # AGENTS.md
 
-OpenCode QA 是基于 npm workspaces 的 monorepo 业务知识问答系统。
+OpenCode QA 是业务知识问答系统，前后端独立管理依赖。
 
 ## 开发命令
 
 ```bash
-npm install                    # 安装依赖
-npm run dev                    # 同时启动前后端
-npm run build                  # 构建生产版本
-npm run db:push                # 推送数据库结构（开发环境）
+# 安装依赖（首次或更新依赖后）
+npm run install:all
 
-# 单独启动
+# 开发
+npm run dev                    # 同时启动前后端
 npm run dev:backend            # 仅后端 (http://localhost:8000)
 npm run dev:frontend           # 仅前端 (http://localhost:3000)
+
+# 构建
+npm run build                  # 构建生产版本
+
+# 数据库
+cd packages/backend
+npm run db:generate            # 生成迁移文件（修改 schema 后）
+npm run db:seed                # 手动执行 seed（应用启动时会自动执行）
 
 # 测试
 npm run test                   # 运行所有测试
@@ -86,11 +93,43 @@ cp packages/backend/.env.dev packages/backend/.env
 
 必须配置 `OPENCODE_SERVER_PASSWORD`（OpenCode 服务认证密码）。
 
+## 数据库初始化流程
+
+**应用启动时自动执行**：
+1. **自动迁移**：检查并应用未执行的迁移文件，确保数据库结构正确
+2. **自动 Seed**：检查数据库是否为空，如果为空则插入初始数据（管理员、角色、飞书 SSO 等）
+
+**首次启动流程**：
+```
+启动应用 → 自动执行迁移（创建表） → 自动执行 seed（插入初始数据） → 应用就绪
+```
+
+**后续启动流程**：
+```
+启动应用 → 自动执行迁移（应用新迁移，跳过已执行的） → 跳过 seed（已有数据） → 应用就绪
+```
+
+**手动操作**：
+```bash
+cd packages/backend
+
+# 修改 schema 后，生成迁移文件
+npm run db:generate
+
+# 手动执行 seed（通常不需要，应用启动时会自动执行）
+npm run db:seed
+```
+
+**迁移文件管理**：
+- 迁移文件位于 `packages/backend/drizzle/`
+- 迁移文件应提交到 git
+- 每次修改 schema 后需要生成新的迁移文件
+
 ## 架构要点
 
-### npm workspaces
+### 依赖管理
 
-根目录 `node_modules` 包含所有依赖，子包 `node_modules` 仅有缓存文件。这是正确设计。
+前后端独立管理依赖，各自维护 `node_modules` 和 `package-lock.json`。
 
 ### 后端 ES Modules
 
@@ -161,13 +200,14 @@ taskkill /F /PID <PID>
 
 ```bash
 # 推送 schema 变更
-npm run db:push --workspace=@opencode-qa/backend
+cd packages/backend
+npm run db:push
 
 # 生成迁移文件
-npm run db:generate --workspace=@opencode-qa/backend
+npm run db:generate
 
 # 数据库 Studio (如果支持)
-npm run db:studio --workspace=@opencode-qa/backend
+npm run db:studio
 ```
 
 ## 分支策略

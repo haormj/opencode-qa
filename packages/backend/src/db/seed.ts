@@ -10,7 +10,7 @@ const FEISHU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24
 </svg>`
 const FEISHU_ICON_BASE64 = Buffer.from(FEISHU_ICON_SVG).toString('base64')
 
-async function main() {
+export async function seed() {
   const existingUsers = await db.select().from(users).limit(1)
   
   if (existingUsers.length > 0) {
@@ -144,7 +144,8 @@ async function main() {
   }
 }
 
-main()
+// Run seed if executed directly
+seed()
   .catch((e) => {
     console.error(e)
     process.exit(1)

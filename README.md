@@ -136,7 +136,7 @@ opencode-qa/
 │           └── seed.ts              # 种子数据
 │
 ├── AGENTS.md                        # AI Agent 开发指南
-└── package.json                     # npm workspaces 配置
+└── package.json                     # 根目录配置
 ```
 
 ## API 接口
