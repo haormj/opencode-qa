@@ -113,8 +113,8 @@ class EventSubscriptionManager {
       logger.info('[EventSubscriptionManager] Event stream connected')
       
       this.processEventStream(subscription)
-    } catch (error) {
-      logger.error('[EventSubscriptionManager] Failed to start event listener:', error)
+    } catch (error: any) {
+      logger.error(`[EventSubscriptionManager] Event stream connection failed for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
       this.reconnect(subscription)
     }
   }
@@ -127,7 +127,7 @@ class EventSubscriptionManager {
         this.handleEvent(subscription, event)
       }
     } catch (error: any) {
-      logger.error('[EventSubscriptionManager] Event stream error:', error.message || error)
+      logger.error(`[EventSubscriptionManager] Event stream error for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
       if (!subscription.isReconnecting) {
         this.reconnect(subscription)
       }
@@ -239,8 +239,8 @@ class EventSubscriptionManager {
       logger.info('[EventSubscriptionManager] Reconnected successfully')
       
       this.processEventStream(subscription)
-    } catch (error) {
-      logger.error('[EventSubscriptionManager] Reconnect failed:', error)
+    } catch (error: any) {
+      logger.error(`[EventSubscriptionManager] Reconnect failed (attempt ${subscription.reconnectAttempts + 1}) for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
       subscription.reconnectAttempts++
     } finally {
       subscription.isReconnecting = false

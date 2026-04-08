@@ -59,7 +59,11 @@ export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: s
   })
   
   if (!result.data?.id) {
-    throw new Error('Failed to create OpenCode session')
+    const errorDetail = result.error 
+      ? JSON.stringify(result.error) 
+      : 'No session ID returned'
+    logger.error(`[OpenCode] Session creation failed: ${errorDetail}`)
+    throw new Error(`Failed to create OpenCode session: ${errorDetail}`)
   }
   
   logger.info('[OpenCode] New session created:', result.data.id)
@@ -126,7 +130,9 @@ export async function sendOpenCodeMessage(
     }
   }
   
-  logger.debug('[OpenCode] Answer length:', answer.length)
+  if (!answer) {
+    logger.warn(`[OpenCode] Empty answer for session: ${sessionId}, parts: ${result.data?.parts?.length || 0}`)
+  }
   
   return {
     sessionId,
@@ -189,7 +195,7 @@ export async function sendOpenCodeMessageStream(
       timeoutCount++
       logger.warn(`[OpenCode] Timeout check ${timeoutCount}/${MAX_TIMEOUT_COUNT} for session: ${sessionId}, idleTime: ${Math.round(idleTime / 1000)}s`)
       if (timeoutCount >= MAX_TIMEOUT_COUNT) {
-        logger.warn(`[OpenCode] Max timeout reached for session: ${sessionId}`)
+        logger.warn(`[OpenCode] Stream timeout after ${MAX_TIMEOUT_COUNT} idle periods for session: ${sessionId}, answer length: ${answer.length}`)
         completionResolver()
       }
     }
@@ -210,14 +216,12 @@ export async function sendOpenCodeMessageStream(
     await completionPromise
     
     if (!answer) {
-      logger.debug('[OpenCode] No answer from stream, trying prompt result')
+      logger.info(`[OpenCode] No answer from stream for session: ${sessionId}, trying prompt result`)
       try {
         const result = await promptPromise
-        logger.debug('[OpenCode] Prompt result:', {
-          hasData: !!result.data,
-          hasParts: !!result.data?.parts,
-          partsLength: result.data?.parts?.length
-        })
+        if (!result.data?.parts || result.data.parts.length === 0) {
+          logger.warn(`[OpenCode] Prompt result empty for session: ${sessionId}, error: ${result.error ? JSON.stringify(result.error) : 'none'}`)
+        }
         if (result.data?.parts) {
           for (const part of result.data.parts) {
             if (part.type === 'text' && 'text' in part && part.text) {
@@ -226,8 +230,8 @@ export async function sendOpenCodeMessageStream(
             }
           }
         }
-      } catch (error) {
-        logger.error('[OpenCode] Prompt error:', error)
+      } catch (error: any) {
+        logger.error(`[OpenCode] Prompt request failed for session: ${sessionId}, error: ${error.message || error}`)
       }
     }
   } finally {
@@ -236,7 +240,11 @@ export async function sendOpenCodeMessageStream(
       intervalId = null
     }
     eventSubscriptionManager.unregister(botConfig.apiUrl, sessionId)
-    logger.debug('[OpenCode] Stream answer length:', answer.length)
+    logger.info(`[OpenCode] Stream completed for session: ${sessionId}, answer length: ${answer.length}`)
+    
+    if (!answer) {
+      logger.warn(`[OpenCode] Empty stream answer for session: ${sessionId}`)
+    }
   }
   
   return {
