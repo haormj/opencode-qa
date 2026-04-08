@@ -27,11 +27,13 @@ const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
 class EventSubscriptionManager {
   private subscriptions: Map<string, Subscription> = new Map()
   private cleanupInterval: NodeJS.Timeout | null = null
+  private abortingSessions: Set<string> = new Set()
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000
   private readonly INACTIVE_TIMEOUT_MS = 10 * 60 * 1000
   private readonly MAX_RECONNECT_DELAY_MS = 10000
   private readonly INITIAL_RECONNECT_DELAY_MS = 1000
   private readonly STREAM_TIMEOUT_MS = 60000
+  private readonly ABORT_TIMEOUT_MS = 10000
 
   async initialize(): Promise<void> {
     logger.info('[EventSubscriptionManager] Initializing...')
@@ -132,6 +134,30 @@ class EventSubscriptionManager {
     }
   }
 
+  private async abortSessionIfNeeded(subscription: Subscription, sessionId: string): Promise<void> {
+    if (this.abortingSessions.has(sessionId)) {
+      logger.debug(`[EventSubscriptionManager] Session ${sessionId} already aborting, skip`)
+      return
+    }
+    
+    this.abortingSessions.add(sessionId)
+    
+    const timeoutId = setTimeout(() => {
+      this.abortingSessions.delete(sessionId)
+      logger.warn(`[EventSubscriptionManager] Abort timeout for session: ${sessionId}`)
+    }, this.ABORT_TIMEOUT_MS)
+    
+    try {
+      await subscription.client.session.abort({ sessionID: sessionId })
+      logger.info(`[EventSubscriptionManager] Aborted session: ${sessionId}`)
+    } catch (error) {
+      logger.error(`[EventSubscriptionManager] Failed to abort session ${sessionId}:`, error)
+    } finally {
+      clearTimeout(timeoutId)
+      this.abortingSessions.delete(sessionId)
+    }
+  }
+
   private handleEvent(subscription: Subscription, event: any): void {
     const eventType = event.type
     
@@ -151,6 +177,10 @@ class EventSubscriptionManager {
     if (!callbackInfo) {
       logger.warn(`[EventSubscriptionManager] No callback found for session: ${sessionId}, event type: ${event.type}`)
       logger.debug(`[EventSubscriptionManager] Current registered sessions: ${Array.from(subscription.callbacks.keys()).join(', ')}`)
+      
+      if (event.type === 'message.part.delta' || event.type === 'message.part.updated') {
+        this.abortSessionIfNeeded(subscription, sessionId)
+      }
       return
     }
     
