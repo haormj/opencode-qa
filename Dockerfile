@@ -30,9 +30,9 @@ RUN npm install --omit=dev
 COPY --from=backend-builder /app/packages/backend/dist ./dist
 COPY --from=backend-builder /app/packages/backend/drizzle ./drizzle
 COPY --from=frontend-builder /app/packages/frontend/dist ./public
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh && sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh
+
+RUN mkdir -p data
 
 EXPOSE 8000
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["node", "dist/index.js"]
