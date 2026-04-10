@@ -291,11 +291,16 @@ function Home() {
     setLoadingState(currentSessionId, false)
   }, [sessionId, setLoadingState])
 
-  const handleCopyLink = useCallback(() => {
+  const handleCopyLink = useCallback(async () => {
     if (!sessionId) return
     const link = `${window.location.origin}/session/${sessionId}`
-    navigator.clipboard.writeText(link)
-    message.success('会话链接已复制')
+    try {
+      await navigator.clipboard.writeText(link)
+      message.success('会话链接已复制')
+    } catch (error) {
+      console.error('复制链接失败:', error)
+      message.error('复制失败，请重试')
+    }
   }, [sessionId])
 
   const handleMarkNeedHuman = useCallback(async () => {
