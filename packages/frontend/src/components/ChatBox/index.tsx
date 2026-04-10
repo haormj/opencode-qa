@@ -85,7 +85,8 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
     
     const isUser = position === 'right'
     const text = content.text || ''
-    const isAnimating = typing && !isUser
+    const isLastMessage = msg._id === messages[messages.length - 1]._id
+    const isAnimating = typing && !isUser && isLastMessage
 
     return (
       <div className="message-wrapper">
