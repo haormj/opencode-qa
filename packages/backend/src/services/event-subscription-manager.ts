@@ -1,6 +1,7 @@
 import { createOpencodeClient, type OpencodeClient } from '@opencode-ai/sdk/v2'
 
 import logger from './logger.js'
+import { parseThinkTags, type ParseState } from './think-tag-parser.js'
 
 export type ChunkType = 'text' | 'reasoning'
 
@@ -9,6 +10,7 @@ interface CallbackInfo {
   onComplete: () => void
   lastActive: number
   partTypes: Map<string, ChunkType>
+  thinkParseState: ParseState
 }
 
 interface Subscription {
@@ -65,7 +67,8 @@ class EventSubscriptionManager {
       onChunk,
       onComplete,
       lastActive: Date.now(),
-      partTypes: new Map()
+      partTypes: new Map(),
+      thinkParseState: { inThinkBlock: false, buffer: '' }
     })
     
     logger.info('[EventSubscriptionManager] Callback registered. Total callbacks:', subscription.callbacks.size)
@@ -200,9 +203,18 @@ class EventSubscriptionManager {
       const delta = event.properties?.delta
       
       if (partId && delta) {
-        const type = callbackInfo.partTypes.get(partId) || 'text'
-        logger.debug(`[EventSubscriptionManager] Part delta: partId=${partId}, type=${type}, delta=${delta.substring(0, 50)}`)
-        callbackInfo.onChunk(delta, type)
+        const partType = callbackInfo.partTypes.get(partId)
+        
+        if (partType === 'reasoning') {
+          logger.debug(`[EventSubscriptionManager] Part delta (structured reasoning): partId=${partId}, delta=${delta.substring(0, 50)}`)
+          callbackInfo.onChunk(delta, 'reasoning')
+        } else {
+          const results = parseThinkTags(delta, callbackInfo.thinkParseState)
+          for (const result of results) {
+            logger.debug(`[EventSubscriptionManager] Part delta (parsed): partId=${partId}, type=${result.type}, delta=${result.content.substring(0, 50)}`)
+            callbackInfo.onChunk(result.content, result.type)
+          }
+        }
       }
     }
     
