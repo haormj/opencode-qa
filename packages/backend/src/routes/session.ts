@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { db, sessions, messages, users, bots } from '../db/index.js'
+import { db, sessions, messages, users, bots, assistants } from '../db/index.js'
 import { eq, and, desc, asc, sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { authMiddleware } from '../middleware/auth.js'
@@ -11,7 +11,22 @@ const router = Router()
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id
-    const { title } = req.body
+    const { title, assistantId } = req.body
+
+    let validAssistantId = assistantId
+    if (assistantId) {
+      const assistant = await db.select().from(assistants)
+        .where(and(eq(assistants.id, assistantId), eq(assistants.isActive, true)))
+        .get()
+      if (!assistant) {
+        return res.status(400).json({ error: 'Assistant not found or inactive' })
+      }
+    } else {
+      const defaultAssistant = await db.select().from(assistants)
+        .where(eq(assistants.slug, 'default'))
+        .get()
+      validAssistantId = defaultAssistant?.id
+    }
 
     const sessionTitle = title && typeof title === 'string' && title.trim()
       ? (title.length > 30 ? title.substring(0, 30) + '...' : title)
@@ -21,6 +36,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const [session] = await db.insert(sessions).values({
       id: randomUUID(),
       userId,
+      assistantId: validAssistantId,
       title: sessionTitle,
       status: 'active',
       createdAt: now,
@@ -29,6 +45,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     res.json({
       id: session.id,
+      assistantId: session.assistantId,
       title: session.title,
       status: session.status,
       createdAt: session.createdAt,
@@ -60,13 +77,23 @@ router.get('/public/:id/info', async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const userId = req.user!.id
+    const { assistantId } = req.query
 
-    const sessionList = await db.select().from(sessions).where(and(eq(sessions.userId, userId), eq(sessions.isDeleted, false))).orderBy(desc(sessions.updatedAt))
+    const conditions = [eq(sessions.userId, userId), eq(sessions.isDeleted, false)]
+    
+    if (assistantId && typeof assistantId === 'string') {
+      conditions.push(eq(sessions.assistantId, assistantId))
+    }
+
+    const sessionList = await db.select().from(sessions)
+      .where(and(...conditions))
+      .orderBy(desc(sessions.updatedAt))
 
     const sessionsWithCounts = await Promise.all(sessionList.map(async (s) => {
       const countResult = await db.select({ count: sql<number>`count(*)` }).from(messages).where(eq(messages.sessionId, s.id)).get()
       return {
         id: s.id,
+        assistantId: s.assistantId,
         title: s.title,
         status: s.status,
         createdAt: s.createdAt,

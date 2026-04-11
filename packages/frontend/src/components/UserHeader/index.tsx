@@ -11,6 +11,7 @@ interface UserHeaderProps {
   sessionStatus?: string
   onCopyLink?: () => void
   onMarkNeedHuman?: () => void
+  assistantSelector?: React.ReactNode
 }
 
 function UserHeader({ 
@@ -20,7 +21,8 @@ function UserHeader({
   sessionId,
   sessionStatus = 'active',
   onCopyLink,
-  onMarkNeedHuman
+  onMarkNeedHuman,
+  assistantSelector
 }: UserHeaderProps) {
   const isHuman = sessionStatus === 'human'
   const isClosed = sessionStatus === 'closed'
@@ -45,6 +47,7 @@ function UserHeader({
             onClick={onToggleSidebar}
           />
         </Tooltip>
+        {assistantSelector}
       </div>
       <div className="user-header-content">
         <Tooltip title={displayTitle !== truncatedTitle ? displayTitle : ''}>

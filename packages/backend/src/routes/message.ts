@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { db, bots, sessions, messages, users } from '../db/index.js'
+import { db, bots, sessions, messages, users, assistants, userAssistantBots } from '../db/index.js'
 import { eq, and, desc, asc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessageStream, checkOrCreateOpenCodeSession, rebuildContext, abortOpenCodeSession } from '../services/opencode.js'
@@ -9,6 +9,43 @@ import { authMiddleware } from '../middleware/auth.js'
 import logger from '../services/logger.js'
 
 const router = Router()
+
+async function getUserBot(assistantId: string | null, userId: string): Promise<{ bot: typeof bots.$inferSelect; isUserAssigned: boolean } | null> {
+  if (!assistantId) {
+    const defaultAssistant = await db.select().from(assistants).where(eq(assistants.slug, 'default')).get()
+    if (!defaultAssistant) {
+      return null
+    }
+    assistantId = defaultAssistant.id
+  }
+
+  const userBotAssignment = await db.select()
+    .from(userAssistantBots)
+    .where(and(
+      eq(userAssistantBots.assistantId, assistantId),
+      eq(userAssistantBots.userId, userId)
+    ))
+    .get()
+
+  if (userBotAssignment) {
+    const bot = await db.select().from(bots).where(eq(bots.id, userBotAssignment.botId)).get()
+    if (bot) {
+      return { bot, isUserAssigned: true }
+    }
+  }
+
+  const assistant = await db.select().from(assistants).where(eq(assistants.id, assistantId)).get()
+  if (!assistant) {
+    return null
+  }
+
+  const bot = await db.select().from(bots).where(eq(bots.id, assistant.defaultBotId)).get()
+  if (bot) {
+    return { bot, isUserAssigned: false }
+  }
+
+  return null
+}
 
 router.post('/stream', authMiddleware, async (req, res) => {
   try {
@@ -23,17 +60,20 @@ router.post('/stream', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Session ID is required' })
     }
 
-    const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
-
-    if (!defaultBot) {
-      return res.status(500).json({ error: 'No active bot found' })
-    }
-
     const session = await db.select().from(sessions).where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId))).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
+
+    const botResult = await getUserBot(session.assistantId, userId)
+
+    if (!botResult) {
+      return res.status(500).json({ error: 'No bot found for this assistant' })
+    }
+
+    const { bot: userBot, isUserAssigned } = botResult
+    logger.info(`[Message] Using bot: ${userBot.displayName} (user assigned: ${isUserAssigned})`)
 
     const lastMessage = await db.select().from(messages).where(eq(messages.sessionId, sessionId)).orderBy(desc(messages.createdAt)).limit(1).get()
 
@@ -84,11 +124,11 @@ router.post('/stream', authMiddleware, async (req, res) => {
     await db.update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sessionId))
 
     const botConfig = {
-      apiUrl: defaultBot.apiUrl,
-      provider: defaultBot.provider,
-      model: defaultBot.model,
-      agent: defaultBot.agent,
-      apiKey: defaultBot.apiKey || undefined
+      apiUrl: userBot.apiUrl,
+      provider: userBot.provider,
+      model: userBot.model,
+      agent: userBot.agent,
+      apiKey: userBot.apiKey || undefined
     }
 
     const { sessionId: opencodeSessionId, needsRebuild } = await checkOrCreateOpenCodeSession(
@@ -162,7 +202,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
       senderType: 'bot',
       content: answer || '抱歉，我无法回答这个问题。',
       reasoning: reasoningContent || null,
-      botId: defaultBot.id,
+      botId: userBot.id,
       createdAt: new Date()
     }).returning()
 
@@ -201,14 +241,15 @@ router.post('/stop', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Session not found or no active generation' })
     }
     
-    const defaultBot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
+    const userId = req.user!.id
+    const botResult = await getUserBot(session.assistantId, userId)
     
-    if (!defaultBot) {
-      return res.status(500).json({ error: 'No active bot found' })
+    if (!botResult) {
+      return res.status(500).json({ error: 'No bot found for this assistant' })
     }
     
-    await abortOpenCodeSession(defaultBot.apiUrl, session.opencodeSessionId)
-    eventSubscriptionManager.unregister(defaultBot.apiUrl, session.opencodeSessionId)
+    await abortOpenCodeSession(botResult.bot.apiUrl, session.opencodeSessionId)
+    eventSubscriptionManager.unregister(botResult.bot.apiUrl, session.opencodeSessionId)
     
     res.json({ success: true })
   } catch (error) {

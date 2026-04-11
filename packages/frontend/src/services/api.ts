@@ -19,6 +19,7 @@ export interface MessageItem {
 
 export interface Session {
   id: string
+  assistantId?: string | null
   title: string
   status: string
   createdAt: string
@@ -85,6 +86,40 @@ export interface Bot {
   isActive: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface Assistant {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  defaultBotId: string
+  defaultBot?: {
+    id: string
+    name: string
+    displayName: string
+  }
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UserAssistantBot {
+  id: number
+  assistantId: string
+  userId: string
+  botId: string
+  user?: {
+    id: string
+    username: string
+    displayName: string
+  }
+  bot?: {
+    id: string
+    name: string
+    displayName: string
+  }
+  createdAt: string
 }
 
 export interface AdminSession {
@@ -372,15 +407,16 @@ export async function getSession(sessionId: string): Promise<SessionDetail> {
   return request<SessionDetail>(`${API_BASE}/sessions/${sessionId}`)
 }
 
-export async function createSession(title?: string): Promise<Session> {
+export async function createSession(title?: string, assistantId?: string): Promise<Session> {
   return request<Session>(`${API_BASE}/sessions`, {
     method: 'POST',
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, assistantId }),
   })
 }
 
-export async function getSessions(): Promise<Session[]> {
-  return request<Session[]>(`${API_BASE}/sessions`)
+export async function getSessions(assistantId?: string): Promise<Session[]> {
+  const query = assistantId ? `?assistantId=${assistantId}` : ''
+  return request<Session[]>(`${API_BASE}/sessions${query}`)
 }
 
 export async function updateSessionTitle(sessionId: string, title: string): Promise<void> {
@@ -651,4 +687,64 @@ export async function updateSetting(key: string, value: string): Promise<SystemS
 
 export async function getPublicSettings(): Promise<Record<string, string>> {
   return request<Record<string, string>>(`${API_BASE}/settings`)
+}
+
+export async function getAssistants(): Promise<Assistant[]> {
+  return request(`${API_BASE}/assistants`)
+}
+
+export async function getAssistant(id: string): Promise<Assistant> {
+  return request(`${API_BASE}/assistants/${id}`)
+}
+
+export async function getAdminAssistants(): Promise<Assistant[]> {
+  return request(`${API_BASE}/admin/assistants`)
+}
+
+export async function getAdminAssistant(id: string): Promise<Assistant> {
+  return request(`${API_BASE}/admin/assistants/${id}`)
+}
+
+export async function createAssistant(data: Partial<Assistant>): Promise<Assistant> {
+  return request(`${API_BASE}/admin/assistants`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateAssistant(id: string, data: Partial<Assistant>): Promise<Assistant> {
+  return request(`${API_BASE}/admin/assistants/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteAssistant(id: string): Promise<void> {
+  await request(`${API_BASE}/admin/assistants/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getAssistantUserBots(assistantId: string): Promise<UserAssistantBot[]> {
+  return request(`${API_BASE}/admin/assistants/${assistantId}/user-bots`)
+}
+
+export async function createAssistantUserBot(assistantId: string, data: { userId: string; botId: string }): Promise<UserAssistantBot> {
+  return request(`${API_BASE}/admin/assistants/${assistantId}/user-bots`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateAssistantUserBot(assistantId: string, userId: string, botId: string): Promise<UserAssistantBot> {
+  return request(`${API_BASE}/admin/assistants/${assistantId}/user-bots/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ botId }),
+  })
+}
+
+export async function deleteAssistantUserBot(assistantId: string, userId: string): Promise<void> {
+  await request(`${API_BASE}/admin/assistants/${assistantId}/user-bots/${userId}`, {
+    method: 'DELETE',
+  })
 }

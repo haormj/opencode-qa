@@ -19,6 +19,8 @@ import adminSettingsRoutes from './routes/admin-settings.js'
 import settingsRoutes from './routes/settings.js'
 import botRoutes from './routes/bot.js'
 import sessionEventsRoutes from './routes/session-events.js'
+import assistantRoutes from './routes/assistant.js'
+import adminAssistantRoutes from './routes/admin-assistant.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
 import { accessLogger, errorLogger } from './middleware/logger.js'
@@ -53,6 +55,8 @@ app.use('/api/admin/sso-providers', adminSsoRoutes)
 app.use('/api/admin/settings', adminSettingsRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/bots', botRoutes)
+app.use('/api/assistants', assistantRoutes)
+app.use('/api/admin/assistants', adminAssistantRoutes)
 
 app.use(errorLogger)
 

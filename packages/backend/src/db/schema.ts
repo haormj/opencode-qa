@@ -47,9 +47,32 @@ export const bots = sqliteTable('bots', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
+export const assistants = sqliteTable('assistants', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  defaultBotId: text('default_bot_id').notNull().references(() => bots.id, { onDelete: 'restrict' }),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+export const userAssistantBots = sqliteTable('user_assistant_bots', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  assistantId: text('assistant_id').notNull().references(() => assistants.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  botId: text('bot_id').notNull().references(() => bots.id, { onDelete: 'restrict' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+}, (table) => ({
+  userAssistantUnique: uniqueIndex('user_assistant_unique').on(table.assistantId, table.userId)
+}))
+
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  assistantId: text('assistant_id').references(() => assistants.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   status: text('status').notNull().default('active'),
   needHuman: integer('need_human', { mode: 'boolean' }).notNull().default(false),
@@ -142,13 +165,43 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 }))
 
 export const botsRelations = relations(bots, ({ many }) => ({
-  messages: many(messages)
+  messages: many(messages),
+  assistants: many(assistants),
+  userAssistantBots: many(userAssistantBots)
+}))
+
+export const assistantsRelations = relations(assistants, ({ one, many }) => ({
+  defaultBot: one(bots, {
+    fields: [assistants.defaultBotId],
+    references: [bots.id]
+  }),
+  sessions: many(sessions),
+  userAssistantBots: many(userAssistantBots)
+}))
+
+export const userAssistantBotsRelations = relations(userAssistantBots, ({ one }) => ({
+  assistant: one(assistants, {
+    fields: [userAssistantBots.assistantId],
+    references: [assistants.id]
+  }),
+  user: one(users, {
+    fields: [userAssistantBots.userId],
+    references: [users.id]
+  }),
+  bot: one(bots, {
+    fields: [userAssistantBots.botId],
+    references: [bots.id]
+  })
 }))
 
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id]
+  }),
+  assistant: one(assistants, {
+    fields: [sessions.assistantId],
+    references: [assistants.id]
   }),
   messages: many(messages)
 }))
@@ -193,3 +246,7 @@ export type SystemSetting = typeof systemSettings.$inferSelect
 export type NewSystemSetting = typeof systemSettings.$inferInsert
 export type SsoProvider = typeof ssoProviders.$inferSelect
 export type NewSsoProvider = typeof ssoProviders.$inferInsert
+export type Assistant = typeof assistants.$inferSelect
+export type NewAssistant = typeof assistants.$inferInsert
+export type UserAssistantBot = typeof userAssistantBots.$inferSelect
+export type NewUserAssistantBot = typeof userAssistantBots.$inferInsert

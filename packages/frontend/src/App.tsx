@@ -9,6 +9,7 @@ import AdminSessions from './pages/admin/Sessions'
 import AdminSessionDetail from './pages/admin/SessionDetail'
 import AdminUsers from './pages/admin/Users'
 import AdminBots from './pages/admin/Bots'
+import AdminAssistants from './pages/admin/Assistants'
 import AdminSsoProviders from './pages/admin/SsoProviders'
 import AdminSystemSettings from './pages/admin/SystemSettings'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
@@ -70,6 +71,7 @@ function App() {
           <Route path="sessions/:id" element={<AdminSessionDetail />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="bots" element={<AdminBots />} />
+          <Route path="assistants" element={<AdminAssistants />} />
           <Route path="settings/sso" element={<AdminSsoProviders />} />
           <Route path="settings/system" element={<AdminSystemSettings />} />
           <Route path="statistics" element={<StatisticsLayout />}>

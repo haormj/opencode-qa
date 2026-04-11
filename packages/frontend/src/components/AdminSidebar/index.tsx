@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined, AppstoreOutlined } from '@ant-design/icons'
 import { getPublicSettings } from '../../services/api'
 import './AdminSidebar.css'
 
@@ -33,6 +33,11 @@ function AdminSidebar() {
       key: '/admin/bots',
       icon: <RobotOutlined />,
       label: '机器人管理'
+    },
+    {
+      key: '/admin/assistants',
+      icon: <AppstoreOutlined />,
+      label: '助手管理'
     },
     {
       key: '/admin/statistics',
@@ -67,6 +72,7 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/sessions')) return '/admin/sessions'
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
+    if (pathname.startsWith('/admin/assistants')) return '/admin/assistants'
     if (pathname.startsWith('/admin/statistics/overview')) return '/admin/statistics/overview'
     if (pathname.startsWith('/admin/settings/system')) return '/admin/settings/system'
     if (pathname.startsWith('/admin/settings/sso')) return '/admin/settings/sso'

@@ -13,9 +13,10 @@ interface SidebarProps {
   refreshTrigger?: number
   onSessionsLoad?: (sessions: Session[]) => void
   collapsed?: boolean
+  assistantId?: string | null
 }
 
-function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, collapsed = false }: SidebarProps) {
+function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, collapsed = false, assistantId }: SidebarProps) {
   const [siteTitle, setSiteTitle] = useState('OpenCode QA')
 
   useEffect(() => {
@@ -52,6 +53,7 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
         refreshTrigger={refreshTrigger}
         collapsed={collapsed}
         onSessionsLoad={onSessionsLoad}
+        assistantId={assistantId}
       />
     </div>
   )

@@ -13,15 +13,16 @@ interface SessionListProps {
   refreshTrigger?: number
   collapsed?: boolean
   onSessionsLoad?: (sessions: Session[]) => void
+  assistantId?: string | null
 }
 
-function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed, onSessionsLoad }: SessionListProps) {
+function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed, onSessionsLoad, assistantId }: SessionListProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchSessions = async () => {
     try {
-      const data = await getSessions()
+      const data = await getSessions(assistantId || undefined)
       setSessions(data)
       onSessionsLoad?.(data)
     } catch {
@@ -33,7 +34,7 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
 
   useEffect(() => {
     fetchSessions()
-  }, [refreshTrigger])
+  }, [refreshTrigger, assistantId])
 
   const handleDelete = async (sessionId: string) => {
     try {

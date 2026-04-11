@@ -5,6 +5,7 @@ import copy from 'copy-to-clipboard'
 import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
+import AssistantSelector from '../components/AssistantSelector'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, type MessageItem } from '../services/api'
 import { useSessionEvents } from '../hooks/useSessionEvents'
 import type { Session } from '../services/api'
@@ -25,6 +26,9 @@ function Home() {
   const loadingStatesRef = useRef<Map<string, boolean>>(new Map())
   const streamingMessagesRef = useRef<Map<string, ExtendedMessageProps[]>>(new Map())
   const currentDisplaySessionIdRef = useRef<string | null>(null)
+  const [currentAssistantId, setCurrentAssistantId] = useState<string | null>(() => {
+    return localStorage.getItem('currentAssistantId')
+  })
 
   const setLoadingState = useCallback((id: string, loading: boolean) => {
     loadingStatesRef.current.set(id, loading)
@@ -34,6 +38,18 @@ function Home() {
   const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
     setSessions(loadedSessions)
   }, [])
+
+  const handleAssistantChange = useCallback((assistantId: string | null) => {
+    setCurrentAssistantId(assistantId)
+    if (assistantId) {
+      localStorage.setItem('currentAssistantId', assistantId)
+    } else {
+      localStorage.removeItem('currentAssistantId')
+    }
+    setSearchParams({})
+    setMessages([])
+    setSessionStatus('active')
+  }, [setSearchParams])
 
   const currentSessionTitle = useMemo(() => {
     if (!sessionId) return '新对话'
@@ -265,7 +281,7 @@ function Home() {
 
     if (!sessionId) {
       try {
-        const newSession = await createSession(text)
+        const newSession = await createSession(text, currentAssistantId || undefined)
         sessionStorage.setItem(`pendingMessage_${newSession.id}`, text)
         setSearchParams({ sessionId: newSession.id })
         setRefreshTrigger(prev => prev + 1)
@@ -402,6 +418,7 @@ function Home() {
         refreshTrigger={refreshTrigger}
         onSessionsLoad={handleSessionsLoad}
         collapsed={sidebarCollapsed}
+        assistantId={currentAssistantId}
       />
       <div className="home-content">
         <UserHeader
@@ -412,6 +429,12 @@ function Home() {
           sessionStatus={sessionStatus}
           onCopyLink={handleCopyLink}
           onMarkNeedHuman={handleMarkNeedHuman}
+          assistantSelector={
+            <AssistantSelector
+              value={currentAssistantId}
+              onChange={handleAssistantChange}
+            />
+          }
         />
         <div className="home-content-body">
           <ChatBox

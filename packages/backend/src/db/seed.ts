@@ -1,4 +1,4 @@
-import { db, users, roles, userRoles, bots, ssoProviders, systemSettings } from './index.js'
+import { db, users, roles, userRoles, bots, ssoProviders, systemSettings, assistants } from './index.js'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
@@ -134,12 +134,35 @@ export async function seed() {
     }
   }).returning()
 
+  // Upsert default assistant
+  const [defaultAssistant] = await db.insert(assistants).values({
+    id: randomUUID(),
+    name: '默认助手',
+    slug: 'default',
+    description: '默认问答助手',
+    defaultBotId: defaultBot.id,
+    isActive: true,
+    createdAt: now,
+    updatedAt: now
+  }).onConflictDoUpdate({
+    target: assistants.slug,
+    set: {
+      name: '默认助手',
+      description: '默认问答助手',
+      defaultBotId: defaultBot.id,
+      isActive: true,
+      updatedAt: now
+    }
+  }).returning()
+
   console.log('Seed data created successfully')
   console.log(`Admin user: ${adminUsername}`)
   console.log(`Admin password: ${adminPassword}`)
   console.log(`Default bot ID: ${defaultBot.id}`)
   console.log(`Default bot name: ${defaultBot.displayName}`)
   console.log(`Default bot API: ${defaultBot.apiUrl}`)
+  console.log(`Default assistant ID: ${defaultAssistant.id}`)
+  console.log(`Default assistant name: ${defaultAssistant.name}`)
 
   // Upsert Feishu SSO provider
   const existingFeishuProvider = await db.select().from(ssoProviders)
