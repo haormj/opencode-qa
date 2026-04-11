@@ -8,6 +8,13 @@
       "when": 1775576983836,
       "tag": "0000_silly_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1775903798966,
+      "tag": "0001_amazing_namor",
+      "breakpoints": true
     }
   ]
 }

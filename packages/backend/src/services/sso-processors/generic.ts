@@ -57,11 +57,16 @@ const GenericSsoProcessor: SsoProcessor = {
     }
 
     const data = await response.json() as Record<string, unknown>
+    const userIdField = params.userIdField || 'sub'
+    const usernameField = params.usernameField || 'preferred_username'
+    const emailField = params.emailField || 'email'
+    const displayNameField = params.displayNameField || 'name'
+
     return {
-      id: String(data.sub || data.id || ''),
-      username: String(data.preferred_username || data.username || data.name || ''),
-      email: data.email ? String(data.email) : undefined,
-      displayName: String(data.name || data.display_name || data.preferred_username || '')
+      id: String(data[userIdField as keyof typeof data] || data.sub || data.id || ''),
+      username: String(data[usernameField as keyof typeof data] || data.preferred_username || data.username || data.name || ''),
+      email: data[emailField as keyof typeof data] ? String(data[emailField as keyof typeof data]) : undefined,
+      displayName: String(data[displayNameField as keyof typeof data] || data.name || data.display_name || data.preferred_username || '')
     }
   }
 }

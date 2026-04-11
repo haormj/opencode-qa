@@ -503,6 +503,39 @@ export function getUsername(): string {
   return user?.displayName || user?.username || '用户'
 }
 
+export interface AdvancedConfig {
+  authorize?: {
+    method?: 'GET' | 'POST'
+    extraParams?: Record<string, string>
+    paramsEncoding?: 'query' | 'body'
+  }
+  preRequests?: Array<{
+    name: string
+    url: string
+    method: 'GET' | 'POST'
+    headers?: Record<string, string>
+    body?: Record<string, unknown>
+    responseFields?: Record<string, string>
+  }>
+  tokenExchange?: {
+    contentType?: 'application/x-www-form-urlencoded' | 'application/json'
+    bodyTemplate?: Record<string, unknown>
+    accessTokenPath?: string
+  }
+  userInfo?: {
+    method?: 'GET' | 'POST'
+    headers?: Record<string, string>
+    accessTokenLocation?: 'header' | 'query'
+    accessTokenPrefix?: string
+    responsePaths?: {
+      id?: string
+      username?: string
+      email?: string
+      displayName?: string
+    }
+  }
+}
+
 export interface SsoProvider {
   id: string
   name: string
@@ -522,6 +555,7 @@ export interface SsoProvider {
   usernameField: string
   emailField: string
   displayNameField: string
+  advancedConfig?: AdvancedConfig | null
   createdAt: string
   updatedAt: string
 }

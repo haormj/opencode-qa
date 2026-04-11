@@ -7,7 +7,8 @@ import './Admin.css'
 
 const SSO_TYPES = [
   { value: 'GENERIC', label: '通用 OAuth 2.0' },
-  { value: 'FEISHU', label: '飞书' }
+  { value: 'FEISHU', label: '飞书' },
+  { value: 'CUSTOM', label: '自定义' }
 ]
 
 function AdminSsoProviders() {
@@ -323,6 +324,105 @@ function AdminSsoProviders() {
                 rules={[{ required: !editingProvider, message: '请输入 App Secret' }]}
               >
                 <Input.Password placeholder="飞书应用 App Secret" />
+              </Form.Item>
+            </>
+          )}
+
+          {selectedType === 'CUSTOM' && (
+            <>
+              <Form.Item
+                name="authorizeUrl"
+                label="授权 URL"
+                rules={[{ required: true, message: '请输入授权 URL' }]}
+              >
+                <Input placeholder="OAuth 授权端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="tokenUrl"
+                label="Token URL"
+                rules={[{ required: true, message: '请输入 Token URL' }]}
+              >
+                <Input placeholder="OAuth Token 端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="userInfoUrl"
+                label="用户信息 URL"
+              >
+                <Input placeholder="用户信息端点 URL" />
+              </Form.Item>
+              <Form.Item
+                name="clientId"
+                label="Client ID"
+              >
+                <Input placeholder="OAuth Client ID（可选）" />
+              </Form.Item>
+              <Form.Item
+                name="clientSecret"
+                label="Client Secret"
+              >
+                <Input.Password placeholder="OAuth Client Secret（可选）" />
+              </Form.Item>
+              <Form.Item
+                name="scope"
+                label="Scope"
+              >
+                <Input placeholder="如：openid profile email" />
+              </Form.Item>
+              <Form.Item
+                name="userIdField"
+                label="用户 ID 字段"
+              >
+                <Input placeholder="默认：sub" />
+              </Form.Item>
+              <Form.Item
+                name="usernameField"
+                label="用户名字段"
+              >
+                <Input placeholder="默认：preferred_username" />
+              </Form.Item>
+              <Form.Item
+                name="emailField"
+                label="邮箱字段"
+              >
+                <Input placeholder="默认：email" />
+              </Form.Item>
+              <Form.Item
+                name="displayNameField"
+                label="显示名称字段"
+              >
+                <Input placeholder="默认：name" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'tokenExchange', 'accessTokenPath']}
+                label="Token 路径"
+                extra="从 Token 响应中提取 access_token 的 JSON 路径，如：data.access_token"
+              >
+                <Input placeholder="默认：access_token" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userInfo', 'responsePaths', 'id']}
+                label="用户 ID 响应路径"
+                extra="从用户信息响应中提取用户 ID 的 JSON 路径"
+              >
+                <Input placeholder="如：data.user.open_id" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userInfo', 'responsePaths', 'username']}
+                label="用户名响应路径"
+              >
+                <Input placeholder="如：data.user.name" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userInfo', 'responsePaths', 'email']}
+                label="邮箱响应路径"
+              >
+                <Input placeholder="如：data.user.email" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userInfo', 'responsePaths', 'displayName']}
+                label="显示名称响应路径"
+              >
+                <Input placeholder="如：data.user.nickname" />
               </Form.Item>
             </>
           )}

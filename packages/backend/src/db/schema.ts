@@ -105,6 +105,7 @@ export const ssoProviders = sqliteTable('sso_providers', {
   usernameField: text('username_field').notNull().default('preferred_username'),
   emailField: text('email_field').notNull().default('email'),
   displayNameField: text('display_name_field').notNull().default('name'),
+  advancedConfig: text('advanced_config'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })

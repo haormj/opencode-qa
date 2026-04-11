@@ -3,10 +3,11 @@ import { db, ssoProviders, users, roles, userRoles } from '../db/index.js'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { createToken } from './token.js'
-import type { SsoProcessor, SsoProviderType } from './sso-processor.js'
+import type { SsoProcessor, SsoProviderType, AdvancedConfig } from './sso-processor.js'
 import { SSO_PROVIDER_TYPES } from './sso-processor.js'
 import GenericSsoProcessor from './sso-processors/generic.js'
 import FeishuSsoProcessor from './sso-processors/feishu.js'
+import CustomSsoProcessor from './sso-processors/custom.js'
 
 interface SsoState {
   nonce: string
@@ -16,6 +17,15 @@ interface SsoState {
 
 const stateStore = new Map<string, SsoState>()
 const STATE_EXPIRES_MS = 5 * 60 * 1000
+
+function parseAdvancedConfig(configJson: string | null): AdvancedConfig | undefined {
+  if (!configJson) return undefined
+  try {
+    return JSON.parse(configJson) as AdvancedConfig
+  } catch {
+    return undefined
+  }
+}
 
 function cleanupExpiredStates(): void {
   const now = Date.now()
@@ -32,6 +42,8 @@ function getSsoProcessor(type: string): SsoProcessor {
       return GenericSsoProcessor
     case SSO_PROVIDER_TYPES.FEISHU:
       return FeishuSsoProcessor
+    case SSO_PROVIDER_TYPES.CUSTOM:
+      return CustomSsoProcessor
     default:
       throw new Error(`Unknown SSO provider type: ${type}`)
   }
@@ -71,12 +83,14 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
   })
 
   const processor = getSsoProcessor(ssoProvider.type)
+  const advancedConfig = parseAdvancedConfig(ssoProvider.advancedConfig)
   const params = processor.getAuthorizeUrl({
     clientId: ssoProvider.clientId || '',
     redirectUri,
     state,
     scope: ssoProvider.scope,
-    appId: ssoProvider.appId || undefined
+    appId: ssoProvider.appId || undefined,
+    advancedConfig
   })
 
   const authorizeUrl = `${ssoProvider.authorizeUrl}?${params}`
@@ -112,6 +126,7 @@ export async function exchangeCodeForToken(
   }
 
   const processor = getSsoProcessor(provider.type)
+  const advancedConfig = parseAdvancedConfig(provider.advancedConfig)
   const result = await processor.exchangeCode({
     code,
     redirectUri,
@@ -119,7 +134,8 @@ export async function exchangeCodeForToken(
     clientSecret: provider.clientSecret || undefined,
     appId: provider.appId || undefined,
     appSecret: provider.appSecret || undefined,
-    tokenUrl: provider.tokenUrl
+    tokenUrl: provider.tokenUrl,
+    advancedConfig
   })
 
   return result.accessToken
@@ -132,9 +148,15 @@ export async function fetchUserInfo(providerName: string, accessToken: string): 
   }
 
   const processor = getSsoProcessor(provider.type)
+  const advancedConfig = parseAdvancedConfig(provider.advancedConfig)
   const userInfo = await processor.getUserInfo({
     accessToken,
-    userInfoUrl: provider.userInfoUrl || undefined
+    userInfoUrl: provider.userInfoUrl || undefined,
+    advancedConfig,
+    userIdField: provider.userIdField,
+    usernameField: provider.usernameField,
+    emailField: provider.emailField,
+    displayNameField: provider.displayNameField
   })
 
   return {
