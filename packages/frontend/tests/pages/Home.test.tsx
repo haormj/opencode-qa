@@ -14,13 +14,10 @@ vi.mock('antd', async () => {
   }
 })
 
-const mockClipboardWrite = vi.fn()
-vi.stubGlobal('navigator', {
-  ...navigator,
-  clipboard: {
-    writeText: mockClipboardWrite,
-  },
-})
+const mockCopy = vi.hoisted(() => vi.fn())
+vi.mock('copy-to-clipboard', () => ({
+  default: mockCopy,
+}))
 
 const originalLocation = window.location
 delete (window as any).location
@@ -73,7 +70,7 @@ describe('Home - handleCopyLink', () => {
     mockMessageError = message.error as ReturnType<typeof vi.fn>
     
     vi.clearAllMocks()
-    mockClipboardWrite.mockClear()
+    mockCopy.mockClear()
     mockFetch.mockClear()
     
     mockFetch.mockImplementation((url: string) => {
@@ -112,7 +109,7 @@ describe('Home - handleCopyLink', () => {
   })
 
   it('should copy session link to clipboard successfully', async () => {
-    mockClipboardWrite.mockResolvedValueOnce(undefined)
+    mockCopy.mockReturnValue(true)
     
     renderHome()
     
@@ -120,14 +117,13 @@ describe('Home - handleCopyLink', () => {
     fireEvent.click(copyButton)
     
     await waitFor(() => {
-      expect(mockClipboardWrite).toHaveBeenCalledWith('http://localhost:3000/session/test-session-id')
+      expect(mockCopy).toHaveBeenCalledWith('http://localhost:3000/session/test-session-id')
       expect(mockMessageSuccess).toHaveBeenCalledWith('会话链接已复制')
     })
   })
 
   it('should show error message when clipboard write fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    mockClipboardWrite.mockRejectedValueOnce(new Error('Permission denied'))
+    mockCopy.mockReturnValue(false)
     
     renderHome()
     
@@ -135,12 +131,10 @@ describe('Home - handleCopyLink', () => {
     fireEvent.click(copyButton)
     
     await waitFor(() => {
-      expect(mockClipboardWrite).toHaveBeenCalled()
+      expect(mockCopy).toHaveBeenCalled()
       expect(mockMessageError).toHaveBeenCalledWith('复制失败，请重试')
       expect(mockMessageSuccess).not.toHaveBeenCalled()
     })
-    
-    consoleErrorSpy.mockRestore()
   })
 
   it('should not attempt to copy if no sessionId', async () => {
@@ -156,7 +150,7 @@ describe('Home - handleCopyLink', () => {
     
     await waitFor(() => {
       expect(copyButton).toBeNull()
-      expect(mockClipboardWrite).not.toHaveBeenCalled()
+      expect(mockCopy).not.toHaveBeenCalled()
     })
     
     window.location = {

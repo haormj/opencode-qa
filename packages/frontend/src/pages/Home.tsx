@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
+import copy from 'copy-to-clipboard'
 import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
@@ -291,14 +292,13 @@ function Home() {
     setLoadingState(currentSessionId, false)
   }, [sessionId, setLoadingState])
 
-  const handleCopyLink = useCallback(async () => {
+  const handleCopyLink = useCallback(() => {
     if (!sessionId) return
     const link = `${window.location.origin}/session/${sessionId}`
-    try {
-      await navigator.clipboard.writeText(link)
+    const success = copy(link)
+    if (success) {
       message.success('会话链接已复制')
-    } catch (error) {
-      console.error('复制链接失败:', error)
+    } else {
       message.error('复制失败，请重试')
     }
   }, [sessionId])
