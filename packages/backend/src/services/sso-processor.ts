@@ -53,7 +53,7 @@ export interface SsoProcessor {
     appSecret?: string
     tokenUrl: string
     advancedConfig?: AdvancedConfig
-  }): Promise<{ accessToken: string; steps?: Record<string, Record<string, unknown>> }>
+  }): Promise<{ accessToken: string; steps?: Record<string, Record<string, unknown>>; userInfo?: SsoUserInfo }>
 
   getUserInfo(params: {
     accessToken: string

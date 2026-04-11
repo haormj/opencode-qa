@@ -445,7 +445,7 @@ function AdminSsoProviders() {
               <Divider>流水线配置</Divider>
               
               <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
+                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
               </div>
               
               <Form.List name={['advancedConfig', 'pipeline']}>
@@ -529,11 +529,11 @@ function AdminSsoProviders() {
                                 {...restField}
                                 name={[name, 'extract']}
                                 label="响应字段提取"
-                                extra="从响应中提取字段，供后续步骤使用"
+                                extra="最后一步需提取 accessToken 和用户字段（id、username、email、displayName）"
                               >
                                 <Input.TextArea 
                                   rows={2} 
-                                  placeholder='JSON 格式，如：{"accessToken": "data.access_token", "openid": "openid"}' 
+                                  placeholder='{"accessToken": "data.access_token", "userId": "data.user.open_id"}' 
                                 />
                               </Form.Item>
                               

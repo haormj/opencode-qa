@@ -184,43 +184,56 @@ const CustomSsoProcessor: SsoProcessor = {
       throw new Error('Access token not found in pipeline result')
     }
 
-    return { 
-      accessToken: String(accessToken),
-      steps
-    }
-  },
-
-  async getUserInfo(params) {
-    if (!params.advancedConfig?.pipeline?.length) {
-      throw new Error('Pipeline configuration is required for CUSTOM SSO')
-    }
-
-    const context: Record<string, unknown> = {
-      accessToken: params.accessToken,
-      steps: params.steps || {}
-    }
-
-    const pipeline = params.advancedConfig.pipeline
-    const { lastResult } = await executePipeline(pipeline, context)
-
     const mapping = params.advancedConfig.userFieldMapping || {}
-    
     const idField = mapping.id || 'id'
     const usernameField = mapping.username || 'username'
     const emailField = mapping.email || 'email'
     const displayNameField = mapping.displayName || 'displayName'
 
-    const id = lastResult[idField] || lastResult.id || lastResult.openid || lastResult.open_id || lastResult.user_id
-    const username = lastResult[usernameField] || lastResult.username || lastResult.name || lastResult.nickname || id
+    const id = lastResult[idField] || lastResult.id
+    const username = lastResult[usernameField] || lastResult.username || id
     const email = lastResult[emailField] || lastResult.email
-    const displayName = lastResult[displayNameField] || lastResult.displayName || lastResult.display_name || lastResult.name || lastResult.nickname || username
+    const displayName = lastResult[displayNameField] || lastResult.displayName || username
 
-    return {
+    const userInfo: SsoUserInfo = {
       id: String(id || ''),
       username: String(username || ''),
       email: email ? String(email) : undefined,
       displayName: String(displayName || '')
     }
+
+    return { 
+      accessToken: String(accessToken),
+      steps,
+      userInfo
+    }
+  },
+
+  async getUserInfo(params) {
+    if (params.steps) {
+      const mapping = params.advancedConfig?.userFieldMapping || {}
+      const lastStepName = Object.keys(params.steps).pop()
+      const lastResult = lastStepName ? params.steps[lastStepName] : {}
+
+      const idField = mapping.id || 'id'
+      const usernameField = mapping.username || 'username'
+      const emailField = mapping.email || 'email'
+      const displayNameField = mapping.displayName || 'displayName'
+
+      const id = lastResult[idField] || lastResult.id
+      const username = lastResult[usernameField] || lastResult.username || id
+      const email = lastResult[emailField] || lastResult.email
+      const displayName = lastResult[displayNameField] || lastResult.displayName || username
+
+      return {
+        id: String(id || ''),
+        username: String(username || ''),
+        email: email ? String(email) : undefined,
+        displayName: String(displayName || '')
+      }
+    }
+
+    throw new Error('Pipeline steps are required for CUSTOM SSO getUserInfo')
   }
 }
 
