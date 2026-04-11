@@ -12,11 +12,10 @@ interface SidebarProps {
   onNewSession: () => void
   refreshTrigger?: number
   onSessionsLoad?: (sessions: Session[]) => void
-  collapsed?: boolean
   assistantId?: string | null
 }
 
-function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, collapsed = false, assistantId }: SidebarProps) {
+function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, assistantId }: SidebarProps) {
   const [siteTitle, setSiteTitle] = useState('OpenCode QA')
 
   useEffect(() => {
@@ -28,20 +27,20 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
   }, [])
 
   return (
-    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <div className="sidebar">
       <div className="sidebar-brand">
-        {!collapsed && <span className="brand-text">{siteTitle}</span>}
+        <span className="brand-text">{siteTitle}</span>
       </div>
 
       <div className="sidebar-new-chat">
-        <Tooltip title="新对话" placement={collapsed ? 'right' : 'top'}>
+        <Tooltip title="新对话" placement="top">
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={onNewSession}
-            block={!collapsed}
+            block
           >
-            {!collapsed && '新对话'}
+            新对话
           </Button>
         </Tooltip>
       </div>
@@ -51,7 +50,6 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
         onSelectSession={onSelectSession}
         onNewSession={onNewSession}
         refreshTrigger={refreshTrigger}
-        collapsed={collapsed}
         onSessionsLoad={onSessionsLoad}
         assistantId={assistantId}
       />

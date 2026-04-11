@@ -19,7 +19,6 @@ function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [, forceUpdate] = useState(0)
   const notFoundRef = useRef(false)
   const chatBoxRef = useRef<ChatBoxRef>(null)
@@ -346,10 +345,6 @@ function Home() {
     setTimeout(() => chatBoxRef.current?.focus(), 0)
   }
 
-  const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed(prev => !prev)
-  }, [])
-
   // SSE 实时消息监听
   const handleRealtimeMessage = useCallback((msgData: {
     id: string
@@ -417,14 +412,11 @@ function Home() {
         onNewSession={handleNewSession}
         refreshTrigger={refreshTrigger}
         onSessionsLoad={handleSessionsLoad}
-        collapsed={sidebarCollapsed}
         assistantId={currentAssistantId}
       />
       <div className="home-content">
         <UserHeader
           sessionTitle={currentSessionTitle}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={toggleSidebar}
           sessionId={sessionId || undefined}
           sessionStatus={sessionStatus}
           onCopyLink={handleCopyLink}

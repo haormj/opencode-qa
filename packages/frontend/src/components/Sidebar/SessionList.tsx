@@ -11,12 +11,11 @@ interface SessionListProps {
   onSelectSession: (sessionId: string) => void
   onNewSession: () => void
   refreshTrigger?: number
-  collapsed?: boolean
   onSessionsLoad?: (sessions: Session[]) => void
   assistantId?: string | null
 }
 
-function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, collapsed, onSessionsLoad, assistantId }: SessionListProps) {
+function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, assistantId }: SessionListProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -64,7 +63,7 @@ function SessionList({ currentSessionId, onSelectSession, onNewSession, refreshT
   }
 
   return (
-    <div className="session-list" style={{ display: collapsed ? 'none' : 'flex' }}>
+    <div className="session-list">
       <OverlayScrollbarsComponent
         className="session-list-content"
         options={{

@@ -1,12 +1,10 @@
 import { Button, Tooltip } from 'antd'
-import { MenuFoldOutlined, MenuUnfoldOutlined, LinkOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { LinkOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import UserInfo from '../Sidebar/UserInfo'
 import './UserHeader.css'
 
 interface UserHeaderProps {
   sessionTitle: string
-  sidebarCollapsed: boolean
-  onToggleSidebar: () => void
   sessionId?: string
   sessionStatus?: string
   onCopyLink?: () => void
@@ -16,8 +14,6 @@ interface UserHeaderProps {
 
 function UserHeader({ 
   sessionTitle, 
-  sidebarCollapsed, 
-  onToggleSidebar,
   sessionId,
   sessionStatus = 'active',
   onCopyLink,
@@ -39,14 +35,6 @@ function UserHeader({
   return (
     <div className="user-header">
       <div className="user-header-left">
-        <Tooltip title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}>
-          <Button
-            type="text"
-            className="sidebar-toggle-btn"
-            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={onToggleSidebar}
-          />
-        </Tooltip>
         {assistantSelector}
       </div>
       <div className="user-header-content">
