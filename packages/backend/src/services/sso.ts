@@ -162,7 +162,7 @@ export async function exchangeCodeForToken(
   code: string,
   redirectUri: string
 ): Promise<{ 
-  accessToken: string
+  accessToken?: string
   steps?: Record<string, Record<string, unknown>>
   userInfo?: { id: string; username: string; email?: string; displayName: string }
 }> {
@@ -199,7 +199,7 @@ export async function exchangeCodeForToken(
 
 export async function fetchUserInfo(
   providerName: string, 
-  accessToken: string,
+  accessToken?: string,
   steps?: Record<string, Record<string, unknown>>,
   existingUserInfo?: { id: string; username: string; email?: string; displayName: string }
 ): Promise<Record<string, unknown>> {
@@ -222,13 +222,24 @@ export async function fetchUserInfo(
     return mappedInfo
   }
 
+  if (!accessToken) {
+    logger.error(`[SSO] fetchUserInfo failed: accessToken is required when existingUserInfo is not provided`)
+    throw new Error('Access token is required when existing user info is not provided')
+  }
+
   const processor = getSsoProcessor(provider.type)
   const advancedConfig = parseAdvancedConfig(provider.advancedConfig)
   const userInfo = await processor.getUserInfo({
     accessToken,
     userInfoUrl: provider.userInfoUrl || undefined,
     advancedConfig,
-    steps
+    steps,
+    fieldMapping: {
+      userIdField: provider.userIdField,
+      usernameField: provider.usernameField,
+      emailField: provider.emailField,
+      displayNameField: provider.displayNameField
+    }
   })
 
   const mappedInfo = {

@@ -30,6 +30,13 @@ export interface UserFieldMapping {
   displayName?: string
 }
 
+export interface SsoFieldMapping {
+  userIdField: string
+  usernameField: string
+  emailField: string
+  displayNameField: string
+}
+
 export interface AdvancedConfig {
   authorizeUrlTemplate?: string
   pipeline: PipelineStep[]
@@ -54,13 +61,14 @@ export interface SsoProcessor {
     appSecret?: string
     tokenUrl: string
     advancedConfig?: AdvancedConfig
-  }): Promise<{ accessToken: string; steps?: Record<string, Record<string, unknown>>; userInfo?: SsoUserInfo }>
+  }): Promise<{ accessToken?: string; steps?: Record<string, Record<string, unknown>>; userInfo?: SsoUserInfo }>
 
   getUserInfo(params: {
     accessToken: string
     userInfoUrl?: string
     advancedConfig?: AdvancedConfig
     steps?: Record<string, Record<string, unknown>>
+    fieldMapping?: SsoFieldMapping
   }): Promise<SsoUserInfo>
 }
 
