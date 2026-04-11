@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload, Select } from 'antd'
-import { ReloadOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload, Select, Collapse, Divider } from 'antd'
+import { ReloadOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAdminSsoProviders, createSsoProvider, updateSsoProvider, deleteSsoProvider, uploadSsoProviderIcon, type SsoProvider } from '../../services/api'
+import { getAdminSsoProviders, createSsoProvider, updateSsoProvider, deleteSsoProvider, uploadSsoProviderIcon, type SsoProvider, type PipelineStep } from '../../services/api'
 import './Admin.css'
 
 const SSO_TYPES = [
@@ -10,6 +10,29 @@ const SSO_TYPES = [
   { value: 'FEISHU', label: '飞书' },
   { value: 'CUSTOM', label: '自定义' }
 ]
+
+const HTTP_METHODS = [
+  { value: 'GET', label: 'GET' },
+  { value: 'POST', label: 'POST' },
+  { value: 'PUT', label: 'PUT' },
+  { value: 'DELETE', label: 'DELETE' }
+]
+
+const CONTENT_TYPES = [
+  { value: 'json', label: 'JSON' },
+  { value: 'form', label: 'Form URL Encoded' }
+]
+
+const defaultPipelineStep = {
+  name: '',
+  url: '',
+  method: 'GET' as const,
+  params: '',
+  headers: '',
+  body: '',
+  contentType: 'json' as const,
+  extract: ''
+}
 
 function AdminSsoProviders() {
   const [loading, setLoading] = useState(false)
@@ -38,7 +61,22 @@ function AdminSsoProviders() {
   const handleEdit = (provider: SsoProvider) => {
     setEditingProvider(provider)
     setSelectedType(provider.type)
-    form.setFieldsValue(provider)
+    
+    const formValues: Record<string, unknown> = { ...provider }
+    
+    if (provider.advancedConfig?.pipeline) {
+      formValues.advancedConfig = {
+        pipeline: provider.advancedConfig.pipeline.map(step => ({
+          ...step,
+          params: step.params ? JSON.stringify(step.params, null, 2) : '',
+          headers: step.headers ? JSON.stringify(step.headers, null, 2) : '',
+          body: step.body ? JSON.stringify(step.body, null, 2) : '',
+          extract: step.extract ? JSON.stringify(step.extract, null, 2) : ''
+        }))
+      }
+    }
+    
+    form.setFieldsValue(formValues)
     setModalOpen(true)
   }
 
@@ -55,6 +93,42 @@ function AdminSsoProviders() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
+      
+      if (values.advancedConfig?.pipeline) {
+        values.advancedConfig.pipeline = values.advancedConfig.pipeline.map((step: PipelineStep) => {
+          const parsedStep = { ...step }
+          if (typeof step.params === 'string' && step.params) {
+            try {
+              parsedStep.params = JSON.parse(step.params)
+            } catch {
+              parsedStep.params = {}
+            }
+          }
+          if (typeof step.headers === 'string' && step.headers) {
+            try {
+              parsedStep.headers = JSON.parse(step.headers)
+            } catch {
+              parsedStep.headers = {}
+            }
+          }
+          if (typeof step.body === 'string' && step.body) {
+            try {
+              parsedStep.body = JSON.parse(step.body)
+            } catch {
+              parsedStep.body = {}
+            }
+          }
+          if (typeof step.extract === 'string' && step.extract) {
+            try {
+              parsedStep.extract = JSON.parse(step.extract)
+            } catch {
+              parsedStep.extract = {}
+            }
+          }
+          return parsedStep
+        })
+      }
+      
       if (editingProvider) {
         await updateSsoProvider(editingProvider.id, values)
         message.success('更新成功')
@@ -99,7 +173,7 @@ function AdminSsoProviders() {
       width: 120,
       render: (type: string) => {
         const typeInfo = SSO_TYPES.find(t => t.value === type)
-        return <Tag color={type === 'FEISHU' ? 'blue' : 'green'}>{typeInfo?.label || type}</Tag>
+        return <Tag color={type === 'FEISHU' ? 'blue' : type === 'CUSTOM' ? 'purple' : 'green'}>{typeInfo?.label || type}</Tag>
       }
     },
     {
@@ -208,7 +282,7 @@ function AdminSsoProviders() {
         onCancel={() => setModalOpen(false)}
         okText="确定"
         cancelText="取消"
-        width={700}
+        width={800}
       >
         <Form
           form={form}
@@ -338,29 +412,28 @@ function AdminSsoProviders() {
                 <Input placeholder="OAuth 授权端点 URL" />
               </Form.Item>
               <Form.Item
-                name="tokenUrl"
-                label="Token URL"
-                rules={[{ required: true, message: '请输入 Token URL' }]}
-              >
-                <Input placeholder="OAuth Token 端点 URL" />
-              </Form.Item>
-              <Form.Item
-                name="userInfoUrl"
-                label="用户信息 URL"
-              >
-                <Input placeholder="用户信息端点 URL" />
-              </Form.Item>
-              <Form.Item
                 name="clientId"
                 label="Client ID"
               >
-                <Input placeholder="OAuth Client ID（可选）" />
+                <Input placeholder="OAuth Client ID（可选，用于模板变量 {{clientId}}）" />
               </Form.Item>
               <Form.Item
                 name="clientSecret"
                 label="Client Secret"
               >
-                <Input.Password placeholder="OAuth Client Secret（可选）" />
+                <Input.Password placeholder="OAuth Client Secret（可选，用于模板变量 {{clientSecret}}）" />
+              </Form.Item>
+              <Form.Item
+                name="appId"
+                label="App ID"
+              >
+                <Input placeholder="App ID（可选，用于模板变量 {{appId}}）" />
+              </Form.Item>
+              <Form.Item
+                name="appSecret"
+                label="App Secret"
+              >
+                <Input.Password placeholder="App Secret（可选，用于模板变量 {{appSecret}}）" />
               </Form.Item>
               <Form.Item
                 name="scope"
@@ -368,11 +441,134 @@ function AdminSsoProviders() {
               >
                 <Input placeholder="如：openid profile email" />
               </Form.Item>
+              
+              <Divider>流水线配置</Divider>
+              
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
+              </div>
+              
+              <Form.List name={['advancedConfig', 'pipeline']}>
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }, index) => (
+                      <Collapse
+                        key={key}
+                        style={{ marginBottom: 8 }}
+                        items={[{
+                          key: '1',
+                          label: `步骤 ${index + 1}: ${form.getFieldValue(['advancedConfig', 'pipeline', name, 'name']) || '未命名'}`,
+                          children: (
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'name']}
+                                label="步骤名称"
+                                rules={[{ required: true, message: '请输入步骤名称' }]}
+                              >
+                                <Input placeholder="如：getAppToken" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'url']}
+                                label="请求 URL"
+                                rules={[{ required: true, message: '请输入 URL' }]}
+                              >
+                                <Input placeholder="https://api.example.com/token" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'method']}
+                                label="请求方法"
+                              >
+                                <Select options={HTTP_METHODS} style={{ width: 120 }} />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'params']}
+                                label="URL 参数 (GET 请求)"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='JSON 格式，如：{"appid": "{{clientId}}", "code": "{{code}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'headers']}
+                                label="请求头"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='JSON 格式，如：{"Authorization": "Bearer {{steps.getToken.accessToken}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'contentType']}
+                                label="Content-Type"
+                              >
+                                <Select options={CONTENT_TYPES} style={{ width: 180 }} />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'body']}
+                                label="请求体 (POST/PUT)"
+                              >
+                                <Input.TextArea 
+                                  rows={3} 
+                                  placeholder='JSON 格式，如：{"app_id": "{{appId}}", "app_secret": "{{appSecret}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'extract']}
+                                label="响应字段提取"
+                                extra="从响应中提取字段，供后续步骤使用"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='JSON 格式，如：{"accessToken": "data.access_token", "openid": "openid"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Button 
+                                type="dashed" 
+                                danger 
+                                onClick={() => remove(name)}
+                                icon={<MinusCircleOutlined />}
+                              >
+                                删除此步骤
+                              </Button>
+                            </Space>
+                          )
+                        }]}
+                      />
+                    ))}
+                    <Button 
+                      type="dashed" 
+                      onClick={() => add({ ...defaultPipelineStep })} 
+                      block 
+                      icon={<PlusOutlined />}
+                    >
+                      添加步骤
+                    </Button>
+                  </>
+                )}
+              </Form.List>
+              
+              <Divider>字段映射</Divider>
+              
               <Form.Item
                 name="userIdField"
                 label="用户 ID 字段"
               >
-                <Input placeholder="默认：sub" />
+                <Input placeholder="默认：sub（用于最终用户信息映射）" />
               </Form.Item>
               <Form.Item
                 name="usernameField"
@@ -391,38 +587,6 @@ function AdminSsoProviders() {
                 label="显示名称字段"
               >
                 <Input placeholder="默认：name" />
-              </Form.Item>
-              <Form.Item
-                name={['advancedConfig', 'tokenExchange', 'accessTokenPath']}
-                label="Token 路径"
-                extra="从 Token 响应中提取 access_token 的 JSON 路径，如：data.access_token"
-              >
-                <Input placeholder="默认：access_token" />
-              </Form.Item>
-              <Form.Item
-                name={['advancedConfig', 'userInfo', 'responsePaths', 'id']}
-                label="用户 ID 响应路径"
-                extra="从用户信息响应中提取用户 ID 的 JSON 路径"
-              >
-                <Input placeholder="如：data.user.open_id" />
-              </Form.Item>
-              <Form.Item
-                name={['advancedConfig', 'userInfo', 'responsePaths', 'username']}
-                label="用户名响应路径"
-              >
-                <Input placeholder="如：data.user.name" />
-              </Form.Item>
-              <Form.Item
-                name={['advancedConfig', 'userInfo', 'responsePaths', 'email']}
-                label="邮箱响应路径"
-              >
-                <Input placeholder="如：data.user.email" />
-              </Form.Item>
-              <Form.Item
-                name={['advancedConfig', 'userInfo', 'responsePaths', 'displayName']}
-                label="显示名称响应路径"
-              >
-                <Input placeholder="如：data.user.nickname" />
               </Form.Item>
             </>
           )}

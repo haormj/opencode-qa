@@ -1,7 +1,7 @@
-import type { SsoProcessor, SsoUserInfo, AdvancedConfig } from '../sso-processor.js'
+import type { SsoProcessor, SsoUserInfo, AdvancedConfig, PipelineStep } from '../sso-processor.js'
 
 function getValueByPath(obj: Record<string, unknown>, path: string): unknown {
-  const keys = path.split('.')
+  const keys = path.replace(/^\$\./, '').split('.')
   let current: unknown = obj
   for (const key of keys) {
     if (current === null || current === undefined) {
@@ -16,26 +16,21 @@ function getValueByPath(obj: Record<string, unknown>, path: string): unknown {
   return current
 }
 
-function replaceTemplateVariables(
-  template: string,
-  variables: Record<string, unknown>
-): string {
-  return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_, path: string) => {
-    const value = getValueByPath(variables, path)
-    return value !== undefined ? String(value) : ''
+function renderTemplate(template: string, context: Record<string, unknown>): string {
+  return template.replace(/\{\{([^}]+)\}\}/g, (_, path: string) => {
+    const trimmedPath = path.trim()
+    const value = getValueByPath(context, trimmedPath)
+    return value !== undefined && value !== null ? String(value) : ''
   })
 }
 
-function replaceBodyTemplate(
-  body: Record<string, unknown>,
-  variables: Record<string, unknown>
-): Record<string, unknown> {
+function renderObject(obj: Record<string, unknown>, context: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(body)) {
+  for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
-      result[key] = replaceTemplateVariables(value, variables)
+      result[key] = renderTemplate(value, context)
     } else if (typeof value === 'object' && value !== null) {
-      result[key] = replaceBodyTemplate(value as Record<string, unknown>, variables)
+      result[key] = renderObject(value as Record<string, unknown>, context)
     } else {
       result[key] = value
     }
@@ -43,179 +38,176 @@ function replaceBodyTemplate(
   return result
 }
 
-async function executePreRequests(
-  preRequests: NonNullable<AdvancedConfig['preRequests']>,
+function evaluateCondition(
+  condition: PipelineStep['condition'],
   context: Record<string, unknown>
-): Promise<Record<string, Record<string, unknown>>> {
-  const results: Record<string, Record<string, unknown>> = {}
+): boolean {
+  if (!condition) return true
 
-  for (const preRequest of preRequests) {
-    const url = replaceTemplateVariables(preRequest.url, context)
-    const headers: Record<string, string> = {}
-    
-    if (preRequest.headers) {
-      for (const [key, value] of Object.entries(preRequest.headers)) {
-        headers[key] = replaceTemplateVariables(value, context)
-      }
+  const value = getValueByPath(context, condition.field)
+
+  switch (condition.operator) {
+    case 'exists':
+      return value !== undefined
+    case 'notEmpty':
+      return value !== undefined && value !== null && value !== ''
+    case 'equals':
+      return String(value) === condition.value
+    default:
+      return true
+  }
+}
+
+async function executeStep(
+  step: PipelineStep,
+  context: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const url = renderTemplate(step.url, context)
+  
+  const headers: Record<string, string> = {}
+  if (step.headers) {
+    for (const [key, value] of Object.entries(step.headers)) {
+      headers[key] = renderTemplate(value, context)
     }
-
-    let body: string | undefined
-    if (preRequest.body && preRequest.method === 'POST') {
-      const processedBody = replaceBodyTemplate(preRequest.body, context)
-      body = JSON.stringify(processedBody)
-      headers['Content-Type'] = 'application/json'
-    }
-
-    const response = await fetch(url, {
-      method: preRequest.method,
-      headers,
-      body
-    })
-
-    if (!response.ok) {
-      throw new Error(`Pre-request '${preRequest.name}' failed: ${response.status}`)
-    }
-
-    const responseData = await response.json() as Record<string, unknown>
-    
-    if (preRequest.responseFields) {
-      results[preRequest.name] = {}
-      for (const [outputKey, path] of Object.entries(preRequest.responseFields)) {
-        const value = getValueByPath(responseData, path)
-        if (value !== undefined) {
-          results[preRequest.name][outputKey] = value
-        }
-      }
-    }
-
-    context[preRequest.name] = results[preRequest.name] || responseData
   }
 
-  return results
+  let finalUrl = url
+  let body: string | undefined
+
+  if (step.method === 'GET' && step.params) {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(step.params)) {
+      params.append(key, renderTemplate(value, context))
+    }
+    finalUrl = `${url}?${params.toString()}`
+  } else if (step.body) {
+    const renderedBody = renderObject(step.body, context)
+    
+    if (step.contentType === 'form') {
+      const formParams = new URLSearchParams()
+      for (const [key, value] of Object.entries(renderedBody)) {
+        formParams.append(key, String(value))
+      }
+      body = formParams.toString()
+      headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    } else {
+      body = JSON.stringify(renderedBody)
+      headers['Content-Type'] = 'application/json'
+    }
+  }
+
+  const response = await fetch(finalUrl, {
+    method: step.method,
+    headers,
+    body: body && step.method !== 'GET' ? body : undefined
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Step '${step.name}' failed: ${response.status} - ${errorText}`)
+  }
+
+  const responseData = await response.json() as Record<string, unknown>
+  
+  const extracted: Record<string, unknown> = {}
+  if (step.extract) {
+    for (const [outputKey, jsonPath] of Object.entries(step.extract)) {
+      const value = getValueByPath(responseData, jsonPath)
+      if (value !== undefined) {
+        extracted[outputKey] = value
+      }
+    }
+  }
+
+  return extracted
+}
+
+async function executePipeline(
+  pipeline: PipelineStep[],
+  initialContext: Record<string, unknown>
+): Promise<{ steps: Record<string, Record<string, unknown>>; lastResult: Record<string, unknown> }> {
+  const steps: Record<string, Record<string, unknown>> = {}
+  const context = { ...initialContext, steps }
+
+  for (const step of pipeline) {
+    if (!evaluateCondition(step.condition, context)) {
+      continue
+    }
+
+    const extracted = await executeStep(step, context)
+    steps[step.name] = extracted
+    context.steps = { ...steps }
+  }
+
+  const lastStep = pipeline[pipeline.length - 1]
+  const lastResult = steps[lastStep?.name] || {}
+
+  return { steps, lastResult }
 }
 
 const CustomSsoProcessor: SsoProcessor = {
   getAuthorizeUrl(params) {
-    const { clientId, redirectUri, state, scope, advancedConfig } = params
-    
     const urlParams: Record<string, string> = {
-      client_id: clientId,
-      redirect_uri: redirectUri,
+      client_id: params.clientId,
+      redirect_uri: params.redirectUri,
       response_type: 'code',
-      state
+      state: params.state
     }
 
-    if (scope && scope.trim()) {
-      urlParams.scope = scope
-    }
-
-    if (advancedConfig?.authorize?.extraParams) {
-      Object.assign(urlParams, advancedConfig.authorize.extraParams)
+    if (params.scope && params.scope.trim()) {
+      urlParams.scope = params.scope
     }
 
     return new URLSearchParams(urlParams).toString()
   },
 
   async exchangeCode(params) {
-    const { code, redirectUri, clientId, clientSecret, tokenUrl, advancedConfig } = params
-    
-    let context: Record<string, unknown> = { code, redirectUri, clientId, clientSecret }
-    
-    if (advancedConfig?.preRequests) {
-      const preRequestResults = await executePreRequests(advancedConfig.preRequests, context)
-      context.preRequests = preRequestResults
+    if (!params.advancedConfig?.pipeline?.length) {
+      throw new Error('Pipeline configuration is required for CUSTOM SSO')
     }
 
-    const contentType = advancedConfig?.tokenExchange?.contentType || 'application/x-www-form-urlencoded'
-    
-    let body: string
-    if (advancedConfig?.tokenExchange?.bodyTemplate) {
-      const processedBody = replaceBodyTemplate(advancedConfig.tokenExchange.bodyTemplate, context)
-      body = JSON.stringify(processedBody)
-    } else {
-      const formParams = new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id: clientId || '',
-        client_secret: clientSecret || ''
-      })
-      body = formParams.toString()
+    const context: Record<string, unknown> = {
+      clientId: params.clientId,
+      clientSecret: params.clientSecret,
+      appId: params.appId,
+      appSecret: params.appSecret,
+      code: params.code,
+      redirectUri: params.redirectUri,
+      tokenUrl: params.tokenUrl
     }
 
-    const headers: Record<string, string> = {
-      'Content-Type': contentType
+    const pipeline = params.advancedConfig.pipeline
+    const { steps, lastResult } = await executePipeline(pipeline, context)
+
+    const accessToken = lastResult.accessToken || lastResult.access_token
+    if (!accessToken) {
+      throw new Error('Access token not found in pipeline result')
     }
 
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers,
-      body
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Token exchange failed: ${errorText}`)
+    return { 
+      accessToken: String(accessToken),
+      steps
     }
-
-    const data = await response.json() as Record<string, unknown>
-    const accessTokenPath = advancedConfig?.tokenExchange?.accessTokenPath || 'access_token'
-    const accessToken = getValueByPath(data, accessTokenPath)
-
-    if (typeof accessToken !== 'string') {
-      throw new Error('Access token not found in response')
-    }
-
-    return { accessToken }
   },
 
   async getUserInfo(params) {
-    const { accessToken, userInfoUrl, advancedConfig, userIdField, usernameField, emailField, displayNameField } = params
-
-    if (!userInfoUrl) {
-      throw new Error('User info URL is required for CUSTOM SSO')
+    if (!params.advancedConfig?.pipeline?.length) {
+      throw new Error('Pipeline configuration is required for CUSTOM SSO')
     }
 
-    const method = advancedConfig?.userInfo?.method || 'GET'
-    const accessTokenLocation = advancedConfig?.userInfo?.accessTokenLocation || 'header'
-    const accessTokenPrefix = advancedConfig?.userInfo?.accessTokenPrefix || 'Bearer '
-
-    const headers: Record<string, string> = {
-      ...advancedConfig?.userInfo?.headers
+    const context: Record<string, unknown> = {
+      accessToken: params.accessToken,
+      steps: params.steps || {}
     }
 
-    let url = userInfoUrl
-    if (accessTokenLocation === 'header') {
-      headers['Authorization'] = `${accessTokenPrefix}${accessToken}`
-    } else if (accessTokenLocation === 'query') {
-      const separator = userInfoUrl.includes('?') ? '&' : '?'
-      url = `${userInfoUrl}${separator}access_token=${encodeURIComponent(accessToken)}`
-    }
-
-    const response = await fetch(url, {
-      method,
-      headers
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to fetch user info: ${errorText}`)
-    }
-
-    const data = await response.json() as Record<string, unknown>
-
-    const responsePaths = advancedConfig?.userInfo?.responsePaths || {}
-
-    const idPath = responsePaths.id || userIdField || 'sub'
-    const usernamePath = responsePaths.username || usernameField || 'preferred_username'
-    const emailPath = responsePaths.email || emailField || 'email'
-    const displayNamePath = responsePaths.displayName || displayNameField || 'name'
+    const pipeline = params.advancedConfig.pipeline
+    const { lastResult } = await executePipeline(pipeline, context)
 
     return {
-      id: String(getValueByPath(data, idPath) || ''),
-      username: String(getValueByPath(data, usernamePath) || ''),
-      email: getValueByPath(data, emailPath) ? String(getValueByPath(data, emailPath)) : undefined,
-      displayName: String(getValueByPath(data, displayNamePath) || '')
+      id: String(lastResult.id || lastResult.openid || lastResult.open_id || lastResult.user_id || ''),
+      username: String(lastResult.username || lastResult.name || lastResult.nickname || lastResult.id || ''),
+      email: lastResult.email ? String(lastResult.email) : undefined,
+      displayName: String(lastResult.displayName || lastResult.display_name || lastResult.name || lastResult.nickname || lastResult.username || '')
     }
   }
 }

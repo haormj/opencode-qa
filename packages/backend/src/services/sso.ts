@@ -83,14 +83,12 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
   })
 
   const processor = getSsoProcessor(ssoProvider.type)
-  const advancedConfig = parseAdvancedConfig(ssoProvider.advancedConfig)
   const params = processor.getAuthorizeUrl({
     clientId: ssoProvider.clientId || '',
     redirectUri,
     state,
     scope: ssoProvider.scope,
-    appId: ssoProvider.appId || undefined,
-    advancedConfig
+    appId: ssoProvider.appId || undefined
   })
 
   const authorizeUrl = `${ssoProvider.authorizeUrl}?${params}`
@@ -119,7 +117,7 @@ export async function exchangeCodeForToken(
   providerName: string,
   code: string,
   redirectUri: string
-): Promise<string> {
+): Promise<{ accessToken: string; steps?: Record<string, Record<string, unknown>> }> {
   const provider = await getSsoProvider(providerName)
   if (!provider) {
     throw new Error('SSO provider not found')
@@ -138,10 +136,14 @@ export async function exchangeCodeForToken(
     advancedConfig
   })
 
-  return result.accessToken
+  return { accessToken: result.accessToken, steps: result.steps }
 }
 
-export async function fetchUserInfo(providerName: string, accessToken: string): Promise<Record<string, unknown>> {
+export async function fetchUserInfo(
+  providerName: string, 
+  accessToken: string,
+  steps?: Record<string, Record<string, unknown>>
+): Promise<Record<string, unknown>> {
   const provider = await getSsoProvider(providerName)
   if (!provider) {
     throw new Error('SSO provider not found')
@@ -153,10 +155,7 @@ export async function fetchUserInfo(providerName: string, accessToken: string): 
     accessToken,
     userInfoUrl: provider.userInfoUrl || undefined,
     advancedConfig,
-    userIdField: provider.userIdField,
-    usernameField: provider.usernameField,
-    emailField: provider.emailField,
-    displayNameField: provider.displayNameField
+    steps
   })
 
   return {
@@ -262,8 +261,8 @@ export async function ssoLogin(
     throw new Error('SSO provider not found')
   }
 
-  const accessToken = await exchangeCodeForToken(providerName, code, redirectUri)
-  const userInfo = await fetchUserInfo(providerName, accessToken)
+  const { accessToken, steps } = await exchangeCodeForToken(providerName, code, redirectUri)
+  const userInfo = await fetchUserInfo(providerName, accessToken, steps)
   const user = await findOrCreateUser(providerName, userInfo, provider)
   const token = await createToken(user.id, userAgent, ipAddress)
 
