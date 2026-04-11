@@ -405,9 +405,19 @@ function AdminSsoProviders() {
           {selectedType === 'CUSTOM' && (
             <>
               <Form.Item
+                name={['advancedConfig', 'authorizeUrlTemplate']}
+                label="授权 URL 模板"
+                extra="自定义完整授权 URL，支持模板变量。若不填则使用下方的授权 URL 字段"
+              >
+                <Input.TextArea 
+                  rows={2}
+                  placeholder="https://open.weixin.qq.com/connect/oauth2/authorize?appid={{appId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}#wechat_redirect"
+                />
+              </Form.Item>
+              <Form.Item
                 name="authorizeUrl"
-                label="授权 URL"
-                rules={[{ required: true, message: '请输入授权 URL' }]}
+                label="授权 URL（备用）"
+                extra="若未填写授权 URL 模板，则使用此字段"
               >
                 <Input placeholder="OAuth 授权端点 URL" />
               </Form.Item>
@@ -445,7 +455,7 @@ function AdminSsoProviders() {
               <Divider>流水线配置</Divider>
               
               <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
+                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{steps.步骤名.字段名}}'}
               </div>
               
               <Form.List name={['advancedConfig', 'pipeline']}>

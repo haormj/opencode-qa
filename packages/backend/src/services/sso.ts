@@ -83,6 +83,28 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
   })
 
   const processor = getSsoProcessor(ssoProvider.type)
+  const advancedConfig = parseAdvancedConfig(ssoProvider.advancedConfig)
+
+  if (ssoProvider.type === SSO_PROVIDER_TYPES.CUSTOM && advancedConfig?.authorizeUrlTemplate) {
+    const context: Record<string, unknown> = {
+      clientId: ssoProvider.clientId || '',
+      clientSecret: ssoProvider.clientSecret || '',
+      appId: ssoProvider.appId || '',
+      appSecret: ssoProvider.appSecret || '',
+      redirectUri,
+      state,
+      scope: ssoProvider.scope || ''
+    }
+    
+    const authorizeUrl = advancedConfig.authorizeUrlTemplate.replace(/\{\{([^}]+)\}\}/g, (_, key: string) => {
+      const trimmedKey = key.trim()
+      const value = context[trimmedKey]
+      return value !== undefined && value !== null ? String(value) : ''
+    })
+
+    return { authorizeUrl, state }
+  }
+
   const params = processor.getAuthorizeUrl({
     clientId: ssoProvider.clientId || '',
     redirectUri,

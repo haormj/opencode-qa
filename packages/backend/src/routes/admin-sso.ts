@@ -57,11 +57,11 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
         return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
       }
     } else if (type === SSO_PROVIDER_TYPES.CUSTOM) {
-      if (!data.authorizeUrl) {
-        return res.status(400).json({ error: 'Authorize URL is required for CUSTOM type' })
-      }
       if (!data.advancedConfig?.pipeline?.length) {
         return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
+      }
+      if (!data.advancedConfig?.authorizeUrlTemplate && !data.authorizeUrl) {
+        return res.status(400).json({ error: 'Authorize URL or authorizeUrlTemplate is required for CUSTOM type' })
       }
     }
 
@@ -71,7 +71,7 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
       name: data.name,
       displayName: data.displayName,
       type: type,
-      authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : data.authorizeUrl,
+      authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : (data.authorizeUrl || ''),
       tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : (data.tokenUrl || ''),
       userInfoUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.USER_INFO_URL : data.userInfoUrl,
       clientId: data.clientId,
@@ -113,11 +113,11 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
           return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
         }
       } else if (data.type === SSO_PROVIDER_TYPES.CUSTOM) {
-        if (!data.authorizeUrl) {
-          return res.status(400).json({ error: 'Authorize URL is required for CUSTOM type' })
-        }
         if (!data.advancedConfig?.pipeline?.length) {
           return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
+        }
+        if (!data.advancedConfig?.authorizeUrlTemplate && !data.authorizeUrl) {
+          return res.status(400).json({ error: 'Authorize URL or authorizeUrlTemplate is required for CUSTOM type' })
         }
       }
     }

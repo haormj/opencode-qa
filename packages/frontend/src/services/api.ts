@@ -529,6 +529,7 @@ export interface UserFieldMapping {
 }
 
 export interface AdvancedConfig {
+  authorizeUrlTemplate?: string
   pipeline: PipelineStep[]
   userFieldMapping?: UserFieldMapping
 }
