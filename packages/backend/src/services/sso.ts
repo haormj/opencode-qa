@@ -85,7 +85,11 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
   const processor = getSsoProcessor(ssoProvider.type)
   const advancedConfig = parseAdvancedConfig(ssoProvider.advancedConfig)
 
-  if (ssoProvider.type === SSO_PROVIDER_TYPES.CUSTOM && advancedConfig?.authorizeUrlTemplate) {
+  if (ssoProvider.type === SSO_PROVIDER_TYPES.CUSTOM) {
+    if (!advancedConfig?.authorizeUrlTemplate) {
+      throw new Error('Authorize URL template is required for CUSTOM SSO provider')
+    }
+    
     const context: Record<string, unknown> = {
       clientId: ssoProvider.clientId || '',
       clientSecret: ssoProvider.clientSecret || '',

@@ -405,23 +405,6 @@ function AdminSsoProviders() {
           {selectedType === 'CUSTOM' && (
             <>
               <Form.Item
-                name={['advancedConfig', 'authorizeUrlTemplate']}
-                label="授权 URL 模板"
-                extra="自定义完整授权 URL，支持模板变量。若不填则使用下方的授权 URL 字段"
-              >
-                <Input.TextArea 
-                  rows={2}
-                  placeholder="https://open.weixin.qq.com/connect/oauth2/authorize?appid={{appId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}#wechat_redirect"
-                />
-              </Form.Item>
-              <Form.Item
-                name="authorizeUrl"
-                label="授权 URL（备用）"
-                extra="若未填写授权 URL 模板，则使用此字段"
-              >
-                <Input placeholder="OAuth 授权端点 URL" />
-              </Form.Item>
-              <Form.Item
                 name="clientId"
                 label="Client ID"
               >
@@ -452,10 +435,28 @@ function AdminSsoProviders() {
                 <Input placeholder="如：openid profile email" />
               </Form.Item>
               
+              <Divider>授权配置</Divider>
+              
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{scope}}'}
+              </div>
+              
+              <Form.Item
+                name={['advancedConfig', 'authorizeUrlTemplate']}
+                label="授权 URL 模板"
+                rules={[{ required: true, message: '请输入授权 URL 模板' }]}
+                extra="redirectUri 为系统自动生成的回调地址，state 为安全校验参数"
+              >
+                <Input.TextArea 
+                  rows={3}
+                  placeholder="https://open.weixin.qq.com/connect/oauth2/authorize?appid={{appId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}#wechat_redirect"
+                />
+              </Form.Item>
+              
               <Divider>流水线配置</Divider>
               
               <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{steps.步骤名.字段名}}'}
+                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
               </div>
               
               <Form.List name={['advancedConfig', 'pipeline']}>

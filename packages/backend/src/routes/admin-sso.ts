@@ -60,8 +60,8 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
       if (!data.advancedConfig?.pipeline?.length) {
         return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
       }
-      if (!data.advancedConfig?.authorizeUrlTemplate && !data.authorizeUrl) {
-        return res.status(400).json({ error: 'Authorize URL or authorizeUrlTemplate is required for CUSTOM type' })
+      if (!data.advancedConfig?.authorizeUrlTemplate) {
+        return res.status(400).json({ error: 'Authorize URL template is required for CUSTOM type' })
       }
     }
 
@@ -116,8 +116,8 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
         if (!data.advancedConfig?.pipeline?.length) {
           return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
         }
-        if (!data.advancedConfig?.authorizeUrlTemplate && !data.authorizeUrl) {
-          return res.status(400).json({ error: 'Authorize URL or authorizeUrlTemplate is required for CUSTOM type' })
+        if (!data.advancedConfig?.authorizeUrlTemplate) {
+          return res.status(400).json({ error: 'Authorize URL template is required for CUSTOM type' })
         }
       }
     }
