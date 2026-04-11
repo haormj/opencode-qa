@@ -203,11 +203,23 @@ const CustomSsoProcessor: SsoProcessor = {
     const pipeline = params.advancedConfig.pipeline
     const { lastResult } = await executePipeline(pipeline, context)
 
+    const mapping = params.advancedConfig.userFieldMapping || {}
+    
+    const idField = mapping.id || 'id'
+    const usernameField = mapping.username || 'username'
+    const emailField = mapping.email || 'email'
+    const displayNameField = mapping.displayName || 'displayName'
+
+    const id = lastResult[idField] || lastResult.id || lastResult.openid || lastResult.open_id || lastResult.user_id
+    const username = lastResult[usernameField] || lastResult.username || lastResult.name || lastResult.nickname || id
+    const email = lastResult[emailField] || lastResult.email
+    const displayName = lastResult[displayNameField] || lastResult.displayName || lastResult.display_name || lastResult.name || lastResult.nickname || username
+
     return {
-      id: String(lastResult.id || lastResult.openid || lastResult.open_id || lastResult.user_id || ''),
-      username: String(lastResult.username || lastResult.name || lastResult.nickname || lastResult.id || ''),
-      email: lastResult.email ? String(lastResult.email) : undefined,
-      displayName: String(lastResult.displayName || lastResult.display_name || lastResult.name || lastResult.nickname || lastResult.username || '')
+      id: String(id || ''),
+      username: String(username || ''),
+      email: email ? String(email) : undefined,
+      displayName: String(displayName || '')
     }
   }
 }

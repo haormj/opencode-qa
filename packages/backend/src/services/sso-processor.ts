@@ -23,8 +23,16 @@ export interface PipelineStep {
   condition?: PipelineStepCondition
 }
 
+export interface UserFieldMapping {
+  id?: string
+  username?: string
+  email?: string
+  displayName?: string
+}
+
 export interface AdvancedConfig {
   pipeline: PipelineStep[]
+  userFieldMapping?: UserFieldMapping
 }
 
 export interface SsoProcessor {

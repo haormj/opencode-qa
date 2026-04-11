@@ -564,29 +564,34 @@ function AdminSsoProviders() {
               
               <Divider>字段映射</Divider>
               
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                将最后一步 extract 提取的字段映射到用户字段，如 extract 了 myUserId 则填写 myUserId
+              </div>
+              
               <Form.Item
-                name="userIdField"
-                label="用户 ID 字段"
+                name={['advancedConfig', 'userFieldMapping', 'id']}
+                label="用户 ID 字段名"
+                extra="从 extract 结果中取哪个字段作为用户 ID"
               >
-                <Input placeholder="默认：sub（用于最终用户信息映射）" />
+                <Input placeholder="默认：id" />
               </Form.Item>
               <Form.Item
-                name="usernameField"
-                label="用户名字段"
+                name={['advancedConfig', 'userFieldMapping', 'username']}
+                label="用户名字段名"
               >
-                <Input placeholder="默认：preferred_username" />
+                <Input placeholder="默认：username" />
               </Form.Item>
               <Form.Item
-                name="emailField"
-                label="邮箱字段"
+                name={['advancedConfig', 'userFieldMapping', 'email']}
+                label="邮箱字段名"
               >
                 <Input placeholder="默认：email" />
               </Form.Item>
               <Form.Item
-                name="displayNameField"
-                label="显示名称字段"
+                name={['advancedConfig', 'userFieldMapping', 'displayName']}
+                label="显示名称字段名"
               >
-                <Input placeholder="默认：name" />
+                <Input placeholder="默认：displayName" />
               </Form.Item>
             </>
           )}
