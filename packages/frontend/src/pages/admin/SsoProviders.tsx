@@ -417,18 +417,6 @@ function AdminSsoProviders() {
                 <Input.Password placeholder="OAuth Client Secret（可选，用于模板变量 {{clientSecret}}）" />
               </Form.Item>
               <Form.Item
-                name="appId"
-                label="App ID"
-              >
-                <Input placeholder="App ID（可选，用于模板变量 {{appId}}）" />
-              </Form.Item>
-              <Form.Item
-                name="appSecret"
-                label="App Secret"
-              >
-                <Input.Password placeholder="App Secret（可选，用于模板变量 {{appSecret}}）" />
-              </Form.Item>
-              <Form.Item
                 name="scope"
                 label="Scope"
               >
@@ -438,7 +426,7 @@ function AdminSsoProviders() {
               <Divider>授权配置</Divider>
               
               <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{scope}}'}
+                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{scope}}'}
               </div>
               
               <Form.Item
@@ -449,14 +437,14 @@ function AdminSsoProviders() {
               >
                 <Input.TextArea 
                   rows={3}
-                  placeholder="https://open.weixin.qq.com/connect/oauth2/authorize?appid={{appId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}#wechat_redirect"
+                  placeholder="https://example.com/oauth/authorize?client_id={{clientId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}&scope={{scope}}"
                 />
               </Form.Item>
               
               <Divider>流水线配置</Divider>
               
               <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{appId}}'}, {'{{appSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
+                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
               </div>
               
               <Form.List name={['advancedConfig', 'pipeline']}>
