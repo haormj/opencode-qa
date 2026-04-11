@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
@@ -6,9 +6,10 @@ import Sidebar from '../components/Sidebar'
 import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
 import AssistantSelector from '../components/AssistantSelector'
-import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, type MessageItem } from '../services/api'
+import Breadcrumb from '../components/Breadcrumb'
+import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, getAssistants, type MessageItem } from '../services/api'
 import { useSessionEvents } from '../hooks/useSessionEvents'
-import type { Session } from '../services/api'
+import type { Session, Assistant } from '../services/api'
 import './Home.css'
 
 function Home() {
@@ -17,7 +18,6 @@ function Home() {
 
   const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [sessions, setSessions] = useState<Session[]>([])
   const [sessionStatus, setSessionStatus] = useState<string>('active')
   const [, forceUpdate] = useState(0)
   const notFoundRef = useRef(false)
@@ -28,14 +28,20 @@ function Home() {
   const [currentAssistantId, setCurrentAssistantId] = useState<string | null>(() => {
     return localStorage.getItem('currentAssistantId')
   })
+  const [assistants, setAssistants] = useState<Assistant[]>([])
+
+  useEffect(() => {
+    getAssistants()
+      .then(setAssistants)
+      .catch(() => message.error('加载助手列表失败'))
+  }, [])
 
   const setLoadingState = useCallback((id: string, loading: boolean) => {
     loadingStatesRef.current.set(id, loading)
     forceUpdate(n => n + 1)
   }, [])
 
-  const handleSessionsLoad = useCallback((loadedSessions: Session[]) => {
-    setSessions(loadedSessions)
+  const handleSessionsLoad = useCallback((_sessions: Session[]) => {
   }, [])
 
   const handleAssistantChange = useCallback((assistantId: string | null) => {
@@ -49,12 +55,6 @@ function Home() {
     setMessages([])
     setSessionStatus('active')
   }, [setSearchParams])
-
-  const currentSessionTitle = useMemo(() => {
-    if (!sessionId) return '新对话'
-    const session = sessions.find(s => s.id === sessionId)
-    return session?.title || '新对话'
-  }, [sessionId, sessions])
 
   const loadSession = useCallback(async (id: string) => {
     if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
@@ -416,7 +416,6 @@ function Home() {
       />
       <div className="home-content">
         <UserHeader
-          sessionTitle={currentSessionTitle}
           sessionId={sessionId || undefined}
           sessionStatus={sessionStatus}
           onCopyLink={handleCopyLink}
@@ -425,9 +424,11 @@ function Home() {
             <AssistantSelector
               value={currentAssistantId}
               onChange={handleAssistantChange}
+              assistants={assistants}
             />
           }
         />
+        <Breadcrumb assistantId={currentAssistantId} assistants={assistants} />
         <div className="home-content-body">
           <ChatBox
             ref={chatBoxRef}

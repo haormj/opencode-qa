@@ -19,6 +19,25 @@
   min-height: 0;
 }
 
+.chat-title-area {
+  padding: 6px 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.chat-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.chat-subtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
 .home-content-body .chat-box-wrapper {
   flex: 1;
   border: none;

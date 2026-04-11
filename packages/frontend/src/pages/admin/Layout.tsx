@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import AdminSidebar from '../../components/AdminSidebar'
 import AdminHeader from '../../components/AdminHeader'
+import AdminBreadcrumb from '../../components/AdminBreadcrumb'
 import { isAdmin } from '../../services/api'
 import './Admin.css'
 
@@ -20,6 +21,7 @@ function AdminLayout() {
       <AdminSidebar />
       <div className="admin-content">
         <AdminHeader />
+        <AdminBreadcrumb />
         <div className="admin-content-body">
           <Outlet />
         </div>

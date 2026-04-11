@@ -1,39 +1,39 @@
-import { useState, useEffect } from 'react'
-import { Select, message } from 'antd'
-import { getAssistants, type Assistant } from '../services/api'
+import { useMemo } from 'react'
+import { Dropdown, Button } from 'antd'
+import type { MenuProps } from 'antd'
+import type { Assistant } from '../services/api'
+import './AssistantSelector.css'
 
 interface AssistantSelectorProps {
   value?: string | null
   onChange?: (assistantId: string | null) => void
-  style?: React.CSSProperties
+  assistants: Assistant[]
 }
 
-function AssistantSelector({ value, onChange, style }: AssistantSelectorProps) {
-  const [assistants, setAssistants] = useState<Assistant[]>([])
-  const [loading, setLoading] = useState(false)
+function AssistantSelector({ value, onChange, assistants }: AssistantSelectorProps) {
+  const menuItems: MenuProps['items'] = useMemo(() => {
+    return assistants.map(assistant => ({
+      key: assistant.id,
+      label: assistant.name,
+    }))
+  }, [assistants])
 
-  useEffect(() => {
-    setLoading(true)
-    getAssistants()
-      .then(setAssistants)
-      .catch(() => message.error('加载助手列表失败'))
-      .finally(() => setLoading(false))
-  }, [])
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    onChange?.(key === value ? null : key)
+  }
 
   return (
-    <Select
-      value={value}
-      onChange={onChange}
-      loading={loading}
-      style={{ minWidth: 150, ...style }}
-      placeholder="选择助手"
+    <Dropdown
+      menu={{ items: menuItems, onClick: handleMenuClick, selectedKeys: value ? [value] : [] }}
+      trigger={['hover']}
+      dropdownRender={(menu) => (
+        <div className="assistant-selector-dropdown">{menu}</div>
+      )}
     >
-      {assistants.map(assistant => (
-        <Select.Option key={assistant.id} value={assistant.id}>
-          {assistant.name}
-        </Select.Option>
-      ))}
-    </Select>
+      <Button type="text" className="assistant-selector-btn">
+        智能助手
+      </Button>
+    </Dropdown>
   )
 }
 

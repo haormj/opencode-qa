@@ -4,7 +4,6 @@ import UserInfo from '../Sidebar/UserInfo'
 import './UserHeader.css'
 
 interface UserHeaderProps {
-  sessionTitle: string
   sessionId?: string
   sessionStatus?: string
   onCopyLink?: () => void
@@ -13,7 +12,6 @@ interface UserHeaderProps {
 }
 
 function UserHeader({ 
-  sessionTitle, 
   sessionId,
   sessionStatus = 'active',
   onCopyLink,
@@ -22,26 +20,12 @@ function UserHeader({
 }: UserHeaderProps) {
   const isHuman = sessionStatus === 'human'
   const isClosed = sessionStatus === 'closed'
-  const showActions = sessionId && sessionTitle
-
-  const truncateTitle = (title: string, maxLen: number = 20) => {
-    if (title.length <= maxLen) return title
-    return title.slice(0, maxLen) + '...'
-  }
-
-  const displayTitle = sessionTitle || '新对话'
-  const truncatedTitle = truncateTitle(displayTitle)
+  const showActions = sessionId
 
   return (
     <div className="user-header">
       <div className="user-header-left">
         {assistantSelector}
-      </div>
-      <div className="user-header-content">
-        <Tooltip title={displayTitle !== truncatedTitle ? displayTitle : ''}>
-          <h2 className="user-header-title">{truncatedTitle}</h2>
-        </Tooltip>
-        <p className="user-header-subtitle">由 OpenCode AI 生成</p>
       </div>
       <div className="user-header-right">
         {showActions && (
