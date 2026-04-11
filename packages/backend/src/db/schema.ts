@@ -84,6 +84,15 @@ export const userTokens = sqliteTable('user_tokens', {
   userIdIdx: index('user_tokens_user_id_idx').on(table.userId)
 }))
 
+export const systemSettings = sqliteTable('system_settings', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  value: text('value').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
 export const ssoProviders = sqliteTable('sso_providers', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
@@ -180,5 +189,7 @@ export type Message = typeof messages.$inferSelect
 export type NewMessage = typeof messages.$inferInsert
 export type UserToken = typeof userTokens.$inferSelect
 export type NewUserToken = typeof userTokens.$inferInsert
+export type SystemSetting = typeof systemSettings.$inferSelect
+export type NewSystemSetting = typeof systemSettings.$inferInsert
 export type SsoProvider = typeof ssoProviders.$inferSelect
 export type NewSsoProvider = typeof ssoProviders.$inferInsert

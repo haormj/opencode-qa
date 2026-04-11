@@ -628,3 +628,27 @@ export interface Statistics {
 export async function getStatistics(): Promise<Statistics> {
   return request<Statistics>(`${API_BASE}/admin/statistics`)
 }
+
+export interface SystemSetting {
+  id: string
+  key: string
+  value: string
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function getAdminSettings(): Promise<SystemSetting[]> {
+  return request<SystemSetting[]>(`${API_BASE}/admin/settings`)
+}
+
+export async function updateSetting(key: string, value: string): Promise<SystemSetting> {
+  return request<SystemSetting>(`${API_BASE}/admin/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value })
+  })
+}
+
+export async function getPublicSettings(): Promise<Record<string, string>> {
+  return request<Record<string, string>>(`${API_BASE}/settings`)
+}

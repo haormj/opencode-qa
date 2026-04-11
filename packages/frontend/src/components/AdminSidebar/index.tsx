@@ -40,6 +40,10 @@ function AdminSidebar() {
       label: '系统设置',
       children: [
         {
+          key: '/admin/settings/login',
+          label: '登录配置'
+        },
+        {
           key: '/admin/settings/sso',
           label: '统一登录'
         }
@@ -53,6 +57,7 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/statistics/overview')) return '/admin/statistics/overview'
+    if (pathname.startsWith('/admin/settings/login')) return '/admin/settings/login'
     if (pathname.startsWith('/admin/settings/sso')) return '/admin/settings/sso'
     return pathname
   }

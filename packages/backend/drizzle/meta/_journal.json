@@ -15,6 +15,13 @@
       "when": 1775903798966,
       "tag": "0001_amazing_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1775914282073,
+      "tag": "0002_polite_wolverine",
+      "breakpoints": true
     }
   ]
 }
