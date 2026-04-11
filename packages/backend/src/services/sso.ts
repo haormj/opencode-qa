@@ -8,6 +8,13 @@ import { SSO_PROVIDER_TYPES } from './sso-processor.js'
 import GenericSsoProcessor from './sso-processors/generic.js'
 import FeishuSsoProcessor from './sso-processors/feishu.js'
 import CustomSsoProcessor from './sso-processors/custom.js'
+import logger from './logger.js'
+
+function maskSecret(value: string | undefined | null, visibleChars: number = 3): string {
+  if (!value) return '(empty)'
+  if (value.length <= visibleChars) return '***'
+  return `${value.substring(0, visibleChars)}***`
+}
 
 interface SsoState {
   nonce: string
@@ -66,8 +73,11 @@ export async function getSsoProvider(name: string) {
 }
 
 export async function buildAuthorizeUrl(provider: string, redirectUri: string): Promise<{ authorizeUrl: string; state: string }> {
+  logger.debug(`[SSO] buildAuthorizeUrl started: provider=${provider}, redirectUri=${redirectUri}`)
+  
   const ssoProvider = await getSsoProvider(provider)
   if (!ssoProvider) {
+    logger.error(`[SSO] buildAuthorizeUrl failed: provider not found or disabled`)
     throw new Error('SSO provider not found or disabled')
   }
 
@@ -84,9 +94,11 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
 
   const processor = getSsoProcessor(ssoProvider.type)
   const advancedConfig = parseAdvancedConfig(ssoProvider.advancedConfig)
+  logger.debug(`[SSO] buildAuthorizeUrl: type=${ssoProvider.type}, hasAdvancedConfig=${!!advancedConfig}`)
 
   if (ssoProvider.type === SSO_PROVIDER_TYPES.CUSTOM) {
     if (!advancedConfig?.authorizeUrlTemplate) {
+      logger.error(`[SSO] buildAuthorizeUrl failed: authorizeUrlTemplate missing for CUSTOM type`)
       throw new Error('Authorize URL template is required for CUSTOM SSO provider')
     }
     
@@ -99,6 +111,7 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
       state,
       scope: ssoProvider.scope || ''
     }
+    logger.debug(`[SSO] CUSTOM template context: ${JSON.stringify(context)}`)
     
     const authorizeUrl = advancedConfig.authorizeUrlTemplate.replace(/\{\{([^}]+)\}\}/g, (_, key: string) => {
       const trimmedKey = key.trim()
@@ -106,6 +119,7 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
       return value !== undefined && value !== null ? String(value) : ''
     })
 
+    logger.debug(`[SSO] buildAuthorizeUrl completed: authorizeUrl=${authorizeUrl}`)
     return { authorizeUrl, state }
   }
 
@@ -119,6 +133,7 @@ export async function buildAuthorizeUrl(provider: string, redirectUri: string): 
 
   const authorizeUrl = `${ssoProvider.authorizeUrl}?${params}`
 
+  logger.debug(`[SSO] buildAuthorizeUrl completed: authorizeUrl=${authorizeUrl}`)
   return { authorizeUrl, state }
 }
 
@@ -127,15 +142,18 @@ export function verifyState(state: string): { valid: boolean; provider?: string 
 
   const stateData = stateStore.get(state)
   if (!stateData) {
+    logger.debug(`[SSO] verifyState failed: state not found`)
     return { valid: false }
   }
 
   if (Date.now() - stateData.createdAt > STATE_EXPIRES_MS) {
     stateStore.delete(state)
+    logger.debug(`[SSO] verifyState failed: state expired`)
     return { valid: false }
   }
 
   stateStore.delete(state)
+  logger.debug(`[SSO] verifyState success: provider=${stateData.provider}`)
   return { valid: true, provider: stateData.provider }
 }
 
@@ -148,13 +166,18 @@ export async function exchangeCodeForToken(
   steps?: Record<string, Record<string, unknown>>
   userInfo?: { id: string; username: string; email?: string; displayName: string }
 }> {
+  logger.debug(`[SSO] exchangeCodeForToken started: provider=${providerName}, code=${maskSecret(code)}`)
+  
   const provider = await getSsoProvider(providerName)
   if (!provider) {
+    logger.error(`[SSO] exchangeCodeForToken failed: provider not found`)
     throw new Error('SSO provider not found')
   }
 
   const processor = getSsoProcessor(provider.type)
   const advancedConfig = parseAdvancedConfig(provider.advancedConfig)
+  logger.debug(`[SSO] exchangeCodeForToken: type=${provider.type}`)
+  
   const result = await processor.exchangeCode({
     code,
     redirectUri,
@@ -166,6 +189,7 @@ export async function exchangeCodeForToken(
     advancedConfig
   })
 
+  logger.debug(`[SSO] exchangeCodeForToken completed: accessToken=${maskSecret(result.accessToken)}, hasSteps=${!!result.steps}, hasUserInfo=${!!result.userInfo}`)
   return { 
     accessToken: result.accessToken, 
     steps: result.steps,
@@ -179,18 +203,23 @@ export async function fetchUserInfo(
   steps?: Record<string, Record<string, unknown>>,
   existingUserInfo?: { id: string; username: string; email?: string; displayName: string }
 ): Promise<Record<string, unknown>> {
+  logger.debug(`[SSO] fetchUserInfo started: provider=${providerName}, hasExistingUserInfo=${!!existingUserInfo}`)
+  
   const provider = await getSsoProvider(providerName)
   if (!provider) {
+    logger.error(`[SSO] fetchUserInfo failed: provider not found`)
     throw new Error('SSO provider not found')
   }
 
   if (existingUserInfo) {
-    return {
+    const mappedInfo = {
       [provider.userIdField]: existingUserInfo.id,
       [provider.usernameField]: existingUserInfo.username,
       [provider.emailField]: existingUserInfo.email,
       [provider.displayNameField]: existingUserInfo.displayName
     }
+    logger.debug(`[SSO] fetchUserInfo completed (from existing): id=${existingUserInfo.id}, username=${existingUserInfo.username}`)
+    return mappedInfo
   }
 
   const processor = getSsoProcessor(provider.type)
@@ -202,12 +231,15 @@ export async function fetchUserInfo(
     steps
   })
 
-  return {
+  const mappedInfo = {
     [provider.userIdField]: userInfo.id,
     [provider.usernameField]: userInfo.username,
     [provider.emailField]: userInfo.email,
     [provider.displayNameField]: userInfo.displayName
   }
+  
+  logger.debug(`[SSO] fetchUserInfo completed: id=${userInfo.id}, username=${userInfo.username}, email=${userInfo.email || '(none)'}`)
+  return mappedInfo
 }
 
 export async function findOrCreateUser(
@@ -220,13 +252,17 @@ export async function findOrCreateUser(
   const email = userInfo[provider.emailField] ? String(userInfo[provider.emailField]) : null
   const displayName = String(userInfo[provider.displayNameField] || username)
 
+  logger.debug(`[SSO] findOrCreateUser: ssoUserId=${ssoUserId}, username=${username}, email=${email || '(none)'}`)
+
   if (!ssoUserId) {
+    logger.error(`[SSO] findOrCreateUser failed: SSO user ID not found in user info`)
     throw new Error('SSO user ID not found in user info')
   }
 
   let user = await db.select().from(users).where(and(eq(users.ssoProvider, providerName), eq(users.ssoUserId, ssoUserId))).get()
 
   if (user) {
+    logger.debug(`[SSO] findOrCreateUser: found existing user by SSO, id=${user.id}`)
     return {
       id: user.id,
       username: user.username,
@@ -239,6 +275,7 @@ export async function findOrCreateUser(
     user = await db.select().from(users).where(eq(users.email, email)).get()
 
     if (user) {
+      logger.debug(`[SSO] findOrCreateUser: found existing user by email, linking SSO, id=${user.id}`)
       const now = new Date()
       const [updatedUser] = await db.update(users).set({
         ssoProvider: providerName,
@@ -262,6 +299,8 @@ export async function findOrCreateUser(
     counter++
   }
 
+  logger.debug(`[SSO] findOrCreateUser: creating new user, username=${uniqueUsername}`)
+  
   const now = new Date()
   const [newUser] = await db.insert(users).values({
     id: randomUUID(),
@@ -285,6 +324,7 @@ export async function findOrCreateUser(
     })
   }
 
+  logger.debug(`[SSO] findOrCreateUser: created new user, id=${newUser.id}`)
   return {
     id: newUser.id,
     username: newUser.username,
@@ -300,15 +340,26 @@ export async function ssoLogin(
   userAgent?: string,
   ipAddress?: string
 ): Promise<{ token: string; user: { id: string; username: string; displayName: string; email: string | null } }> {
+  logger.debug(`[SSO] ssoLogin started: provider=${providerName}`)
+  
   const provider = await getSsoProvider(providerName)
   if (!provider) {
+    logger.error(`[SSO] ssoLogin failed: provider not found`)
     throw new Error('SSO provider not found')
   }
 
+  logger.debug(`[SSO] ssoLogin: step 1/4 - exchanging code for token`)
   const { accessToken, steps, userInfo: existingUserInfo } = await exchangeCodeForToken(providerName, code, redirectUri)
+  
+  logger.debug(`[SSO] ssoLogin: step 2/4 - fetching user info`)
   const userInfo = await fetchUserInfo(providerName, accessToken, steps, existingUserInfo)
+  
+  logger.debug(`[SSO] ssoLogin: step 3/4 - finding or creating user`)
   const user = await findOrCreateUser(providerName, userInfo, provider)
+  
+  logger.debug(`[SSO] ssoLogin: step 4/4 - creating token`)
   const token = await createToken(user.id, userAgent, ipAddress)
 
+  logger.debug(`[SSO] ssoLogin completed: userId=${user.id}, username=${user.username}`)
   return { token, user }
 }

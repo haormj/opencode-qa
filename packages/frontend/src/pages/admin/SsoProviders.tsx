@@ -66,6 +66,7 @@ function AdminSsoProviders() {
     
     if (provider.advancedConfig?.pipeline) {
       formValues.advancedConfig = {
+        ...provider.advancedConfig,
         pipeline: provider.advancedConfig.pipeline.map(step => ({
           ...step,
           params: step.params ? JSON.stringify(step.params, null, 2) : '',

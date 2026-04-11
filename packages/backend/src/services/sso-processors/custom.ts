@@ -1,4 +1,38 @@
 import type { SsoProcessor, SsoUserInfo, AdvancedConfig, PipelineStep } from '../sso-processor.js'
+import logger from '../logger.js'
+
+function maskSecret(value: string | undefined | null, visibleChars: number = 3): string {
+  if (!value) return '(empty)'
+  if (value.length <= visibleChars) return '***'
+  return `${value.substring(0, visibleChars)}***`
+}
+
+const SENSITIVE_FIELDS = ['access_token', 'token', 'secret', 'password', 'refresh_token', 'client_secret', 'app_secret']
+
+function maskSensitiveData(data: unknown, depth: number = 0): unknown {
+  if (depth > 5) return '[max depth reached]'
+  if (data === null || data === undefined) return data
+  if (typeof data !== 'object') return data
+
+  if (Array.isArray(data)) {
+    return data.map(item => maskSensitiveData(item, depth + 1))
+  }
+
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    const lowerKey = key.toLowerCase()
+    const isSensitive = SENSITIVE_FIELDS.some(field => lowerKey.includes(field))
+    
+    if (isSensitive && typeof value === 'string') {
+      result[key] = maskSecret(value)
+    } else if (typeof value === 'object' && value !== null) {
+      result[key] = maskSensitiveData(value, depth + 1)
+    } else {
+      result[key] = value
+    }
+  }
+  return result
+}
 
 function getValueByPath(obj: Record<string, unknown>, path: string): unknown {
   const keys = path.replace(/^\$\./, '').split('.')
@@ -96,6 +130,11 @@ async function executeStep(
     }
   }
 
+  logger.debug(`[SSO Pipeline] Step "${step.name}": ${step.method} ${finalUrl}`)
+  if (body) {
+    logger.debug(`[SSO Pipeline] Step "${step.name}" body: ${body.substring(0, 200)}${body.length > 200 ? '...' : ''}`)
+  }
+
   const response = await fetch(finalUrl, {
     method: step.method,
     headers,
@@ -104,10 +143,12 @@ async function executeStep(
 
   if (!response.ok) {
     const errorText = await response.text()
+    logger.error(`[SSO Pipeline] Step "${step.name}" failed: ${response.status} - ${errorText}`)
     throw new Error(`Step '${step.name}' failed: ${response.status} - ${errorText}`)
   }
 
   const responseData = await response.json() as Record<string, unknown>
+  logger.debug(`[SSO Pipeline] Step "${step.name}" response: ${response.status}, data: ${JSON.stringify(maskSensitiveData(responseData))}`)
   
   const extracted: Record<string, unknown> = {}
   if (step.extract) {
@@ -117,6 +158,12 @@ async function executeStep(
         extracted[outputKey] = value
       }
     }
+    logger.debug(`[SSO Pipeline] Step "${step.name}" extracted: ${JSON.stringify(extracted, (key, value) => {
+      if (typeof value === 'string' && value.length > 50) {
+        return maskSecret(value)
+      }
+      return value
+    })}`)
   }
 
   return extracted
@@ -179,11 +226,6 @@ const CustomSsoProcessor: SsoProcessor = {
     const pipeline = params.advancedConfig.pipeline
     const { steps, lastResult } = await executePipeline(pipeline, context)
 
-    const accessToken = lastResult.accessToken || lastResult.access_token
-    if (!accessToken) {
-      throw new Error('Access token not found in pipeline result')
-    }
-
     const mapping = params.advancedConfig.userFieldMapping || {}
     const idField = mapping.id || 'id'
     const usernameField = mapping.username || 'username'
@@ -202,8 +244,11 @@ const CustomSsoProcessor: SsoProcessor = {
       displayName: String(displayName || '')
     }
 
+    if (!userInfo.id) {
+      throw new Error('User ID not found in pipeline result')
+    }
+
     return { 
-      accessToken: String(accessToken),
       steps,
       userInfo
     }
