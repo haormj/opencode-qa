@@ -15,6 +15,7 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
   const [ssoProviders, setSsoProviders] = useState<SsoProvider[]>([])
+  const [siteTitle, setSiteTitle] = useState('OpenCode QA')
   const [loginConfig, setLoginConfig] = useState<{
     showPasswordLogin: boolean
     showRegister: boolean
@@ -30,6 +31,9 @@ function Login() {
   useEffect(() => {
     getSsoProviders().then(setSsoProviders).catch(() => {})
     getPublicSettings().then(settings => {
+      if (settings['site.title']) {
+        setSiteTitle(settings['site.title'])
+      }
       setLoginConfig({
         showPasswordLogin: settings['login.showPasswordLogin'] !== 'false',
         showRegister: settings['login.showRegister'] !== 'false',
@@ -265,7 +269,7 @@ function Login() {
   return (
     <div className="login-container">
       <Card className="login-card">
-        <h1 className="login-title">OpenCode QA</h1>
+        <h1 className="login-title">{siteTitle}</h1>
         <Tabs
           activeKey={activeTab}
           onChange={(key) => setActiveTab(key as 'login' | 'register')}

@@ -1,11 +1,22 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
 import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons'
+import { getPublicSettings } from '../../services/api'
 import './AdminSidebar.css'
 
 function AdminSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [adminTitle, setAdminTitle] = useState('OpenCode QA Admin')
+
+  useEffect(() => {
+    getPublicSettings().then(settings => {
+      if (settings['site.adminTitle']) {
+        setAdminTitle(settings['site.adminTitle'])
+      }
+    }).catch(() => {})
+  }, [])
 
   const menuItems = [
     {
@@ -40,8 +51,8 @@ function AdminSidebar() {
       label: '系统设置',
       children: [
         {
-          key: '/admin/settings/login',
-          label: '登录配置'
+          key: '/admin/settings/system',
+          label: '系统配置'
         },
         {
           key: '/admin/settings/sso',
@@ -57,7 +68,7 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/statistics/overview')) return '/admin/statistics/overview'
-    if (pathname.startsWith('/admin/settings/login')) return '/admin/settings/login'
+    if (pathname.startsWith('/admin/settings/system')) return '/admin/settings/system'
     if (pathname.startsWith('/admin/settings/sso')) return '/admin/settings/sso'
     return pathname
   }
@@ -73,7 +84,7 @@ function AdminSidebar() {
   return (
     <div className="admin-sidebar">
       <div className="admin-sidebar-brand">
-        <span className="brand-text">OpenCode QA Admin</span>
+        <span className="brand-text">{adminTitle}</span>
       </div>
 
       <div className="admin-sidebar-menu">

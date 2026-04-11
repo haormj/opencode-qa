@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react'
 import { Button, Tooltip } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import type { Session } from '../../services/api'
+import { getPublicSettings } from '../../services/api'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -14,10 +16,20 @@ interface SidebarProps {
 }
 
 function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, collapsed = false }: SidebarProps) {
+  const [siteTitle, setSiteTitle] = useState('OpenCode QA')
+
+  useEffect(() => {
+    getPublicSettings().then(settings => {
+      if (settings['site.title']) {
+        setSiteTitle(settings['site.title'])
+      }
+    }).catch(() => {})
+  }, [])
+
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
-        {!collapsed && <span className="brand-text">OpenCode QA</span>}
+        {!collapsed && <span className="brand-text">{siteTitle}</span>}
       </div>
 
       <div className="sidebar-new-chat">

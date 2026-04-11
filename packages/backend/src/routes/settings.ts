@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db, systemSettings } from '../db/index.js'
-import { like } from 'drizzle-orm'
+import { like, or } from 'drizzle-orm'
 import logger from '../services/logger.js'
 
 const router = Router()
@@ -8,7 +8,10 @@ const router = Router()
 router.get('/', async (_req, res) => {
   try {
     const settings = await db.select().from(systemSettings)
-      .where(like(systemSettings.key, 'login.%'))
+      .where(or(
+        like(systemSettings.key, 'login.%'),
+        like(systemSettings.key, 'site.%')
+      ))
 
     const result: Record<string, string> = {}
     for (const s of settings) {
