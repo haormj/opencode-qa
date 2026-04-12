@@ -165,6 +165,37 @@ export async function getSkillById(id: string) {
   return db.select().from(skills).where(eq(skills.id, id)).get()
 }
 
+export async function getSkillDetailById(id: string) {
+  const skill = await db.select({
+    id: skills.id,
+    name: skills.name,
+    displayName: skills.displayName,
+    slug: skills.slug,
+    description: skills.description,
+    categoryId: skills.categoryId,
+    authorId: skills.authorId,
+    version: skills.version,
+    status: skills.status,
+    rejectReason: skills.rejectReason,
+    downloadCount: skills.downloadCount,
+    favoriteCount: skills.favoriteCount,
+    averageRating: skills.averageRating,
+    ratingCount: skills.ratingCount,
+    createdAt: skills.createdAt,
+    updatedAt: skills.updatedAt,
+    categoryName: skillCategories.name,
+    categorySlug: skillCategories.slug,
+    authorName: users.displayName,
+    authorUsername: users.username
+  }).from(skills)
+    .leftJoin(skillCategories, eq(skills.categoryId, skillCategories.id))
+    .leftJoin(users, eq(skills.authorId, users.id))
+    .where(eq(skills.id, id))
+    .get()
+
+  return skill
+}
+
 export async function createSkill(data: {
   name: string
   displayName: string
