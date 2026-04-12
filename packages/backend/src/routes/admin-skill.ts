@@ -152,7 +152,18 @@ router.get('/:id/files', async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' })
     }
 
-    const tree = await skillFileService.getSkillFileTree(skill.slug, skill.version)
+    // 管理员预览：如果有 pending 则看 pending，否则看 current
+    const pendingPath = skillFileService.getPendingPath(skill.slug)
+    let location: 'current' | 'pending' = 'current'
+    try {
+      const { access } = await import('fs/promises')
+      await access(pendingPath)
+      location = 'pending'
+    } catch {
+      location = 'current'
+    }
+
+    const tree = await skillFileService.getSkillFileTree(skill.slug, location)
     res.json({ tree })
   } catch (error) {
     logger.error('Get skill files error:', error)
@@ -174,7 +185,18 @@ router.get('/:id/files/*', async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' })
     }
 
-    const content = await skillFileService.readSkillFile(skill.slug, skill.version, filePath)
+    // 管理员预览：如果有 pending 则看 pending，否则看 current
+    const pendingPath = skillFileService.getPendingPath(skill.slug)
+    let location: 'current' | 'pending' = 'current'
+    try {
+      const { access } = await import('fs/promises')
+      await access(pendingPath)
+      location = 'pending'
+    } catch {
+      location = 'current'
+    }
+
+    const content = await skillFileService.readSkillFileFromLocation(skill.slug, filePath, location)
     if (!content) {
       return res.status(404).json({ error: 'File not found' })
     }

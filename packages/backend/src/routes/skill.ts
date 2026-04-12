@@ -123,7 +123,7 @@ router.get('/:slug/download', async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' })
     }
 
-    const zipBuffer = await skillFileService.createSkillZip(skill.slug, skill.version)
+    const zipBuffer = await skillFileService.createSkillZip(skill.slug, 'current')
     
     await skillService.incrementDownloadCount(skill.id)
 
@@ -146,7 +146,7 @@ router.get('/:slug/files', async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' })
     }
 
-    const tree = await skillFileService.getSkillFileTree(skill.slug, skill.version)
+    const tree = await skillFileService.getSkillFileTree(skill.slug, 'current')
     res.json({ tree })
   } catch (error) {
     logger.error('Get skill files error:', error)
@@ -200,7 +200,7 @@ router.post('/', upload.array('files', 200), async (req, res) => {
       content: file.buffer
     }))
 
-    await skillFileService.saveSkillFiles(slug, result.version, skillFiles)
+    await skillFileService.saveSkillFiles(slug, skillFiles)
 
     res.json({
       id: result.skillId,
@@ -279,7 +279,7 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       content: file.buffer
     }))
 
-    await skillFileService.saveSkillFiles(existing.slug, result.version, skillFiles)
+    await skillFileService.saveSkillFiles(existing.slug, skillFiles)
 
     res.json({
       id,
