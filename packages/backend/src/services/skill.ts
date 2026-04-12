@@ -147,9 +147,10 @@ export async function getSkillBySlug(slug: string) {
   }
 
   let readme: string | null = null
-  if (skill.status === 'approved' || skill.version) {
+  // 从 current 读取 readme（用户下载时）
+  if (skill.status === 'approved') {
     try {
-      const readmeBuffer = await skillFileService.readSkillFile(skill.slug, skill.version, 'SKILL.md')
+      const readmeBuffer = await skillFileService.readSkillFileFromLocation(slug, 'SKILL.md', 'current')
       if (readmeBuffer) {
         readme = readmeBuffer.toString('utf-8')
       }
@@ -325,6 +326,13 @@ export async function approveSkillVersion(versionId: string, approvedBy: string)
   }
 
   const now = new Date()
+  const skill = await getSkillById(version.skillId)
+  if (!skill) {
+    throw new Error('Skill not found')
+  }
+
+  // 替换 current 目录
+  await skillFileService.approvePendingFiles(skill.slug)
 
   await db.update(skillVersions).set({
     status: 'approved',
@@ -333,13 +341,12 @@ export async function approveSkillVersion(versionId: string, approvedBy: string)
     updatedAt: now
   }).where(eq(skillVersions.id, versionId))
 
-  const skill = await getSkillById(version.skillId)
   const updateData: Record<string, unknown> = {
     version: version.version,
     updatedAt: now
   }
 
-  if (skill?.status !== 'approved') {
+  if (skill.status !== 'approved') {
     updateData.status = 'approved'
     updateData.rejectReason = null
   }
@@ -356,12 +363,27 @@ export async function rejectSkillVersion(versionId: string, rejectReason: string
   }
 
   const now = new Date()
+  const skill = await getSkillById(version.skillId)
+
+  // 删除 pending 目录
+  if (skill) {
+    await skillFileService.deletePendingFiles(skill.slug)
+  }
 
   await db.update(skillVersions).set({
     status: 'rejected',
     rejectReason,
     updatedAt: now
   }).where(eq(skillVersions.id, versionId))
+
+  // 更新技能状态为 rejected
+  if (skill) {
+    await db.update(skills).set({
+      status: 'rejected',
+      rejectReason,
+      updatedAt: now
+    }).where(eq(skills.id, version.skillId))
+  }
 
   return { success: true }
 }
