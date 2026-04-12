@@ -1,0 +1,119 @@
+.skill-detail {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.skill-detail-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.skill-detail-header {
+  margin-bottom: 16px;
+}
+
+.skill-detail-hero {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.skill-detail-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.skill-detail-hero-info {
+  flex: 1;
+}
+
+.skill-detail-hero-info h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.skill-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.skill-detail-version {
+  color: #999;
+  font-size: 13px;
+}
+
+.skill-detail-author {
+  color: #999;
+  font-size: 13px;
+}
+
+.skill-detail-desc {
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.skill-detail-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+.skill-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.skill-detail-tags {
+  margin-bottom: 24px;
+}
+
+.skill-detail-content {
+  margin-bottom: 32px;
+}
+
+.skill-detail-content h3 {
+  margin-bottom: 16px;
+}
+
+.skill-detail-content-text {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.skill-detail-no-content {
+  color: #999;
+}
+
+.skill-detail-rating {
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.skill-detail-rating h3 {
+  margin-bottom: 12px;
+}

@@ -12,6 +12,8 @@ import AdminBots from './pages/admin/Bots'
 import AdminAssistants from './pages/admin/Assistants'
 import AdminSsoProviders from './pages/admin/SsoProviders'
 import AdminSystemSettings from './pages/admin/SystemSettings'
+import AdminSkills from './pages/admin/Skills'
+import SkillCategories from './pages/admin/SkillCategories'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -59,6 +61,46 @@ function App() {
           }
         />
         <Route
+          path="/skills"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/publish"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/my/published"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/my/favorites"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/:slug"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <AdminRoute>
@@ -72,6 +114,8 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="bots" element={<AdminBots />} />
           <Route path="assistants" element={<AdminAssistants />} />
+          <Route path="skills" element={<AdminSkills />} />
+          <Route path="skills/categories" element={<SkillCategories />} />
           <Route path="settings/sso" element={<AdminSsoProviders />} />
           <Route path="settings/system" element={<AdminSystemSettings />} />
           <Route path="statistics" element={<StatisticsLayout />}>

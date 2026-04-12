@@ -1,0 +1,33 @@
+.skill-publish {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.skill-publish-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.skill-publish-header h2 {
+  margin: 0;
+}
+
+.skill-mypage {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.skill-mypage-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.skill-mypage-header h2 {
+  margin: 0;
+}

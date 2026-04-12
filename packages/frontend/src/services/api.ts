@@ -769,3 +769,183 @@ export async function deleteAssistantUserBot(assistantId: string, userId: string
     method: 'DELETE',
   })
 }
+
+export interface SkillCategory {
+  id: number
+  name: string
+  slug: string
+  icon: string | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Skill {
+  id: string
+  name: string
+  displayName: string
+  slug: string
+  description: string | null
+  content?: string | null
+  categoryId: number
+  authorId: string
+  version: string
+  icon: string | null
+  tags: string | null
+  installCommand: string | null
+  status: string
+  rejectReason: string | null
+  downloadCount: number
+  favoriteCount: number
+  averageRating: number
+  ratingCount: number
+  createdAt: string
+  updatedAt: string
+  categoryName?: string | null
+  categorySlug?: string | null
+  authorName?: string | null
+}
+
+export interface SkillListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: Skill[]
+}
+
+// Skill APIs
+export async function getSkills(params?: {
+  page?: number
+  pageSize?: number
+  category?: string
+  search?: string
+  sort?: string
+}): Promise<SkillListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.page) searchParams.set('page', params.page.toString())
+  if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+  if (params?.category) searchParams.set('category', params.category)
+  if (params?.search) searchParams.set('search', params.search)
+  if (params?.sort) searchParams.set('sort', params.sort)
+  const query = searchParams.toString()
+  return request<SkillListResponse>(`${API_BASE}/skills${query ? `?${query}` : ''}`)
+}
+
+export async function getTrendingSkills(limit?: number): Promise<Skill[]> {
+  return request(`${API_BASE}/skills/trending${limit ? `?limit=${limit}` : ''}`)
+}
+
+export async function getSkillCategories(): Promise<SkillCategory[]> {
+  return request(`${API_BASE}/skills/categories`)
+}
+
+export async function getSkillBySlug(slug: string): Promise<Skill> {
+  return request(`${API_BASE}/skills/${slug}`)
+}
+
+export async function createSkill(data: Partial<Skill> & { name: string; displayName: string; slug: string; categoryId: number }): Promise<Skill> {
+  return request(`${API_BASE}/skills`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSkill(id: string, data: Partial<Skill>): Promise<Skill> {
+  return request(`${API_BASE}/skills/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function toggleSkillFavorite(id: string): Promise<{ favorited: boolean }> {
+  return request(`${API_BASE}/skills/${id}/favorite`, {
+    method: 'POST',
+  })
+}
+
+export async function rateSkill(id: string, score: number, review?: string): Promise<{ score: number; review?: string }> {
+  return request(`${API_BASE}/skills/${id}/rate`, {
+    method: 'POST',
+    body: JSON.stringify({ score, review }),
+  })
+}
+
+export async function incrementSkillDownload(id: string): Promise<void> {
+  await request(`${API_BASE}/skills/${id}/download`, {
+    method: 'POST',
+  })
+}
+
+export async function getMyPublishedSkills(params?: { page?: number; pageSize?: number }): Promise<SkillListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.page) searchParams.set('page', params.page.toString())
+  if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+  const query = searchParams.toString()
+  return request(`${API_BASE}/skills/my/published${query ? `?${query}` : ''}`)
+}
+
+export async function getMyFavoriteSkills(): Promise<Skill[]> {
+  return request(`${API_BASE}/skills/my/favorites`)
+}
+
+// Admin Skill APIs
+export async function getAdminSkills(params?: {
+  page?: number
+  pageSize?: number
+  status?: string
+  search?: string
+  sort?: string
+}): Promise<SkillListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.page) searchParams.set('page', params.page.toString())
+  if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+  if (params?.status) searchParams.set('status', params.status)
+  if (params?.search) searchParams.set('search', params.search)
+  if (params?.sort) searchParams.set('sort', params.sort)
+  const query = searchParams.toString()
+  return request(`${API_BASE}/admin/skills${query ? `?${query}` : ''}`)
+}
+
+export async function reviewSkill(id: string, data: { status: string; rejectReason?: string; name?: string; displayName?: string; categoryId?: number; icon?: string; tags?: string; installCommand?: string }): Promise<Skill> {
+  return request(`${API_BASE}/admin/skills/${id}/review`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function adminUpdateSkill(id: string, data: Partial<Skill>): Promise<Skill> {
+  return request(`${API_BASE}/admin/skills/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function adminDeleteSkill(id: string): Promise<void> {
+  await request(`${API_BASE}/admin/skills/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getAdminSkillCategories(): Promise<SkillCategory[]> {
+  return request(`${API_BASE}/admin/skills/categories`)
+}
+
+export async function createSkillCategory(data: Partial<SkillCategory> & { name: string; slug: string }): Promise<SkillCategory> {
+  return request(`${API_BASE}/admin/skills/categories`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSkillCategory(id: number, data: Partial<SkillCategory>): Promise<SkillCategory> {
+  return request(`${API_BASE}/admin/skills/categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteSkillCategory(id: number): Promise<void> {
+  await request(`${API_BASE}/admin/skills/categories/${id}`, {
+    method: 'DELETE',
+  })
+}

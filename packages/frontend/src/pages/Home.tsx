@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
 import Sidebar from '../components/Sidebar'
@@ -7,6 +7,12 @@ import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
 import AssistantSelector from '../components/AssistantSelector'
 import Breadcrumb from '../components/Breadcrumb'
+import SkillSidebar from './skills/SkillSidebar'
+import SkillMarket from './skills/Market'
+import SkillDetail from './skills/Detail'
+import SkillPublish from './skills/Publish'
+import MySkills from './skills/MySkills'
+import MyFavorites from './skills/MyFavorites'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, getAssistants, type MessageItem } from '../services/api'
 import { useSessionEvents } from '../hooks/useSessionEvents'
 import type { Session, Assistant } from '../services/api'
@@ -14,6 +20,8 @@ import './Home.css'
 
 function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigateHook = useNavigate()
+  const locationHook = useLocation()
   const sessionId = searchParams.get('sessionId')
 
   const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
@@ -25,6 +33,7 @@ function Home() {
   const loadingStatesRef = useRef<Map<string, boolean>>(new Map())
   const streamingMessagesRef = useRef<Map<string, ExtendedMessageProps[]>>(new Map())
   const currentDisplaySessionIdRef = useRef<string | null>(null)
+  const [mode, setMode] = useState<'chat' | 'skill'>('chat')
   const [currentAssistantId, setCurrentAssistantId] = useState<string | null>(() => {
     return localStorage.getItem('currentAssistantId')
   })
@@ -54,7 +63,15 @@ function Home() {
     setSearchParams({})
     setMessages([])
     setSessionStatus('active')
+    setMode('chat')
   }, [setSearchParams])
+
+  const handleModeChange = useCallback((newMode: 'chat' | 'skill') => {
+    setMode(newMode)
+    if (newMode === 'skill') {
+      navigateHook('/skills')
+    }
+  }, [navigateHook])
 
   const loadSession = useCallback(async (id: string) => {
     if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
@@ -410,14 +427,18 @@ function Home() {
 
   return (
     <div className="home-layout">
-      <Sidebar
-        currentSessionId={sessionId}
-        onSelectSession={handleSelectSession}
-        onNewSession={handleNewSession}
-        refreshTrigger={refreshTrigger}
-        onSessionsLoad={handleSessionsLoad}
-        assistantId={currentAssistantId}
-      />
+      {mode === 'chat' ? (
+        <Sidebar
+          currentSessionId={sessionId}
+          onSelectSession={handleSelectSession}
+          onNewSession={handleNewSession}
+          refreshTrigger={refreshTrigger}
+          onSessionsLoad={handleSessionsLoad}
+          assistantId={currentAssistantId}
+        />
+      ) : (
+        <SkillSidebar />
+      )}
       <div className="home-content">
         <UserHeader
           sessionId={sessionId || undefined}
@@ -429,19 +450,33 @@ function Home() {
               value={currentAssistantId}
               onChange={handleAssistantChange}
               assistants={assistants}
+              mode={mode}
+              onModeChange={handleModeChange}
             />
           }
         />
         <Breadcrumb assistantId={currentAssistantId} assistants={assistants} />
         <div className="home-content-body">
-          <ChatBox
-            ref={chatBoxRef}
-            messages={messages}
-            typing={sessionId ? loadingStatesRef.current.get(sessionId) || false : false}
-            onSend={handleSend}
-            onStop={handleStop}
-            sessionStatus={sessionStatus}
-          />
+          {mode === 'skill' ? (
+            (() => {
+              const path = locationHook.pathname
+              const slug = path.match(/^\/skills\/([^/]+)$/)?.[1]
+              if (path === '/skills/publish') return <SkillPublish />
+              if (path === '/skills/my/published') return <MySkills />
+              if (path === '/skills/my/favorites') return <MyFavorites />
+              if (slug) return <SkillDetail />
+              return <SkillMarket />
+            })()
+          ) : (
+            <ChatBox
+              ref={chatBoxRef}
+              messages={messages}
+              typing={sessionId ? loadingStatesRef.current.get(sessionId) || false : false}
+              onSend={handleSend}
+              onStop={handleStop}
+              sessionStatus={sessionStatus}
+            />
+          )}
         </div>
       </div>
     </div>
