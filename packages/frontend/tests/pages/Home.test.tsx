@@ -85,6 +85,12 @@ describe('Home - handleCopyLink', () => {
           }),
         })
       }
+      if (url.includes('/api/assistants')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        })
+      }
       if (url.includes('/api/messages/')) {
         return Promise.resolve({
           ok: true,
