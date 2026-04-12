@@ -27,8 +27,8 @@ function AdminSkills() {
     try {
       const cats = await getAdminSkillCategories()
       setCategories(cats)
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('Failed to fetch categories:', err)
     }
   }
 
@@ -61,7 +61,7 @@ function AdminSkills() {
   useEffect(() => {
     fetchSkills(page, statusFilter, categoryFilter, searchText)
     setSelectedRowKeys([])
-  }, [page, statusFilter, categoryFilter])
+  }, [page, statusFilter, categoryFilter, searchText])
 
   const handleSearch = () => {
     setPage(1)
