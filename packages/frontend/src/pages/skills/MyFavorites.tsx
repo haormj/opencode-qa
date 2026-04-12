@@ -38,7 +38,7 @@ function MyFavorites() {
               <Col key={skill.id} xs={24} sm={12} md={8} lg={6}>
                 <Card className="skill-card" hoverable onClick={() => navigate(`/skills/${skill.slug}`)}>
                   <div className="skill-card-header">
-                    <div className="skill-card-icon">{skill.icon || skill.displayName.charAt(0).toUpperCase()}</div>
+                    <div className="skill-card-icon">{skill.displayName.charAt(0).toUpperCase()}</div>
                     <div className="skill-card-info">
                       <div className="skill-card-name">{skill.displayName}</div>
                     </div>

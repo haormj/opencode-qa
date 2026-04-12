@@ -50,6 +50,20 @@
       "when": 1775973586687,
       "tag": "0006_legal_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1775980347610,
+      "tag": "0007_medical_sally_floyd",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1775981481585,
+      "tag": "0008_skill_changes",
+      "breakpoints": true
     }
   ]
 }

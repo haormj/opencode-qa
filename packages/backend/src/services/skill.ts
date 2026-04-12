@@ -11,7 +11,8 @@ export async function getSkills(params: {
   status?: string
   authorId?: string
 }) {
-  const { page = 1, pageSize = 20, category, search, sort = 'newest', status = 'approved', authorId } = params
+  const { page = 1, pageSize = 20, category, search, sort = 'newest', authorId } = params
+  const status = params.status ?? (authorId ? undefined : 'approved')
   const offset = (page - 1) * pageSize
 
   const conditions = []
@@ -53,9 +54,7 @@ export async function getSkills(params: {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    icon: skills.icon,
-    tags: skills.tags,
-    installCommand: skills.installCommand,
+    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,
@@ -78,8 +77,7 @@ export async function getSkills(params: {
     const filtered = skillList.filter(s =>
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
       s.displayName?.toLowerCase().includes(search.toLowerCase()) ||
-      s.description?.toLowerCase().includes(search.toLowerCase()) ||
-      s.tags?.toLowerCase().includes(search.toLowerCase())
+      s.description?.toLowerCase().includes(search.toLowerCase())
     )
     return { total: filtered.length, page, pageSize, items: filtered }
   }
@@ -97,9 +95,7 @@ export async function getTrendingSkills(limit: number = 10) {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    icon: skills.icon,
-    tags: skills.tags,
-    installCommand: skills.installCommand,
+    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,
@@ -131,9 +127,7 @@ export async function getSkillBySlug(slug: string) {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    icon: skills.icon,
-    tags: skills.tags,
-    installCommand: skills.installCommand,
+    changeLog: skills.changeLog,
     status: skills.status,
     rejectReason: skills.rejectReason,
     downloadCount: skills.downloadCount,
@@ -148,7 +142,7 @@ export async function getSkillBySlug(slug: string) {
   }).from(skills)
     .leftJoin(skillCategories, eq(skills.categoryId, skillCategories.id))
     .leftJoin(users, eq(skills.authorId, users.id))
-    .where(and(eq(skills.slug, slug), eq(skills.status, 'approved')))
+    .where(eq(skills.slug, slug))
     .get()
 
   return skill
@@ -164,12 +158,10 @@ export async function createSkill(data: {
   slug: string
   description?: string
   content?: string
-  categoryId: number
+  categoryId?: number
   authorId: string
   version?: string
-  icon?: string
-  tags?: string
-  installCommand?: string
+  changeLog?: string
 }) {
   const now = new Date()
   const [skill] = await db.insert(skills).values({
@@ -179,12 +171,10 @@ export async function createSkill(data: {
     slug: data.slug,
     description: data.description || '',
     content: data.content || '',
-    categoryId: data.categoryId,
+    categoryId: data.categoryId ?? null,
     authorId: data.authorId,
     version: data.version || '1.0.0',
-    icon: data.icon,
-    tags: data.tags,
-    installCommand: data.installCommand,
+    changeLog: data.changeLog,
     status: 'pending',
     createdAt: now,
     updatedAt: now
@@ -198,11 +188,9 @@ export async function updateSkill(id: string, data: Partial<{
   displayName: string
   description: string
   content: string
-  categoryId: number
+  categoryId: number | null
   version: string
-  icon: string
-  tags: string
-  installCommand: string
+  changeLog: string
   status: string
   rejectReason: string | null
 }>) {
@@ -284,9 +272,7 @@ export async function getUserFavorites(userId: string) {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    icon: skills.icon,
-    tags: skills.tags,
-    installCommand: skills.installCommand,
+    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,

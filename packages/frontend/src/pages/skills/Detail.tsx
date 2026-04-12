@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Tag, Rate, Input, message, Spin } from 'antd'
-import { ArrowLeftOutlined, HeartOutlined, HeartFilled, CopyOutlined, DownloadOutlined } from '@ant-design/icons'
-import { getSkillBySlug, toggleSkillFavorite, rateSkill, incrementSkillDownload, type Skill } from '../../services/api'
+import { Button, Tag, Spin, message } from 'antd'
+import { HeartOutlined, HeartFilled, DownloadOutlined } from '@ant-design/icons'
+import { Streamdown } from 'streamdown'
+import { code } from '@streamdown/code'
+import { mermaid } from '@streamdown/mermaid'
+import { math } from '@streamdown/math'
+import { cjk } from '@streamdown/cjk'
+import { getSkillBySlug, toggleSkillFavorite, type Skill } from '../../services/api'
 import './Detail.css'
+
+const streamdownPlugins = { cjk, code, math, mermaid }
 
 function Detail() {
   const { slug } = useParams<{ slug: string }>()
@@ -11,8 +18,7 @@ function Detail() {
   const [skill, setSkill] = useState<Skill | null>(null)
   const [loading, setLoading] = useState(true)
   const [favorited, setFavorited] = useState(false)
-  const [rating, setRating] = useState(0)
-  const [review, setReview] = useState('')
+  const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'versions'>('overview')
 
   useEffect(() => {
     if (!slug) return
@@ -36,24 +42,6 @@ function Detail() {
     }
   }
 
-  const handleRate = async (score: number) => {
-    if (!skill) return
-    try {
-      await rateSkill(skill.id, score, review || undefined)
-      setRating(score)
-      message.success('评分成功')
-    } catch {
-      message.error('评分失败')
-    }
-  }
-
-  const handleCopyInstall = () => {
-    if (!skill?.installCommand) return
-    navigator.clipboard.writeText(skill.installCommand)
-    message.success('安装命令已复制')
-    incrementSkillDownload(skill.id).catch(() => {})
-  }
-
   const formatCount = (count: number) => {
     if (count >= 10000) return `${(count / 10000).toFixed(1)}万`
     if (count >= 1000) return `${(count / 1000).toFixed(1)}千`
@@ -65,74 +53,87 @@ function Detail() {
 
   return (
     <div className="skill-detail">
-      <div className="skill-detail-header">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/skills')}>返回</Button>
+      <div className="skill-detail-breadcrumb">
+        <span onClick={() => navigate('/skills')}>技能市场</span>
+        <span className="breadcrumb-separator">/</span>
+        <span className="breadcrumb-current">{skill.slug}</span>
       </div>
 
       <div className="skill-detail-hero">
-        <div className="skill-detail-icon">
-          {skill.icon || skill.displayName.charAt(0).toUpperCase()}
-        </div>
-        <div className="skill-detail-hero-info">
+        <div className="skill-detail-hero-content">
           <h1>{skill.displayName}</h1>
-          <div className="skill-detail-meta">
-            {skill.categoryName && <Tag>{skill.categoryName}</Tag>}
-            <span className="skill-detail-version">v{skill.version}</span>
-            <span className="skill-detail-author">by {skill.authorName || 'Unknown'}</span>
-          </div>
           <p className="skill-detail-desc">{skill.description}</p>
+          <div className="skill-detail-meta">
+            <span className="skill-detail-author">作者: {skill.authorName || 'Unknown'}</span>
+            <span className="skill-detail-version">V {skill.version}</span>
+          </div>
           <div className="skill-detail-stats">
             <span><DownloadOutlined /> {formatCount(skill.downloadCount)} 下载</span>
             <span><HeartOutlined /> {formatCount(skill.favoriteCount)} 收藏</span>
-            <Rate disabled value={skill.averageRating} allowHalf style={{ fontSize: 14 }} />
-            <span>({skill.ratingCount})</span>
           </div>
         </div>
-        <div className="skill-detail-actions">
+        <div className="skill-detail-hero-actions">
           <Button
             type={favorited ? 'default' : 'primary'}
             icon={favorited ? <HeartFilled /> : <HeartOutlined />}
             onClick={handleFavorite}
+            size="large"
           >
             {favorited ? '已收藏' : '收藏'}
           </Button>
-          {skill.installCommand && (
-            <Button icon={<CopyOutlined />} onClick={handleCopyInstall}>
-              复制安装命令
-            </Button>
-          )}
         </div>
       </div>
 
-      {skill.tags && (
-        <div className="skill-detail-tags">
-          {JSON.parse(skill.tags).map((tag: string) => (
-            <Tag key={tag}>{tag}</Tag>
-          ))}
-        </div>
-      )}
+      <div className="skill-detail-tabs">
+        <button 
+          className={`skill-detail-tab ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          概述
+        </button>
+        <button 
+          className={`skill-detail-tab ${activeTab === 'install' ? 'active' : ''}`}
+          onClick={() => setActiveTab('install')}
+        >
+          安装方式
+        </button>
+        <button 
+          className={`skill-detail-tab ${activeTab === 'versions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('versions')}
+        >
+          版本历史
+        </button>
+      </div>
 
       <div className="skill-detail-content">
-        <h3>技能详情</h3>
-        <div className="skill-detail-markdown">
-          {skill.content ? (
-            <pre className="skill-detail-content-text">{skill.content}</pre>
-          ) : (
-            <p className="skill-detail-no-content">暂无详细内容</p>
-          )}
-        </div>
-      </div>
-
-      <div className="skill-detail-rating">
-        <h3>评价此技能</h3>
-        <Rate onChange={handleRate} value={rating} />
-        <Input.TextArea
-          placeholder="写下你的评价..."
-          value={review}
-          onChange={e => setReview(e.target.value)}
-          rows={3}
-          style={{ marginTop: 8, maxWidth: 500 }}
-        />
+        {activeTab === 'overview' && (
+          <div className="skill-detail-markdown">
+            {skill.content ? (
+              <Streamdown content={skill.content} plugins={streamdownPlugins} />
+            ) : (
+              <p className="skill-detail-no-content">暂无详细内容</p>
+            )}
+          </div>
+        )}
+        
+        {activeTab === 'install' && (
+          <div className="skill-detail-install">
+            <h3>安装说明</h3>
+            <p>请参考概述中的安装说明。</p>
+          </div>
+        )}
+        
+        {activeTab === 'versions' && (
+          <div className="skill-detail-versions">
+            <div className="version-item">
+              <div className="version-info">
+                <span className="version-number">v{skill.version}</span>
+                <span className="version-date">{new Date(skill.updatedAt).toLocaleDateString()}</span>
+              </div>
+              {skill.changeLog && <p className="version-changelog">{skill.changeLog}</p>}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

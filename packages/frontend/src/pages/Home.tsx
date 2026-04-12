@@ -7,7 +7,6 @@ import UserHeader from '../components/UserHeader'
 import ChatBox, { type ExtendedMessageProps, type ChatBoxRef } from '../components/ChatBox'
 import AssistantSelector from '../components/AssistantSelector'
 import Breadcrumb from '../components/Breadcrumb'
-import SkillSidebar from './skills/SkillSidebar'
 import SkillMarket from './skills/Market'
 import SkillDetail from './skills/Detail'
 import SkillPublish from './skills/Publish'
@@ -45,6 +44,14 @@ function Home() {
       .catch(() => message.error('加载助手列表失败'))
   }, [])
 
+  useEffect(() => {
+    if (locationHook.pathname.startsWith('/skills')) {
+      setMode('skill')
+    } else {
+      setMode('chat')
+    }
+  }, [locationHook.pathname])
+
   const setLoadingState = useCallback((id: string, loading: boolean) => {
     loadingStatesRef.current.set(id, loading)
     forceUpdate(n => n + 1)
@@ -70,6 +77,8 @@ function Home() {
     setMode(newMode)
     if (newMode === 'skill') {
       navigateHook('/skills')
+    } else {
+      navigateHook('/')
     }
   }, [navigateHook])
 
@@ -427,18 +436,15 @@ function Home() {
 
   return (
     <div className="home-layout">
-      {mode === 'chat' ? (
-        <Sidebar
-          currentSessionId={sessionId}
-          onSelectSession={handleSelectSession}
-          onNewSession={handleNewSession}
-          refreshTrigger={refreshTrigger}
-          onSessionsLoad={handleSessionsLoad}
-          assistantId={currentAssistantId}
-        />
-      ) : (
-        <SkillSidebar />
-      )}
+      <Sidebar
+        mode={mode}
+        currentSessionId={sessionId}
+        onSelectSession={handleSelectSession}
+        onNewSession={handleNewSession}
+        refreshTrigger={refreshTrigger}
+        onSessionsLoad={handleSessionsLoad}
+        assistantId={currentAssistantId}
+      />
       <div className="home-content">
         <UserHeader
           sessionId={sessionId || undefined}
@@ -455,7 +461,12 @@ function Home() {
             />
           }
         />
-        <Breadcrumb assistantId={currentAssistantId} assistants={assistants} />
+        <Breadcrumb 
+          assistantId={currentAssistantId} 
+          assistants={assistants} 
+          mode={mode}
+          skillPathname={locationHook.pathname}
+        />
         <div className="home-content-body">
           {mode === 'skill' ? (
             (() => {

@@ -787,12 +787,10 @@ export interface Skill {
   slug: string
   description: string | null
   content?: string | null
-  categoryId: number
+  categoryId?: number | null
   authorId: string
   version: string
-  icon: string | null
-  tags: string | null
-  installCommand: string | null
+  changeLog?: string | null
   status: string
   rejectReason: string | null
   downloadCount: number
@@ -843,7 +841,7 @@ export async function getSkillBySlug(slug: string): Promise<Skill> {
   return request(`${API_BASE}/skills/${slug}`)
 }
 
-export async function createSkill(data: Partial<Skill> & { name: string; displayName: string; slug: string; categoryId: number }): Promise<Skill> {
+export async function createSkill(data: Partial<Skill> & { name: string; displayName: string; slug: string }): Promise<Skill> {
   return request(`${API_BASE}/skills`, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -854,6 +852,24 @@ export async function updateSkill(id: string, data: Partial<Skill>): Promise<Ski
   return request(`${API_BASE}/skills/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  })
+}
+
+export async function offlineSkill(id: string): Promise<Skill> {
+  return request(`${API_BASE}/skills/${id}/offline`, {
+    method: 'PUT',
+  })
+}
+
+export async function onlineSkill(id: string): Promise<Skill> {
+  return request(`${API_BASE}/skills/${id}/online`, {
+    method: 'PUT',
+  })
+}
+
+export async function deleteSkill(id: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/skills/${id}`, {
+    method: 'DELETE',
   })
 }
 
@@ -886,6 +902,52 @@ export async function getMyPublishedSkills(params?: { page?: number; pageSize?: 
 
 export async function getMyFavoriteSkills(): Promise<Skill[]> {
   return request(`${API_BASE}/skills/my/favorites`)
+}
+
+export interface FileNode {
+  name: string
+  path: string
+  size: number
+  isDirectory: boolean
+  children?: FileNode[]
+  isSkillMd?: boolean
+}
+
+export interface UploadResult {
+  files: FileNode[]
+  totalSize: number
+  fileCount: number
+  hasSkillMd: boolean
+  metadata: {
+    name?: string
+    displayName?: string
+    description?: string
+    version?: string
+    icon?: string
+  }
+}
+
+export async function uploadSkillFiles(files: FileList): Promise<UploadResult> {
+  const formData = new FormData()
+  for (let i = 0; i < files.length; i++) {
+    formData.append('files', files[i])
+  }
+  
+  const token = getToken()
+  const response = await fetch(`${API_BASE}/skills/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+  
+  return response.json()
 }
 
 // Admin Skill APIs

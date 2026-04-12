@@ -61,12 +61,10 @@ router.put('/:id/review', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, displayName, description, content, categoryId, version, icon, tags, installCommand } = req.body
+    const { name, displayName, description, content, categoryId, version, changeLog } = req.body
 
     const skill = await skillService.updateSkill(id, {
-      name, displayName, description, content, categoryId, version, icon,
-      tags: typeof tags === 'object' ? JSON.stringify(tags) : tags,
-      installCommand
+      name, displayName, description, content, categoryId, version, changeLog
     })
     if (!skill) {
       return res.status(404).json({ error: 'Skill not found' })

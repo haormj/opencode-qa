@@ -99,7 +99,7 @@ function Market() {
                 >
                   <div className="skill-card-header">
                     <div className="skill-card-icon">
-                      {skill.icon || skill.displayName.charAt(0).toUpperCase()}
+                      {skill.displayName.charAt(0).toUpperCase()}
                     </div>
                     <div className="skill-card-info">
                       <div className="skill-card-name">{skill.displayName}</div>

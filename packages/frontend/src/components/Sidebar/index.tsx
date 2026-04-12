@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Button, Tooltip } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, AppstoreOutlined, FileTextOutlined, HeartOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import type { Session } from '../../services/api'
 import { getPublicSettings } from '../../services/api'
@@ -13,10 +14,27 @@ interface SidebarProps {
   refreshTrigger?: number
   onSessionsLoad?: (sessions: Session[]) => void
   assistantId?: string | null
+  mode?: 'chat' | 'skill'
 }
 
-function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigger, onSessionsLoad, assistantId }: SidebarProps) {
+const skillMenuItems = [
+  { key: '/skills', label: '技能市场', icon: <AppstoreOutlined /> },
+  { key: '/skills/my/published', label: '我的技能', icon: <FileTextOutlined /> },
+  { key: '/skills/my/favorites', label: '我的收藏', icon: <HeartOutlined /> },
+]
+
+function Sidebar({ 
+  currentSessionId, 
+  onSelectSession, 
+  onNewSession, 
+  refreshTrigger, 
+  onSessionsLoad, 
+  assistantId,
+  mode = 'chat'
+}: SidebarProps) {
   const [siteTitle, setSiteTitle] = useState('OpenCode QA')
+  const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     getPublicSettings().then(settings => {
@@ -26,6 +44,17 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
     }).catch(() => {})
   }, [])
 
+  const isSkillMenuItemActive = (key: string) => {
+    if (key === '/skills') {
+      return location.pathname === '/skills' || location.pathname === '/skills/'
+    }
+    return location.pathname.startsWith(key)
+  }
+
+  const handleSkillMenuClick = (key: string) => {
+    navigate(key)
+  }
+
   return (
     <div className="sidebar">
       <div className="sidebar-brand">
@@ -33,26 +62,43 @@ function Sidebar({ currentSessionId, onSelectSession, onNewSession, refreshTrigg
       </div>
 
       <div className="sidebar-new-chat">
-        <Tooltip title="新对话" placement="top">
+        <Tooltip title={mode === 'chat' ? '新对话' : '发布技能'} placement="top">
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={onNewSession}
+            onClick={mode === 'chat' ? onNewSession : () => navigate('/skills/publish')}
             block
           >
-            新对话
+            {mode === 'chat' ? '新对话' : '发布技能'}
           </Button>
         </Tooltip>
       </div>
 
-      <SessionList
-        currentSessionId={currentSessionId}
-        onSelectSession={onSelectSession}
-        onNewSession={onNewSession}
-        refreshTrigger={refreshTrigger}
-        onSessionsLoad={onSessionsLoad}
-        assistantId={assistantId}
-      />
+      {mode === 'chat' ? (
+        <SessionList
+          currentSessionId={currentSessionId}
+          onSelectSession={onSelectSession}
+          onNewSession={onNewSession}
+          refreshTrigger={refreshTrigger}
+          onSessionsLoad={onSessionsLoad}
+          assistantId={assistantId}
+        />
+      ) : (
+        <div className="session-list">
+          <div className="session-list-content">
+            {skillMenuItems.map(item => (
+              <div
+                key={item.key}
+                className={`session-item ${isSkillMenuItemActive(item.key) ? 'active' : ''}`}
+                onClick={() => handleSkillMenuClick(item.key)}
+              >
+                <span className="session-icon">{item.icon}</span>
+                <span className="session-title">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
