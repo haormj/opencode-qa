@@ -90,6 +90,10 @@ router.post('/batch-review', async (req, res) => {
       return res.status(400).json({ error: 'ids must be a non-empty array' })
     }
 
+    if (ids.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 items allowed' })
+    }
+
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'Status must be approved or rejected' })
     }
@@ -112,6 +116,10 @@ router.post('/batch-delete', async (req, res) => {
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'ids must be a non-empty array' })
+    }
+
+    if (ids.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 items allowed' })
     }
 
     const count = await skillService.batchDeleteSkills(ids)

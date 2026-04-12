@@ -1,5 +1,5 @@
 import { db, skills, skillCategories, skillFavorites, skillRatings, skillVersions, users } from '../db/index.js'
-import { eq, desc, asc, sql, and } from 'drizzle-orm'
+import { eq, desc, asc, sql, and, inArray } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import * as skillFileService from './skill-file.js'
 
@@ -530,7 +530,7 @@ export async function batchUpdateSkillStatus(
 
   const result = await db.update(skills)
     .set(updateData)
-    .where(sql`${skills.id} IN ${ids}`)
+    .where(inArray(skills.id, ids))
     .returning()
   
   return result.length
