@@ -81,6 +81,17 @@ function SkillDetail() {
     }))
   }
 
+  const findNodeByPath = (nodes: FileNode[], path: string): FileNode | null => {
+    for (const node of nodes) {
+      if (node.path === path) return node
+      if (node.children) {
+        const found = findNodeByPath(node.children, path)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
   if (loading) return <Spin />
   if (!skill) return <div>技能不存在</div>
 
@@ -137,7 +148,10 @@ function SkillDetail() {
                     treeData={renderFileTree(fileTree)}
                     onSelect={(keys) => {
                       if (keys.length > 0 && typeof keys[0] === 'string') {
-                        handleFileSelect(keys[0])
+                        const node = findNodeByPath(fileTree, keys[0])
+                        if (node && !node.isDirectory) {
+                          handleFileSelect(keys[0])
+                        }
                       }
                     }}
                   />
