@@ -141,9 +141,17 @@ export async function readSkillFile(
   filePath: string
 ): Promise<Buffer | null> {
   const versionDir = getSkillVersionPath(slug, version)
+  const resolvedVersionDir = path.resolve(versionDir)
   const fullPath = path.join(versionDir, filePath)
+  const resolvedPath = path.resolve(fullPath)
+  
+  // Security: ensure resolved path stays within version directory
+  if (!resolvedPath.startsWith(resolvedVersionDir + path.sep)) {
+    return null
+  }
+  
   try {
-    return await fs.readFile(fullPath)
+    return await fs.readFile(resolvedPath)
   } catch {
     return null
   }
