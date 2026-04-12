@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button, Tooltip } from 'antd'
-import { PlusOutlined, AppstoreOutlined, FileTextOutlined, HeartOutlined, DownOutlined, RightOutlined } from '@ant-design/icons'
+import { PlusOutlined, AppstoreOutlined, FileTextOutlined, StarOutlined, DownOutlined, RightOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import type { Session } from '../../services/api'
 import { getPublicSettings } from '../../services/api'
@@ -25,7 +25,7 @@ interface MenuItem {
 }
 
 const skillMenuItems: MenuItem[] = [
-  { key: '/skills', label: '技能市场', icon: <AppstoreOutlined /> },
+  { key: '/skills', label: '全部技能', icon: <AppstoreOutlined /> },
   { 
     key: '/skills/my', 
     label: '我的技能', 
@@ -36,7 +36,7 @@ const skillMenuItems: MenuItem[] = [
       { key: '/skills/my/versions', label: '技能版本' }
     ]
   },
-  { key: '/skills/my/favorites', label: '我的收藏', icon: <HeartOutlined /> },
+  { key: '/skills/my/favorites', label: '我的收藏', icon: <StarOutlined /> },
 ]
 
 function Sidebar({ 
@@ -68,7 +68,8 @@ function Sidebar({
     if (matchedParent && !expandedKeys.includes(matchedParent.key)) {
       setExpandedKeys(prev => [...prev, matchedParent.key])
     }
-  }, [location.pathname, expandedKeys])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   const isSkillMenuItemActive = (key: string) => {
     return location.pathname === key || location.pathname.startsWith(key + '/')

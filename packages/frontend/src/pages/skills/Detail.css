@@ -11,30 +11,6 @@
   min-height: 300px;
 }
 
-.skill-detail-breadcrumb {
-  margin-bottom: 24px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.skill-detail-breadcrumb span {
-  cursor: pointer;
-}
-
-.skill-detail-breadcrumb span:hover {
-  color: #1890ff;
-}
-
-.breadcrumb-separator {
-  margin: 0 8px;
-  cursor: default !important;
-}
-
-.breadcrumb-current {
-  color: rgba(0, 0, 0, 0.85);
-  cursor: default !important;
-}
-
 .skill-detail-hero {
   display: flex;
   justify-content: space-between;
@@ -138,7 +114,7 @@
 .skill-detail-content {
   background: #fff;
   border-radius: 12px;
-  padding: 24px;
+  padding: 0 24px 16px;
   min-height: 300px;
 }
 
@@ -225,31 +201,7 @@
 }
 
 .install-tabs {
-  display: flex;
-  gap: 8px;
   margin-bottom: 24px;
-}
-
-.install-tab {
-  padding: 8px 16px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.65);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.install-tab:hover {
-  color: #1890ff;
-  border-color: #1890ff;
-}
-
-.install-tab.active {
-  color: #1890ff;
-  border-color: #1890ff;
-  background: #e6f7ff;
 }
 
 .install-content {

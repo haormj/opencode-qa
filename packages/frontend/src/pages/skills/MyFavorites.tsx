@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Row, Col, Card, Button, Empty, Spin } from 'antd'
-import { ArrowLeftOutlined, HeartFilled, DownloadOutlined } from '@ant-design/icons'
+import { Card, Spin, Empty } from 'antd'
+import { DownloadOutlined, StarOutlined } from '@ant-design/icons'
 import { getMyFavoriteSkills, type Skill } from '../../services/api'
+import './Market.css'
 
 function MyFavorites() {
   const navigate = useNavigate()
@@ -24,33 +25,35 @@ function MyFavorites() {
   }
 
   return (
-    <div className="skill-mypage">
-      <div className="skill-mypage-header">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/skills')}>返回</Button>
-        <h2>我的收藏</h2>
-      </div>
+    <div className="skill-market">
       <Spin spinning={loading}>
         {favorites.length === 0 && !loading ? (
           <Empty description="还没有收藏任何技能" />
         ) : (
-          <Row gutter={[16, 16]}>
+          <div className="skill-list">
             {favorites.map(skill => (
-              <Col key={skill.id} xs={24} sm={12} md={8} lg={6}>
-                <Card className="skill-card" hoverable onClick={() => navigate(`/skills/${skill.slug}`)}>
-                  <div className="skill-card-header">
-                    <div className="skill-card-icon">{skill.displayName.charAt(0).toUpperCase()}</div>
-                    <div className="skill-card-info">
-                      <div className="skill-card-name">{skill.displayName}</div>
-                    </div>
+              <Card
+                key={skill.id}
+                className="skill-card"
+                hoverable
+                onClick={() => navigate(`/skills/${skill.slug}`)}
+              >
+                <div className="skill-card-content">
+                  <div className="skill-card-icon">
+                    {skill.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="skill-card-info">
+                    <div className="skill-card-name">{skill.displayName}</div>
+                    <div className="skill-card-desc">{skill.description}</div>
                   </div>
                   <div className="skill-card-stats">
                     <span><DownloadOutlined /> {formatCount(skill.downloadCount)}</span>
-                    <span><HeartFilled style={{color:'#ff4d4f'}} /> {formatCount(skill.favoriteCount)}</span>
+                    <span><StarOutlined /> {formatCount(skill.favoriteCount)}</span>
                   </div>
-                </Card>
-              </Col>
+                </div>
+              </Card>
             ))}
-          </Row>
+          </div>
         )}
       </Spin>
     </div>

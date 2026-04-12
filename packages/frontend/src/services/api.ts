@@ -802,6 +802,7 @@ export interface Skill {
   categoryName?: string | null
   categorySlug?: string | null
   authorName?: string | null
+  favorited?: boolean
 }
 
 export interface SkillDetail extends Skill {
@@ -937,8 +938,17 @@ export async function updateSkillWithFiles(id: string, data: {
   return response.json()
 }
 
-export function downloadSkill(slug: string): string {
-  return `${API_BASE}/skills/${slug}/download`
+export async function downloadSkill(slug: string): Promise<Blob> {
+  const token = getToken()
+  const response = await fetch(`${API_BASE}/skills/${slug}/download`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!response.ok) {
+    throw new Error('Download failed')
+  }
+  return response.blob()
 }
 
 export interface SkillVersion {

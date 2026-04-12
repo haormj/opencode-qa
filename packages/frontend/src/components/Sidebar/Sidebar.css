@@ -42,7 +42,7 @@
 }
 
 .sidebar-new-chat {
-  padding: 12px;
+  padding: 12px 12px 0 12px;
 }
 
 .sidebar.collapsed .sidebar-new-chat {

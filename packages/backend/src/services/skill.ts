@@ -1,5 +1,5 @@
 import { db, skills, skillCategories, skillFavorites, skillRatings, skillVersions, users } from '../db/index.js'
-import { eq, desc, asc, sql, and, inArray } from 'drizzle-orm'
+import { eq, desc, asc, sql, and, inArray, ne } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import * as skillFileService from './skill-file.js'
 
@@ -33,6 +33,9 @@ export async function getSkills(params: {
       break
     case 'downloads':
       orderBy = [desc(skills.downloadCount)]
+      break
+    case 'favorites':
+      orderBy = [desc(skills.favoriteCount)]
       break
     case 'rating':
       orderBy = [desc(skills.averageRating)]
@@ -344,7 +347,10 @@ export async function getSkillVersions(skillId: string) {
     creatorName: users.displayName
   }).from(skillVersions)
     .leftJoin(users, eq(skillVersions.createdBy, users.id))
-    .where(eq(skillVersions.skillId, skillId))
+    .where(and(
+      eq(skillVersions.skillId, skillId),
+      ne(skillVersions.status, 'rejected')
+    ))
     .orderBy(desc(skillVersions.createdAt))
 
   return versions
@@ -572,6 +578,18 @@ export async function toggleFavorite(userId: string, skillId: string) {
     }).where(eq(skills.id, skillId))
     return { favorited: true }
   }
+}
+
+export async function checkUserFavorited(userId: string, skillId: string): Promise<boolean> {
+  const favorite = await db.select()
+    .from(skillFavorites)
+    .where(and(
+      eq(skillFavorites.userId, userId),
+      eq(skillFavorites.skillId, skillId)
+    ))
+    .get()
+  
+  return !!favorite
 }
 
 export async function getUserFavorites(userId: string) {

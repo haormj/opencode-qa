@@ -194,7 +194,8 @@ router.get('/:slug', async (req, res) => {
     if (skill.status !== 'approved' && skill.authorId !== req.user!.id && !req.user!.roles.includes('admin')) {
       return res.status(404).json({ error: 'Skill not found' })
     }
-    res.json(skill)
+    const favorited = await skillService.checkUserFavorited(req.user!.id, skill.id)
+    res.json({ ...skill, favorited })
   } catch (error) {
     logger.error('Get skill detail error:', error)
     res.status(500).json({ error: 'Internal server error' })

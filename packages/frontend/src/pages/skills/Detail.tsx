@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Tag, Spin, message } from 'antd'
-import { HeartOutlined, HeartFilled, DownloadOutlined, CopyOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
+import { Button, Spin, message, Segmented } from 'antd'
+import { StarOutlined, StarFilled, DownloadOutlined, CopyOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
 import { Streamdown } from 'streamdown'
 import { code } from '@streamdown/code'
 import { mermaid } from '@streamdown/mermaid'
@@ -47,6 +47,7 @@ function Detail() {
     getSkillBySlug(slug)
       .then(data => {
         setSkill(data)
+        setFavorited(data.favorited || false)
         if (data.authorId) {
           getSkillVersions(slug)
             .then(result => setVersions(result.items))
@@ -76,16 +77,22 @@ function Detail() {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!skill) return
-    const url = downloadSkill(skill.slug)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${skill.slug}-v${skill.version}.zip`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    message.success('开始下载')
+    try {
+      const blob = await downloadSkill(skill.slug)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${skill.slug}-v${skill.version}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      message.success('下载成功')
+    } catch {
+      message.error('下载失败')
+    }
   }
 
   const handleCopy = (text: string) => {
@@ -108,39 +115,23 @@ function Detail() {
 
   return (
     <div className="skill-detail">
-      <div className="skill-detail-breadcrumb">
-        <span onClick={() => navigate('/skills')}>技能市场</span>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">{skill.slug}</span>
-      </div>
-
       <div className="skill-detail-hero">
         <div className="skill-detail-hero-content">
           <h1>{skill.displayName}</h1>
           <p className="skill-detail-desc">{skill.description}</p>
           <div className="skill-detail-meta">
             <span className="skill-detail-author">作者: {skill.authorName || 'Unknown'}</span>
-            <span className="skill-detail-version">V {skill.version}</span>
+            <span className="skill-detail-version">V{skill.version}</span>
           </div>
           <div className="skill-detail-stats">
             <span><DownloadOutlined /> {formatCount(skill.downloadCount)} 下载</span>
-            <span><HeartOutlined /> {formatCount(skill.favoriteCount)} 收藏</span>
+            <span><StarOutlined /> {formatCount(skill.favoriteCount)} 收藏</span>
           </div>
         </div>
         <div className="skill-detail-hero-actions">
-          {skill.status === 'approved' && (
-            <Button
-              type="default"
-              icon={<DownloadOutlined />}
-              onClick={handleDownload}
-              size="large"
-            >
-              下载
-            </Button>
-          )}
           <Button
             type={favorited ? 'default' : 'primary'}
-            icon={favorited ? <HeartFilled /> : <HeartOutlined />}
+            icon={favorited ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
             onClick={handleFavorite}
             size="large"
           >
@@ -186,24 +177,15 @@ function Detail() {
         {activeTab === 'install' && (
           <div className="skill-detail-install">
             <div className="install-tabs">
-              <button 
-                className={`install-tab ${installTab === 'dialog' ? 'active' : ''}`}
-                onClick={() => setInstallTab('dialog')}
-              >
-                通过对话安装
-              </button>
-              <button 
-                className={`install-tab ${installTab === 'cli' ? 'active' : ''}`}
-                onClick={() => setInstallTab('cli')}
-              >
-                命令行安装
-              </button>
-              <button 
-                className={`install-tab ${installTab === 'zip' ? 'active' : ''}`}
-                onClick={() => setInstallTab('zip')}
-              >
-                Zip包安装
-              </button>
+              <Segmented
+                value={installTab}
+                onChange={value => setInstallTab(value as 'dialog' | 'cli' | 'zip')}
+                options={[
+                  { label: '通过对话安装', value: 'dialog' },
+                  { label: '命令行安装', value: 'cli' },
+                  { label: 'Zip包安装', value: 'zip' },
+                ]}
+              />
             </div>
 
             {installTab === 'dialog' && (
@@ -251,14 +233,14 @@ function Detail() {
                     <span className="step-number">2</span>
                     <div className="step-content">
                       <span className="step-title">解压</span>
-                      <p className="step-desc">将压缩包解压到指定目录，请保持内部目录结构。</p>
+                      <p className="step-desc">将压缩包解压到 <code>~/.config/opencode/skills/</code> 目录下，请保持内部目录结构。</p>
                     </div>
                   </div>
                   <div className="install-step">
                     <span className="step-number">3</span>
                     <div className="step-content">
                       <span className="step-title">使用</span>
-                      <p className="step-desc">参考 SKILL.md 中的说明使用技能。</p>
+                      <p className="step-desc">重启 OpenCode 后，技能会自动加载。可在对话中询问"有哪些可用技能"来验证。</p>
                     </div>
                   </div>
                 </div>
@@ -287,33 +269,12 @@ function Detail() {
               versions.map((version) => (
                 <div key={version.id} className="version-item">
                   <div className="version-header">
-                    <div className="version-info">
-                      <span className="version-number">v{version.version}</span>
-                      <Tag color={
-                        version.status === 'approved' ? 'green' :
-                        version.status === 'pending' ? 'blue' :
-                        version.status === 'rejected' ? 'red' : 'default'
-                      }>
-                        {version.status === 'approved' ? '已通过' :
-                         version.status === 'pending' ? '待审核' :
-                         version.status === 'rejected' ? '已拒绝' : version.status}
-                      </Tag>
-                      <span className="version-type">({version.versionType})</span>
-                    </div>
+                    <span className="version-number">v{version.version}</span>
                     <span className="version-date">{formatDate(version.createdAt)}</span>
                   </div>
                   {version.changeLog && (
                     <p className="version-changelog">{version.changeLog}</p>
                   )}
-                  {version.rejectReason && (
-                    <p className="version-reject-reason">拒绝原因：{version.rejectReason}</p>
-                  )}
-                  <div className="version-meta">
-                    <span>提交者：{version.creatorName || 'Unknown'}</span>
-                    {version.approvedAt && (
-                      <span>审核时间：{formatDate(version.approvedAt)}</span>
-                    )}
-                  </div>
                 </div>
               ))
             )}

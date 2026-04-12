@@ -29,7 +29,8 @@ function AssistantSelector({ value, onChange, assistants, mode = 'chat', onModeC
       <Dropdown
         menu={{ items: menuItems, onClick: handleMenuClick, selectedKeys: value ? [value] : [] }}
         trigger={['hover']}
-        dropdownRender={(menu) => (
+        placement="bottomLeft"
+        popupRender={(menu) => (
           <div className="assistant-selector-dropdown">{menu}</div>
         )}
       >

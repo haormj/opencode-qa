@@ -8,57 +8,66 @@ interface BreadcrumbProps {
   skillPathname?: string
 }
 
+interface BreadcrumbResult {
+  root: string | null
+  first: string
+  second: string | null
+  third?: string | null
+}
+
 function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: BreadcrumbProps) {
   if (mode === 'skill') {
-    const getSkillBreadcrumb = () => {
-      if (!skillPathname) return { first: '技能市场', second: null }
+    const getSkillBreadcrumb = (): BreadcrumbResult => {
+      if (!skillPathname) return { root: '技能市场', first: '全部技能', second: null }
       
       if (skillPathname === '/skills' || skillPathname === '/skills/') {
-        return { first: '技能市场', second: null }
+        return { root: '技能市场', first: '全部技能', second: null }
       }
       if (skillPathname === '/skills/publish') {
-        return { first: '我的技能', second: '发布技能' }
+        return { root: '技能市场', first: '我的技能', second: '发布技能' }
       }
       
-      // 我的技能相关页面 - 不显示"技能市场"
       if (skillPathname === '/skills/my/published') {
-        return { first: '我的技能', second: '技能列表' }
+        return { root: '技能市场', first: '我的技能', second: '技能列表' }
       }
       if (skillPathname === '/skills/my/versions') {
-        return { first: '我的技能', second: '技能版本' }
+        return { root: '技能市场', first: '我的技能', second: '技能版本' }
       }
       if (skillPathname === '/skills/my/favorites') {
-        return { first: '我的收藏', second: null }
+        return { root: '技能市场', first: '我的收藏', second: null }
       }
       
-      // 我的技能详情页
       const mySkillMatch = skillPathname.match(/^\/skills\/my\/([^/]+)$/)
       if (mySkillMatch) {
-        return { first: '我的技能', second: '技能列表', third: '技能详情' }
+        return { root: '技能市场', first: '我的技能', second: '技能列表', third: '技能详情' }
       }
       const versionDetailMatch = skillPathname.match(/^\/skills\/my\/versions\/[^/]+$/)
       if (versionDetailMatch) {
-        return { first: '我的技能', second: '技能版本', third: '版本详情' }
+        return { root: '技能市场', first: '我的技能', second: '技能版本', third: '版本详情' }
       }
       
-      // 更新技能页
       if (skillPathname.match(/^\/skills\/update\/[^/]+$/)) {
-        return { first: '我的技能', second: '更新技能' }
+        return { root: '技能市场', first: '我的技能', second: '更新技能' }
       }
       
-      // 技能市场详情页
       const slugMatch = skillPathname.match(/^\/skills\/([^/]+)$/)
       if (slugMatch) {
-        return { first: '技能市场', second: '技能详情' }
+        return { root: '技能市场', first: '全部技能', second: '技能详情' }
       }
       
-      return { first: '技能市场', second: null }
+      return { root: '技能市场', first: '全部技能', second: null }
     }
     
-    const { first, second, third } = getSkillBreadcrumb()
+    const { root, first, second, third } = getSkillBreadcrumb()
     
     return (
       <div className="breadcrumb-container">
+        {root && (
+          <>
+            <span className="breadcrumb-item">{root}</span>
+            <span className="breadcrumb-separator">/</span>
+          </>
+        )}
         <span className="breadcrumb-item">{first}</span>
         {second && (
           <>

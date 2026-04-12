@@ -51,10 +51,6 @@ function AdminSidebar() {
         {
           key: '/admin/skill-versions',
           label: '技能版本'
-        },
-        {
-          key: '/admin/skills/categories',
-          label: '分类管理'
         }
       ]
     },
