@@ -1,3 +1,4 @@
+import path from 'path'
 import { Router } from 'express'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import * as skillService from '../services/skill.js'
@@ -116,6 +117,10 @@ router.get('/:id/files/*', async (req, res) => {
     const { id } = req.params
     const filePath = (req.params as Record<string, string>)[0]
     
+    if (filePath.includes('..') || path.isAbsolute(filePath)) {
+      return res.status(400).json({ error: 'Invalid file path' })
+    }
+
     const skill = await skillService.getSkillById(id)
     if (!skill) {
       return res.status(404).json({ error: 'Skill not found' })
