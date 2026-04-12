@@ -42,7 +42,21 @@ function AdminSidebar() {
     {
       key: '/admin/skills',
       icon: <ToolOutlined />,
-      label: '技能管理'
+      label: '技能管理',
+      children: [
+        {
+          key: '/admin/skills',
+          label: '技能列表'
+        },
+        {
+          key: '/admin/skill-versions',
+          label: '技能版本'
+        },
+        {
+          key: '/admin/skills/categories',
+          label: '分类管理'
+        }
+      ]
     },
     {
       key: '/admin/statistics',
@@ -78,6 +92,8 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/assistants')) return '/admin/assistants'
+    if (pathname === '/admin/skills/categories') return '/admin/skills/categories'
+    if (pathname.startsWith('/admin/skill-versions')) return '/admin/skill-versions'
     if (pathname.startsWith('/admin/skills')) return '/admin/skills'
     if (pathname.startsWith('/admin/statistics/overview')) return '/admin/statistics/overview'
     if (pathname.startsWith('/admin/settings/system')) return '/admin/settings/system'
@@ -88,6 +104,7 @@ function AdminSidebar() {
   const getOpenKeys = () => {
     const pathname = location.pathname
     const openKeys = []
+    if (pathname.startsWith('/admin/skills') || pathname.startsWith('/admin/skill-versions')) openKeys.push('/admin/skills')
     if (pathname.startsWith('/admin/statistics')) openKeys.push('/admin/statistics')
     if (pathname.startsWith('/admin/settings')) openKeys.push('/admin/settings')
     return openKeys

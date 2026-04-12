@@ -61,7 +61,7 @@
 .session-list-content {
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px 8px;
+  padding: 12px 8px 8px;
 }
 
 .session-list-content::-webkit-scrollbar {
@@ -210,6 +210,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
+}
+
+.session-expand-icon {
+  font-size: 10px;
+  color: #999;
+  margin-left: 4px;
+}
+
+.session-submenu {
+  margin-left: 24px;
+}
+
+.session-submenu-item {
+  padding-left: 24px !important;
 }
 
 .session-actions {

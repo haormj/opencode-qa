@@ -79,10 +79,45 @@ export async function getSkills(params: {
       s.displayName?.toLowerCase().includes(search.toLowerCase()) ||
       s.description?.toLowerCase().includes(search.toLowerCase())
     )
+    if (authorId) {
+      await attachPendingVersions(filtered)
+    }
     return { total: filtered.length, page, pageSize, items: filtered }
   }
 
+  if (authorId) {
+    await attachPendingVersions(skillList)
+  }
+
   return { total, page, pageSize, items: skillList }
+}
+
+async function attachPendingVersions(skillList: any[]) {
+  if (skillList.length === 0) return
+  
+  const skillIds = skillList.map(s => s.id)
+  const pendingVersions = await db.select({
+    skillId: skillVersions.skillId,
+    version: skillVersions.version
+  }).from(skillVersions)
+    .where(and(
+      inArray(skillVersions.skillId, skillIds),
+      eq(skillVersions.status, 'pending')
+    ))
+    .orderBy(desc(skillVersions.createdAt))
+
+  const pendingMap = new Map<string, string>()
+  for (const pv of pendingVersions) {
+    if (!pendingMap.has(pv.skillId)) {
+      pendingMap.set(pv.skillId, pv.version)
+    }
+  }
+
+  for (const skill of skillList) {
+    if (pendingMap.has(skill.id)) {
+      skill.pendingVersion = pendingMap.get(skill.id)
+    }
+  }
 }
 
 export async function getTrendingSkills(limit: number = 10) {
@@ -315,6 +350,79 @@ export async function getSkillVersions(skillId: string) {
   return versions
 }
 
+export async function getAllSkillVersions(params: {
+  page?: number
+  pageSize?: number
+  status?: string
+  skillId?: string
+}) {
+  const { page = 1, pageSize = 20, status, skillId } = params
+  const offset = (page - 1) * pageSize
+
+  const conditions = []
+  if (status) conditions.push(eq(skillVersions.status, status))
+  if (skillId) conditions.push(eq(skillVersions.skillId, skillId))
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  const countResult = await db.select({ count: sql<number>`count(*)` })
+    .from(skillVersions)
+    .where(whereClause)
+    .get()
+  const total = countResult?.count || 0
+
+  const versionList = await db.select({
+    id: skillVersions.id,
+    skillId: skillVersions.skillId,
+    version: skillVersions.version,
+    versionType: skillVersions.versionType,
+    changeLog: skillVersions.changeLog,
+    status: skillVersions.status,
+    rejectReason: skillVersions.rejectReason,
+    createdBy: skillVersions.createdBy,
+    approvedBy: skillVersions.approvedBy,
+    createdAt: skillVersions.createdAt,
+    approvedAt: skillVersions.approvedAt,
+    creatorName: users.displayName,
+    skillName: skills.displayName,
+    skillSlug: skills.slug
+  }).from(skillVersions)
+    .leftJoin(users, eq(skillVersions.createdBy, users.id))
+    .leftJoin(skills, eq(skillVersions.skillId, skills.id))
+    .where(whereClause)
+    .orderBy(desc(skillVersions.createdAt))
+    .limit(pageSize)
+    .offset(offset)
+
+  return { total, page, pageSize, items: versionList }
+}
+
+export async function getMySkillVersions(authorId: string, status?: string) {
+  const conditions = [eq(skills.authorId, authorId)]
+  if (status) {
+    conditions.push(eq(skillVersions.status, status))
+  }
+
+  const versionList = await db.select({
+    id: skillVersions.id,
+    skillId: skillVersions.skillId,
+    version: skillVersions.version,
+    versionType: skillVersions.versionType,
+    changeLog: skillVersions.changeLog,
+    status: skillVersions.status,
+    rejectReason: skillVersions.rejectReason,
+    createdBy: skillVersions.createdBy,
+    createdAt: skillVersions.createdAt,
+    skillName: skills.displayName,
+    skillSlug: skills.slug
+  }).from(skillVersions)
+    .innerJoin(skills, eq(skillVersions.skillId, skills.id))
+    .where(and(...conditions))
+    .orderBy(desc(skillVersions.createdAt))
+
+  return { items: versionList }
+}
+
 export async function getSkillVersionById(versionId: string) {
   return db.select().from(skillVersions).where(eq(skillVersions.id, versionId)).get()
 }
@@ -376,10 +484,10 @@ export async function rejectSkillVersion(versionId: string, rejectReason: string
     updatedAt: now
   }).where(eq(skillVersions.id, versionId))
 
-  // 更新技能状态为 rejected
-  if (skill) {
+  // 如果技能状态是 pending（首次发布），记录拒绝原因
+  // 技能保持 pending 状态，作者可以重新提交版本
+  if (skill && skill.status === 'pending') {
     await db.update(skills).set({
-      status: 'rejected',
       rejectReason,
       updatedAt: now
     }).where(eq(skills.id, version.skillId))

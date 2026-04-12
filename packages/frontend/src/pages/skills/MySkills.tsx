@@ -1,17 +1,38 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Tag, Button, Empty, Space, Popconfirm, message } from 'antd'
+import { Table, Card, Tag, Button, Space, Popconfirm, message, Input, Tooltip } from 'antd'
+import { SearchOutlined, EditOutlined, CheckOutlined, StopOutlined, DeleteOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { getMyPublishedSkills, offlineSkill, onlineSkill, deleteSkill, type Skill } from '../../services/api'
+import './MySkills.css'
+
+const statusColors: Record<string, string> = { 
+  pending: 'orange', 
+  approved: 'green', 
+  unpublished: 'default' 
+}
+const statusLabels: Record<string, string> = { 
+  pending: '待发布', 
+  approved: '已发布', 
+  unpublished: '已下架' 
+}
 
 function MySkills() {
   const navigate = useNavigate()
   const [skills, setSkills] = useState<Skill[]>([])
+  const [filteredSkills, setFilteredSkills] = useState<Skill[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchText, setSearchText] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(15)
 
   const loadSkills = () => {
     setLoading(true)
     getMyPublishedSkills()
-      .then(result => setSkills(result.items))
+      .then(result => {
+        setSkills(result.items)
+        setFilteredSkills(result.items)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }
@@ -20,21 +41,21 @@ function MySkills() {
     loadSkills()
   }, [])
 
-  const statusColors: Record<string, string> = { 
-    pending: 'orange', 
-    approved: 'green', 
-    rejected: 'red', 
-    unpublished: 'default' 
-  }
-  const statusLabels: Record<string, string> = { 
-    pending: '待审核', 
-    approved: '已通过', 
-    rejected: '已拒绝', 
-    unpublished: '已下架' 
+  const handleSearch = () => {
+    setPage(1)
+    if (!searchText.trim()) {
+      setFilteredSkills(skills)
+    } else {
+      const filtered = skills.filter(s => 
+        s.displayName.toLowerCase().includes(searchText.toLowerCase()) ||
+        s.name.toLowerCase().includes(searchText.toLowerCase())
+      )
+      setFilteredSkills(filtered)
+    }
   }
 
   const handleUpdate = (skill: Skill) => {
-    navigate(`/skills/update/${skill.id}`)
+    navigate(`/skills/update/${skill.slug}`)
   }
 
   const handleOffline = async (skill: Skill) => {
@@ -50,7 +71,7 @@ function MySkills() {
   const handleOnline = async (skill: Skill) => {
     try {
       await onlineSkill(skill.id)
-      message.success('技能已提交审核')
+      message.success('技能已上架')
       loadSkills()
     } catch {
       message.error('上架失败')
@@ -67,61 +88,85 @@ function MySkills() {
     }
   }
 
-  const columns = [
+  const columns: ColumnsType<Skill> = [
     { 
       title: '名称', 
       dataIndex: 'displayName', 
       key: 'name',
-      render: (name: string, record: Skill) => (
-        <a onClick={(e) => { e.stopPropagation(); navigate(`/skills/${record.slug}`) }} style={{ color: '#1890ff' }}>
+      width: 200,
+      ellipsis: true,
+      render: (name: string, record) => (
+        <span
+          style={{ color: '#1890ff', cursor: 'pointer' }}
+          onClick={() => navigate(`/skills/my/${record.slug}`)}
+        >
           {name}
-        </a>
+        </span>
       )
     },
-    { title: '状态', dataIndex: 'status', key: 'status', render: (status: string) => (
-      <Tag color={statusColors[status]}>{statusLabels[status] || status}</Tag>
-    )},
-    { title: '下载量', dataIndex: 'downloadCount', key: 'downloadCount' },
-    { title: '收藏数', dataIndex: 'favoriteCount', key: 'favoriteCount' },
-    { title: '版本', dataIndex: 'version', key: 'version' },
-    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', render: (v: string) => new Date(v).toLocaleDateString() },
+    { 
+      title: '状态', 
+      dataIndex: 'status', 
+      key: 'status', 
+      width: 100,
+      render: (status: string) => (
+        <Tag color={statusColors[status]}>{statusLabels[status] || status}</Tag>
+      )
+    },
+    { title: '下载量', dataIndex: 'downloadCount', key: 'downloadCount', width: 80, align: 'center' },
+    { title: '收藏数', dataIndex: 'favoriteCount', key: 'favoriteCount', width: 80, align: 'center' },
+    { title: '版本', dataIndex: 'version', key: 'version', width: 80, align: 'center' },
+    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 120, render: (v: string) => new Date(v).toLocaleDateString() },
     { 
       title: '操作', 
       key: 'action',
-      render: (_: unknown, record: Skill) => {
+      width: 140,
+      render: (_, record) => {
         const actions = []
         
         if (record.status === 'approved') {
           actions.push(
-            <Button key="update" type="link" onClick={() => handleUpdate(record)}>更新</Button>,
+            <Tooltip key="update" title="更新">
+              <Button type="text" icon={<EditOutlined />} onClick={() => handleUpdate(record)} />
+            </Tooltip>,
             <Popconfirm 
               key="offline"
               title="确定下架该技能？" 
               onConfirm={() => handleOffline(record)}
             >
-              <Button type="link">下架</Button>
+              <Tooltip title="下架">
+                <Button type="text" icon={<StopOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )
         } else if (record.status === 'unpublished') {
           actions.push(
-            <Button key="online" type="link" onClick={() => handleOnline(record)}>上架</Button>,
+            <Tooltip key="online" title="上架">
+              <Button type="text" icon={<CheckOutlined />} onClick={() => handleOnline(record)} />
+            </Tooltip>,
             <Popconfirm 
               key="delete"
               title="确定删除该技能？" 
               onConfirm={() => handleDelete(record)}
             >
-              <Button type="link" danger>删除</Button>
+              <Tooltip title="删除">
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )
         } else {
           actions.push(
-            <Button key="update" type="link" onClick={() => handleUpdate(record)}>更新</Button>,
+            <Tooltip key="update" title="更新">
+              <Button type="text" icon={<EditOutlined />} onClick={() => handleUpdate(record)} />
+            </Tooltip>,
             <Popconfirm 
               key="delete"
               title="确定删除该技能？" 
               onConfirm={() => handleDelete(record)}
             >
-              <Button type="link" danger>删除</Button>
+              <Tooltip title="删除">
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )
         }
@@ -132,14 +177,43 @@ function MySkills() {
   ]
 
   return (
-    <div className="skill-mypage">
-      <Table
-        dataSource={skills}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        locale={{ emptyText: <Empty description="您还没有发布技能" /> }}
-      />
+    <div className="skill-my-page">
+      <Card
+        title="技能列表"
+        extra={
+          <Space>
+            <Input
+              placeholder="搜索技能名称"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onPressEnter={handleSearch}
+              prefix={<SearchOutlined />}
+              style={{ width: 200 }}
+            />
+            <Button onClick={handleSearch}>
+              搜索
+            </Button>
+          </Space>
+        }
+      >
+        <Table
+          dataSource={filteredSkills}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: page,
+            pageSize,
+            total: filteredSkills.length,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (p, ps) => {
+              setPage(p)
+              setPageSize(ps)
+            }
+          }}
+        />
+      </Card>
     </div>
   )
 }

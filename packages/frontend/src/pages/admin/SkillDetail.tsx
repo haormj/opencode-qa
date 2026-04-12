@@ -5,8 +5,8 @@ import type { TreeDataNode } from 'antd'
 import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
 import { getAdminSkillById, getAdminSkillFiles, getSkillFileContent, batchReviewSkills, type SkillDetail, type FileNode } from '../../services/api'
 
-const statusColors: Record<string, string> = { pending: 'orange', approved: 'green', rejected: 'red', unpublished: 'default' }
-const statusLabels: Record<string, string> = { pending: '待审核', approved: '已通过', rejected: '已拒绝', unpublished: '已下架' }
+const statusColors: Record<string, string> = { pending: 'orange', approved: 'green', unpublished: 'default' }
+const statusLabels: Record<string, string> = { pending: '待发布', approved: '已发布', unpublished: '已下架' }
 
 function SkillDetail() {
   const { id } = useParams<{ id: string }>()

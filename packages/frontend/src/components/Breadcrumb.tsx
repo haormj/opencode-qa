@@ -17,18 +17,36 @@ function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: B
         return { first: '技能市场', second: null }
       }
       if (skillPathname === '/skills/publish') {
-        return { first: '技能市场', second: '发布技能' }
-      }
-      if (skillPathname.match(/^\/skills\/update\/[^/]+$/)) {
-        return { first: '技能市场', second: '更新技能' }
-      }
-      if (skillPathname === '/skills/my/published') {
-        return { first: '技能市场', second: '我的技能' }
-      }
-      if (skillPathname === '/skills/my/favorites') {
-        return { first: '技能市场', second: '我的收藏' }
+        return { first: '我的技能', second: '发布技能' }
       }
       
+      // 我的技能相关页面 - 不显示"技能市场"
+      if (skillPathname === '/skills/my/published') {
+        return { first: '我的技能', second: '技能列表' }
+      }
+      if (skillPathname === '/skills/my/versions') {
+        return { first: '我的技能', second: '技能版本' }
+      }
+      if (skillPathname === '/skills/my/favorites') {
+        return { first: '我的收藏', second: null }
+      }
+      
+      // 我的技能详情页
+      const mySkillMatch = skillPathname.match(/^\/skills\/my\/([^/]+)$/)
+      if (mySkillMatch) {
+        return { first: '我的技能', second: '技能列表', third: '技能详情' }
+      }
+      const versionDetailMatch = skillPathname.match(/^\/skills\/my\/versions\/[^/]+$/)
+      if (versionDetailMatch) {
+        return { first: '我的技能', second: '技能版本', third: '版本详情' }
+      }
+      
+      // 更新技能页
+      if (skillPathname.match(/^\/skills\/update\/[^/]+$/)) {
+        return { first: '我的技能', second: '更新技能' }
+      }
+      
+      // 技能市场详情页
       const slugMatch = skillPathname.match(/^\/skills\/([^/]+)$/)
       if (slugMatch) {
         return { first: '技能市场', second: '技能详情' }
@@ -37,7 +55,7 @@ function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: B
       return { first: '技能市场', second: null }
     }
     
-    const { first, second } = getSkillBreadcrumb()
+    const { first, second, third } = getSkillBreadcrumb()
     
     return (
       <div className="breadcrumb-container">
@@ -45,7 +63,13 @@ function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: B
         {second && (
           <>
             <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">{second}</span>
+            <span className="breadcrumb-item">{second}</span>
+          </>
+        )}
+        {third && (
+          <>
+            <span className="breadcrumb-separator">/</span>
+            <span className="breadcrumb-current">{third}</span>
           </>
         )}
       </div>

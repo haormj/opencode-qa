@@ -6,8 +6,10 @@ const breadcrumbMap: Record<string, { title: string; parent?: string }> = {
   '/admin/users': { title: '用户管理' },
   '/admin/bots': { title: '机器人管理' },
   '/admin/assistants': { title: '助手管理' },
-  '/admin/skills': { title: '技能管理' },
-  '/admin/skills/categories': { title: '技能分类', parent: '/admin/skills' },
+  '/admin/skills': { title: '技能列表', parent: '/admin/skills-menu' },
+  '/admin/skills-menu': { title: '技能管理' },
+  '/admin/skills/categories': { title: '技能分类', parent: '/admin/skills-menu' },
+  '/admin/skill-versions': { title: '技能版本', parent: '/admin/skills-menu' },
   '/admin/statistics': { title: '数据统计' },
   '/admin/statistics/overview': { title: '概览', parent: '/admin/statistics' },
   '/admin/settings': { title: '系统设置' },
@@ -28,8 +30,16 @@ function AdminBreadcrumb() {
       return items
     }
 
+    if (pathname.startsWith('/admin/skill-versions/') && pathname !== '/admin/skill-versions') {
+      items.push({ title: '技能管理' })
+      items.push({ title: '技能版本', path: '/admin/skill-versions' })
+      items.push({ title: '版本详情' })
+      return items
+    }
+
     if (pathname.startsWith('/admin/skills/') && pathname !== '/admin/skills' && !pathname.includes('/categories')) {
-      items.push({ title: '技能管理', path: '/admin/skills' })
+      items.push({ title: '技能管理' })
+      items.push({ title: '技能列表', path: '/admin/skills' })
       items.push({ title: '技能详情' })
       return items
     }

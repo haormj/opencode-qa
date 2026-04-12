@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Tag, Input, Select, Button, Space, Tooltip, message, Popconfirm, Modal, Form } from 'antd'
-import { SearchOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Card, Tag, Input, Select, Button, Space, Tooltip, message, Modal, Form } from 'antd'
+import { SearchOutlined, EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAdminSkills, getAdminSkillCategories, reviewSkill, batchReviewSkills, batchDeleteSkills, type Skill, type SkillCategory } from '../../services/api'
+import { getAdminSkills, getAdminSkillCategories, reviewSkill, type Skill, type SkillCategory } from '../../services/api'
 import './Admin.css'
 
 const statusColors: Record<string, string> = {
   pending: 'orange',
   approved: 'green',
-  rejected: 'red',
   unpublished: 'default'
 }
 
 const statusLabels: Record<string, string> = {
-  pending: '待审核',
-  approved: '已通过',
-  rejected: '已拒绝',
+  pending: '待发布',
+  approved: '已发布',
   unpublished: '已下架'
 }
 
@@ -29,16 +27,12 @@ function AdminSkills() {
   const [pageSize, setPageSize] = useState(15)
 
   const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('pending')
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>()
   const [categories, setCategories] = useState<SkillCategory[]>([])
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   const [reviewModal, setReviewModal] = useState(false)
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null)
   const [reviewForm] = Form.useForm()
-  const [batchModal, setBatchModal] = useState(false)
-  const [batchForm] = Form.useForm()
 
   useEffect(() => {
     getAdminSkillCategories().then(setCategories).catch(() => {})
@@ -48,7 +42,6 @@ function AdminSkills() {
     setLoading(true)
     try {
       const result = await getAdminSkills({
-        status: statusFilter || undefined,
         search: searchText || undefined,
         page,
         pageSize
@@ -68,8 +61,7 @@ function AdminSkills() {
 
   useEffect(() => {
     fetchSkills()
-    setSelectedRowKeys([])
-  }, [page, pageSize, statusFilter, categoryFilter])
+  }, [page, pageSize, categoryFilter])
 
   const handleSearch = () => {
     setPage(1)
@@ -92,35 +84,6 @@ function AdminSkills() {
       fetchSkills()
     } catch {
       message.error('审核失败')
-    }
-  }
-
-  const handleBatchReview = (status: 'approved' | 'rejected') => {
-    batchForm.setFieldsValue({ status, rejectReason: '' })
-    setBatchModal(true)
-  }
-
-  const submitBatchReview = async () => {
-    try {
-      const values = await batchForm.validateFields()
-      await batchReviewSkills(selectedRowKeys, values.status, values.rejectReason)
-      message.success(`已处理 ${selectedRowKeys.length} 个技能`)
-      setBatchModal(false)
-      setSelectedRowKeys([])
-      fetchSkills()
-    } catch {
-      message.error('批量操作失败')
-    }
-  }
-
-  const handleBatchDelete = async () => {
-    try {
-      await batchDeleteSkills(selectedRowKeys)
-      message.success(`已删除 ${selectedRowKeys.length} 个技能`)
-      setSelectedRowKeys([])
-      fetchSkills()
-    } catch {
-      message.error('批量删除失败')
     }
   }
 
@@ -220,11 +183,7 @@ function AdminSkills() {
   return (
     <>
       <Card
-        title={
-          selectedRowKeys.length > 0 
-            ? `已选择 ${selectedRowKeys.length} 项` 
-            : '技能管理'
-        }
+        title="技能列表"
         extra={
           <Space>
             <Input
@@ -234,21 +193,6 @@ function AdminSkills() {
               onPressEnter={handleSearch}
               prefix={<SearchOutlined />}
               style={{ width: 200 }}
-            />
-            <Select
-              placeholder="状态筛选"
-              value={statusFilter}
-              onChange={(value) => {
-                setStatusFilter(value)
-                setPage(1)
-              }}
-              allowClear
-              style={{ width: 120 }}
-              options={[
-                { value: 'pending', label: '待审核' },
-                { value: 'approved', label: '已通过' },
-                { value: 'rejected', label: '已拒绝' }
-              ]}
             />
             <Select
               placeholder="分类筛选"
@@ -265,34 +209,6 @@ function AdminSkills() {
               搜索
             </Button>
           </Space>
-        }
-        actions={
-          selectedRowKeys.length > 0
-            ? [
-                <Space key="batch-actions">
-                  <Button type="primary" icon={<CheckOutlined />} onClick={() => handleBatchReview('approved')}>
-                    批量通过
-                  </Button>
-                  <Button danger icon={<CloseOutlined />} onClick={() => handleBatchReview('rejected')}>
-                    批量拒绝
-                  </Button>
-                  <Popconfirm
-                    title="确定删除选中的技能吗？"
-                    description="删除后无法恢复"
-                    onConfirm={handleBatchDelete}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Button danger icon={<DeleteOutlined />}>
-                      批量删除
-                    </Button>
-                  </Popconfirm>
-                  <Button onClick={() => setSelectedRowKeys([])}>
-                    取消选择
-                  </Button>
-                </Space>
-              ]
-            : undefined
         }
       >
         <Table
@@ -311,10 +227,6 @@ function AdminSkills() {
               setPageSize(ps)
             }
           }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys as string[])
-          }}
         />
       </Card>
 
@@ -326,25 +238,6 @@ function AdminSkills() {
       >
         <Form form={reviewForm} layout="vertical">
           <Form.Item name="status" label="审核结果">
-            <Select>
-              <Select.Option value="approved">通过</Select.Option>
-              <Select.Option value="rejected">拒绝</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="rejectReason" label="拒绝原因">
-            <Input.TextArea rows={3} placeholder="拒绝时建议填写原因" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="批量审核"
-        open={batchModal}
-        onOk={submitBatchReview}
-        onCancel={() => setBatchModal(false)}
-      >
-        <Form form={batchForm} layout="vertical">
-          <Form.Item name="status" label="审核结果" rules={[{ required: true }]}>
             <Select>
               <Select.Option value="approved">通过</Select.Option>
               <Select.Option value="rejected">拒绝</Select.Option>

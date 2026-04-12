@@ -15,6 +15,8 @@ import AdminSystemSettings from './pages/admin/SystemSettings'
 import AdminSkills from './pages/admin/Skills'
 import SkillDetail from './pages/admin/SkillDetail'
 import SkillCategories from './pages/admin/SkillCategories'
+import SkillVersions from './pages/admin/SkillVersions'
+import SkillVersionDetail from './pages/admin/SkillVersionDetail'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -78,7 +80,7 @@ function App() {
           }
         />
         <Route
-          path="/skills/update/:id"
+          path="/skills/update/:slug"
           element={
             <PrivateRoute>
               <Home />
@@ -95,6 +97,30 @@ function App() {
         />
         <Route
           path="/skills/my/favorites"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/my/versions"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/my/versions/:versionId"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/skills/my/:slug"
           element={
             <PrivateRoute>
               <Home />
@@ -126,6 +152,8 @@ function App() {
           <Route path="skills" element={<AdminSkills />} />
           <Route path="skills/:id" element={<SkillDetail />} />
           <Route path="skills/categories" element={<SkillCategories />} />
+          <Route path="skill-versions" element={<SkillVersions />} />
+          <Route path="skill-versions/:id" element={<SkillVersionDetail />} />
           <Route path="settings/sso" element={<AdminSsoProviders />} />
           <Route path="settings/system" element={<AdminSystemSettings />} />
           <Route path="statistics" element={<StatisticsLayout />}>

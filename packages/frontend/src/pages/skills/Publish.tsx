@@ -62,19 +62,47 @@ function Publish() {
     return result
   }
 
+  const stripCommonPrefix = (paths: string[]): string[] => {
+    if (paths.length === 0) return paths
+    
+    const firstPath = paths[0]
+    const parts = firstPath.split('/')
+    
+    let commonPrefix = ''
+    for (let i = 0; i < parts.length - 1; i++) {
+      const prefix = parts.slice(0, i + 1).join('/') + '/'
+      if (paths.every(p => p.startsWith(prefix))) {
+        commonPrefix = prefix
+      } else {
+        break
+      }
+    }
+    
+    if (commonPrefix) {
+      return paths.map(p => p.startsWith(commonPrefix) ? p.slice(commonPrefix.length) : p)
+    }
+    return paths
+  }
+
   const processFiles = useCallback(async (filesWithPath: Array<{ file: File; path: string }>) => {
+    const originalPaths = filesWithPath.map(f => f.path)
+    const normalizedPaths = stripCommonPrefix(originalPaths)
+    
     const allFiles: File[] = []
     const allPaths: string[] = []
     let total = 0
     let foundSkillMd = false
     let metadata: { name?: string; displayName?: string; description?: string } = {}
 
-    for (const { file, path } of filesWithPath) {
+    for (let i = 0; i < filesWithPath.length; i++) {
+      const { file } = filesWithPath[i]
+      const normalizedPath = normalizedPaths[i]
+      
       allFiles.push(file)
-      allPaths.push(path)
+      allPaths.push(normalizedPath)
       total += file.size
 
-      if (path.endsWith('SKILL.md')) {
+      if (normalizedPath.endsWith('SKILL.md')) {
         foundSkillMd = true
         try {
           const content = await file.text()

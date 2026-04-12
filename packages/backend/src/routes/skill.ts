@@ -1,3 +1,5 @@
+import path from 'path'
+import fs from 'fs/promises'
 import { Router } from 'express'
 import multer from 'multer'
 import { authMiddleware } from '../middleware/auth.js'
@@ -59,6 +61,109 @@ router.get('/my/favorites', async (req, res) => {
     res.json(favorites)
   } catch (error) {
     logger.error('Get my favorites error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/my/versions', async (req, res) => {
+  try {
+    const result = await skillService.getMySkillVersions(
+      req.user!.id,
+      req.query.status as string | undefined
+    )
+    res.json(result)
+  } catch (error) {
+    logger.error('Get my versions error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/my/versions/:versionId', async (req, res) => {
+  try {
+    const { versionId } = req.params
+    const version = await skillService.getSkillVersionById(versionId)
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' })
+    }
+
+    const skill = await skillService.getSkillById(version.skillId)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    if (skill.authorId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    res.json({
+      ...version,
+      skillName: skill.displayName,
+      skillSlug: skill.slug,
+      skillId: skill.id
+    })
+  } catch (error) {
+    logger.error('Get my version detail error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/my/versions/:versionId/files', async (req, res) => {
+  try {
+    const { versionId } = req.params
+    const version = await skillService.getSkillVersionById(versionId)
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' })
+    }
+
+    const skill = await skillService.getSkillById(version.skillId)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    if (skill.authorId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    const tree = await skillFileService.getSkillFileTree(skill.slug, 'pending')
+    res.json({ tree })
+  } catch (error) {
+    logger.error('Get my version files error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/my/versions/:versionId/files/*', async (req, res) => {
+  try {
+    const { versionId } = req.params
+    const filePath = (req.params as Record<string, string>)[0]
+    
+    if (!filePath || filePath.includes('..') || path.isAbsolute(filePath)) {
+      return res.status(400).json({ error: 'Invalid file path' })
+    }
+
+    const version = await skillService.getSkillVersionById(versionId)
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' })
+    }
+
+    const skill = await skillService.getSkillById(version.skillId)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    if (skill.authorId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    const content = await skillFileService.readSkillFileFromLocation(skill.slug, filePath, 'pending')
+    if (!content) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.send(content.toString('utf-8'))
+  } catch (error) {
+    logger.error('Get my version file content error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -146,10 +251,65 @@ router.get('/:slug/files', async (req, res) => {
       return res.status(404).json({ error: 'Skill not found' })
     }
 
-    const tree = await skillFileService.getSkillFileTree(skill.slug, 'current')
+    let location: 'current' | 'pending' = 'current'
+    // 作者或管理员查看时，优先显示 pending 目录
+    if (skill.authorId === req.user!.id || req.user!.roles.includes('admin')) {
+      const pendingPath = skillFileService.getPendingPath(skill.slug)
+      try {
+        await fs.access(pendingPath)
+        location = 'pending'
+      } catch {
+        location = 'current'
+      }
+    }
+
+    const tree = await skillFileService.getSkillFileTree(skill.slug, location)
     res.json({ tree })
   } catch (error) {
     logger.error('Get skill files error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/:slug/files/*', async (req, res) => {
+  try {
+    const filePath = (req.params as Record<string, string>)[0]
+    
+    if (!filePath || filePath.includes('..') || path.isAbsolute(filePath)) {
+      return res.status(400).json({ error: 'Invalid file path' })
+    }
+
+    const skill = await skillService.getSkillBySlug(req.params.slug)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    // 只有作者或管理员可以查看文件内容
+    if (skill.authorId !== req.user!.id && !req.user!.roles.includes('admin')) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    let location: 'current' | 'pending' = 'current'
+    // 作者或管理员查看时，优先从 pending 目录读取
+    if (skill.authorId === req.user!.id || req.user!.roles.includes('admin')) {
+      const pendingPath = skillFileService.getPendingPath(skill.slug)
+      try {
+        await fs.access(pendingPath)
+        location = 'pending'
+      } catch {
+        location = 'current'
+      }
+    }
+
+    const content = await skillFileService.readSkillFileFromLocation(skill.slug, filePath, location)
+    if (!content) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.send(content.toString('utf-8'))
+  } catch (error) {
+    logger.error('Get skill file content error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -327,7 +487,7 @@ router.put('/:id/online', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' })
     }
 
-    const updated = await skillService.updateSkill(id, { status: 'pending' })
+    const updated = await skillService.updateSkill(id, { status: 'approved' })
     res.json(updated)
   } catch (error) {
     logger.error('Online skill error:', error)

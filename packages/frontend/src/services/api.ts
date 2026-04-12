@@ -790,6 +790,7 @@ export interface Skill {
   categoryId?: number | null
   authorId: string
   version: string
+  pendingVersion?: string
   status: string
   rejectReason: string | null
   downloadCount: number
@@ -958,6 +959,54 @@ export async function getSkillVersions(slug: string): Promise<{ items: SkillVers
   return request(`${API_BASE}/skills/${slug}/versions`)
 }
 
+export interface MyPendingVersion {
+  id: string
+  skillId: string
+  version: string
+  versionType: string
+  changeLog: string | null
+  status: string
+  rejectReason: string | null
+  createdBy: string
+  createdAt: string
+  skillName: string
+  skillSlug: string
+}
+
+export async function getMySkillVersions(status?: string): Promise<{ items: MyPendingVersion[] }> {
+  const params = new URLSearchParams()
+  if (status) params.append('status', status)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return request(`${API_BASE}/skills/my/versions${query}`)
+}
+
+export interface MyVersionDetail extends MyPendingVersion {
+  skillName: string
+  skillSlug: string
+  skillId: string
+}
+
+export async function getMySkillVersionById(versionId: string): Promise<MyVersionDetail> {
+  return request(`${API_BASE}/skills/my/versions/${versionId}`)
+}
+
+export async function getMySkillVersionFiles(versionId: string): Promise<{ tree: FileNode[] }> {
+  return request(`${API_BASE}/skills/my/versions/${versionId}/files`)
+}
+
+export async function getMySkillVersionFileContent(versionId: string, filePath: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/skills/my/versions/${versionId}/files/${encodeURIComponent(filePath)}`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch file content' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+  return response.text()
+}
+
 export async function createSkill(data: Partial<Skill> & { name: string; displayName: string; slug: string }): Promise<Skill> {
   return request(`${API_BASE}/skills`, {
     method: 'POST',
@@ -1039,6 +1088,19 @@ export interface UploadFileNode {
 
 export async function getSkillFiles(slug: string): Promise<{ tree: FileNode[] }> {
   return request(`${API_BASE}/skills/${slug}/files`)
+}
+
+export async function getSkillFileContentBySlug(slug: string, filePath: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/skills/${slug}/files/${encodeURIComponent(filePath)}`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch file content' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+  return response.text()
 }
 
 export interface UploadResult {
@@ -1184,4 +1246,82 @@ export async function batchDeleteSkills(ids: string[]): Promise<{ success: boole
     method: 'POST',
     body: JSON.stringify({ ids }),
   })
+}
+
+export interface AdminSkillVersion {
+  id: string
+  skillId: string
+  version: string
+  versionType: string
+  changeLog: string | null
+  status: string
+  rejectReason: string | null
+  createdBy: string
+  approvedBy: string | null
+  createdAt: string
+  approvedAt: string | null
+  creatorName: string | null
+  skillName: string | null
+  skillSlug: string | null
+}
+
+export interface AdminSkillVersionListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: AdminSkillVersion[]
+}
+
+export async function getAdminSkillVersions(params: {
+  page?: number
+  pageSize?: number
+  status?: string
+}): Promise<AdminSkillVersionListResponse> {
+  const query = new URLSearchParams()
+  if (params.page) query.set('page', params.page.toString())
+  if (params.pageSize) query.set('pageSize', params.pageSize.toString())
+  if (params.status) query.set('status', params.status)
+  return request(`${API_BASE}/admin/skill-versions?${query.toString()}`)
+}
+
+export async function approveSkillVersion(versionId: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/skill-versions/${versionId}/approve`, {
+    method: 'PUT',
+  })
+}
+
+export async function rejectSkillVersion(versionId: string, rejectReason: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/skill-versions/${versionId}/reject`, {
+    method: 'PUT',
+    body: JSON.stringify({ rejectReason }),
+  })
+}
+
+export async function getSkillVersionFiles(versionId: string): Promise<{ tree: FileNode[] }> {
+  return request(`${API_BASE}/admin/skill-versions/${versionId}/files`)
+}
+
+export interface AdminSkillVersionDetail extends AdminSkillVersion {
+  skillStatus: string
+  skillDownloadCount: number
+  skillFavoriteCount: number
+  skillDescription: string | null
+  skillAuthorName: string | null
+}
+
+export async function getAdminSkillVersionById(versionId: string): Promise<AdminSkillVersionDetail> {
+  return request(`${API_BASE}/admin/skill-versions/${versionId}`)
+}
+
+export async function getSkillVersionFileContent(versionId: string, filePath: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/admin/skill-versions/${versionId}/files/${encodeURIComponent(filePath)}`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch file content' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+  return response.text()
 }

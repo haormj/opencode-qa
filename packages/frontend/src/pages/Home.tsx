@@ -12,6 +12,9 @@ import SkillDetail from './skills/Detail'
 import SkillPublish from './skills/Publish'
 import SkillUpdate from './skills/Update'
 import MySkills from './skills/MySkills'
+import MySkillDetail from './skills/MySkillDetail'
+import MySkillVersions from './skills/MySkillVersions'
+import MySkillVersionDetail from './skills/MySkillVersionDetail'
 import MyFavorites from './skills/MyFavorites'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, getAssistants, type MessageItem } from '../services/api'
 import { useSessionEvents } from '../hooks/useSessionEvents'
@@ -474,10 +477,15 @@ function Home() {
               const path = locationHook.pathname
               const slug = path.match(/^\/skills\/([^/]+)$/)?.[1]
               const updateMatch = path.match(/^\/skills\/update\/([^/]+)$/)
+              const mySkillMatch = path.match(/^\/skills\/my\/([^/]+)$/)
+              const versionDetailMatch = path.match(/^\/skills\/my\/versions\/([^/]+)$/)
               if (path === '/skills/publish') return <SkillPublish />
               if (updateMatch) return <SkillUpdate />
+              if (versionDetailMatch) return <MySkillVersionDetail />
               if (path === '/skills/my/published') return <MySkills />
+              if (path === '/skills/my/versions') return <MySkillVersions />
               if (path === '/skills/my/favorites') return <MyFavorites />
+              if (mySkillMatch) return <MySkillDetail />
               if (slug) return <SkillDetail />
               return <SkillMarket />
             })()

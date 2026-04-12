@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button, Tooltip } from 'antd'
-import { PlusOutlined, AppstoreOutlined, FileTextOutlined, HeartOutlined } from '@ant-design/icons'
+import { PlusOutlined, AppstoreOutlined, FileTextOutlined, HeartOutlined, DownOutlined, RightOutlined } from '@ant-design/icons'
 import SessionList from './SessionList'
 import type { Session } from '../../services/api'
 import { getPublicSettings } from '../../services/api'
@@ -17,9 +17,25 @@ interface SidebarProps {
   mode?: 'chat' | 'skill'
 }
 
-const skillMenuItems = [
+interface MenuItem {
+  key: string
+  label: string
+  icon: React.ReactNode
+  children?: { key: string; label: string }[]
+}
+
+const skillMenuItems: MenuItem[] = [
   { key: '/skills', label: '技能市场', icon: <AppstoreOutlined /> },
-  { key: '/skills/my/published', label: '我的技能', icon: <FileTextOutlined /> },
+  { 
+    key: '/skills/my', 
+    label: '我的技能', 
+    icon: <FileTextOutlined />,
+    children: [
+      { key: '/skills/publish', label: '发布技能' },
+      { key: '/skills/my/published', label: '技能列表' },
+      { key: '/skills/my/versions', label: '技能版本' }
+    ]
+  },
   { key: '/skills/my/favorites', label: '我的收藏', icon: <HeartOutlined /> },
 ]
 
@@ -33,6 +49,7 @@ function Sidebar({
   mode = 'chat'
 }: SidebarProps) {
   const [siteTitle, setSiteTitle] = useState('OpenCode QA')
+  const [expandedKeys, setExpandedKeys] = useState<string[]>(['/skills/my'])
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -44,15 +61,71 @@ function Sidebar({
     }).catch(() => {})
   }, [])
 
-  const isSkillMenuItemActive = (key: string) => {
-    if (key === '/skills') {
-      return location.pathname === '/skills' || location.pathname === '/skills/'
+  useEffect(() => {
+    const matchedParent = skillMenuItems.find(item => 
+      item.children?.some(child => location.pathname === child.key)
+    )
+    if (matchedParent && !expandedKeys.includes(matchedParent.key)) {
+      setExpandedKeys(prev => [...prev, matchedParent.key])
     }
-    return location.pathname.startsWith(key)
+  }, [location.pathname, expandedKeys])
+
+  const isSkillMenuItemActive = (key: string) => {
+    return location.pathname === key || location.pathname.startsWith(key + '/')
   }
 
-  const handleSkillMenuClick = (key: string) => {
-    navigate(key)
+  const isMenuItemOrChildActive = (item: MenuItem) => {
+    if (isSkillMenuItemActive(item.key)) return true
+    if (item.children) {
+      return item.children.some(child => location.pathname === child.key)
+    }
+    return false
+  }
+
+  const handleSkillMenuClick = (key: string, hasChildren: boolean) => {
+    if (hasChildren) {
+      setExpandedKeys(prev => 
+        prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+      )
+    } else {
+      navigate(key)
+    }
+  }
+
+  const renderMenuItem = (item: MenuItem) => {
+    const isActive = isSkillMenuItemActive(item.key) || isMenuItemOrChildActive(item)
+    const isExpanded = expandedKeys.includes(item.key)
+    const hasChildren = item.children && item.children.length > 0
+
+    return (
+      <div key={item.key}>
+        <div
+          className={`session-item ${isActive && !hasChildren ? 'active' : ''}`}
+          onClick={() => handleSkillMenuClick(item.key, hasChildren || false)}
+        >
+          <span className="session-icon">{item.icon}</span>
+          <span className="session-title">{item.label}</span>
+          {hasChildren && (
+            <span className="session-expand-icon">
+              {isExpanded ? <DownOutlined /> : <RightOutlined />}
+            </span>
+          )}
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="session-submenu">
+            {item.children!.map(child => (
+              <div
+                key={child.key}
+                className={`session-item session-submenu-item ${isSkillMenuItemActive(child.key) ? 'active' : ''}`}
+                onClick={() => navigate(child.key)}
+              >
+                <span className="session-title">{child.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -61,18 +134,20 @@ function Sidebar({
         <span className="brand-text">{siteTitle}</span>
       </div>
 
-      <div className="sidebar-new-chat">
-        <Tooltip title={mode === 'chat' ? '新对话' : '发布技能'} placement="top">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={mode === 'chat' ? onNewSession : () => navigate('/skills/publish')}
-            block
-          >
-            {mode === 'chat' ? '新对话' : '发布技能'}
-          </Button>
-        </Tooltip>
-      </div>
+      {mode === 'chat' && (
+        <div className="sidebar-new-chat">
+          <Tooltip title="新对话" placement="top">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={onNewSession}
+              block
+            >
+              新对话
+            </Button>
+          </Tooltip>
+        </div>
+      )}
 
       {mode === 'chat' ? (
         <SessionList
@@ -86,16 +161,7 @@ function Sidebar({
       ) : (
         <div className="session-list">
           <div className="session-list-content">
-            {skillMenuItems.map(item => (
-              <div
-                key={item.key}
-                className={`session-item ${isSkillMenuItemActive(item.key) ? 'active' : ''}`}
-                onClick={() => handleSkillMenuClick(item.key)}
-              >
-                <span className="session-icon">{item.icon}</span>
-                <span className="session-title">{item.label}</span>
-              </div>
-            ))}
+            {skillMenuItems.map(renderMenuItem)}
           </div>
         </div>
       )}
