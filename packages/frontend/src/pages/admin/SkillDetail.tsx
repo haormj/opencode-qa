@@ -171,7 +171,7 @@ function SkillDetail() {
             key: 'files',
             label: '文件预览',
             children: (
-              <div ref={containerRef} style={{ display: 'flex', minHeight: 400 }}>
+              <div ref={containerRef} style={{ display: 'flex', height: 'calc(100vh - 450px)' }}>
                 <div style={{ width: leftWidth, overflow: 'auto' }}>
                   <Tree
                     showIcon
