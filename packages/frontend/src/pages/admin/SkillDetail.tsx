@@ -145,6 +145,7 @@ function SkillDetail() {
                 <div style={{ width: 250, borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
                   <Tree
                     showIcon
+                    expandAction="click"
                     treeData={renderFileTree(fileTree)}
                     onSelect={(keys) => {
                       if (keys.length > 0 && typeof keys[0] === 'string') {
