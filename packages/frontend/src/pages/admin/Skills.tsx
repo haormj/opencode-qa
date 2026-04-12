@@ -61,7 +61,7 @@ function AdminSkills() {
   useEffect(() => {
     fetchSkills(page, statusFilter, categoryFilter, searchText)
     setSelectedRowKeys([])
-  }, [page, statusFilter, categoryFilter, searchText])
+  }, [page, statusFilter, categoryFilter])
 
   const handleSearch = () => {
     setPage(1)
