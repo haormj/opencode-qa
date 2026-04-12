@@ -6,6 +6,8 @@ const breadcrumbMap: Record<string, { title: string; parent?: string }> = {
   '/admin/users': { title: '用户管理' },
   '/admin/bots': { title: '机器人管理' },
   '/admin/assistants': { title: '助手管理' },
+  '/admin/skills': { title: '技能管理' },
+  '/admin/skills/categories': { title: '技能分类', parent: '/admin/skills' },
   '/admin/statistics': { title: '数据统计' },
   '/admin/statistics/overview': { title: '概览', parent: '/admin/statistics' },
   '/admin/settings': { title: '系统设置' },
@@ -23,6 +25,12 @@ function AdminBreadcrumb() {
     if (pathname.startsWith('/admin/sessions/') && pathname !== '/admin/sessions') {
       items.push({ title: '会话管理', path: '/admin/sessions' })
       items.push({ title: '会话详情' })
+      return items
+    }
+
+    if (pathname.startsWith('/admin/skills/') && pathname !== '/admin/skills' && !pathname.includes('/categories')) {
+      items.push({ title: '技能管理', path: '/admin/skills' })
+      items.push({ title: '技能详情' })
       return items
     }
 
