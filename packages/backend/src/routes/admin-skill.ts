@@ -95,6 +95,45 @@ router.get('/:id', async (req, res) => {
   }
 })
 
+router.get('/:id/files', async (req, res) => {
+  try {
+    const { id } = req.params
+    const skill = await skillService.getSkillById(id)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    const tree = await skillFileService.getSkillFileTree(skill.slug, skill.version)
+    res.json({ tree })
+  } catch (error) {
+    logger.error('Get skill files error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/:id/files/*', async (req, res) => {
+  try {
+    const { id } = req.params
+    const filePath = (req.params as Record<string, string>)[0]
+    
+    const skill = await skillService.getSkillById(id)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    const content = await skillFileService.readSkillFile(skill.slug, skill.version, filePath)
+    if (!content) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.send(content.toString('utf-8'))
+  } catch (error) {
+    logger.error('Get skill file content error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.put('/:id/versions/:versionId/review', async (req, res) => {
   try {
     const { id, versionId } = req.params
