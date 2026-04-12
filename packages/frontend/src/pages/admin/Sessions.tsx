@@ -133,9 +133,9 @@ function AdminSessions() {
       )
     },
     {
-      title: '问题数',
-      dataIndex: 'questionCount',
-      key: 'questionCount',
+      title: '消息数',
+      dataIndex: 'messageCount',
+      key: 'messageCount',
       width: 80,
       align: 'center'
     },
