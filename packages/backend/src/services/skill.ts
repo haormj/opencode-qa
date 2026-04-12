@@ -512,3 +512,37 @@ export async function incrementDownloadCount(skillId: string) {
     updatedAt: new Date()
   }).where(eq(skills.id, skillId))
 }
+
+export async function batchUpdateSkillStatus(
+  ids: string[], 
+  status: string, 
+  rejectReason?: string
+): Promise<number> {
+  const updateData: Record<string, unknown> = { 
+    status, 
+    updatedAt: new Date() 
+  }
+  if (status === 'rejected' && rejectReason) {
+    updateData.rejectReason = rejectReason
+  } else if (status === 'approved') {
+    updateData.rejectReason = null
+  }
+
+  const result = await db.update(skills)
+    .set(updateData)
+    .where(sql`${skills.id} IN ${ids}`)
+    .returning()
+  
+  return result.length
+}
+
+export async function batchDeleteSkills(ids: string[]): Promise<number> {
+  for (const id of ids) {
+    const skill = await getSkillById(id)
+    if (skill) {
+      await skillFileService.deleteSkillFiles(skill.slug)
+      await deleteSkill(id)
+    }
+  }
+  return ids.length
+}

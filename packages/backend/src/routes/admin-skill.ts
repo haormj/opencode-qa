@@ -82,6 +82,46 @@ router.delete('/categories/:id', async (req, res) => {
   }
 })
 
+router.post('/batch-review', async (req, res) => {
+  try {
+    const { ids, status, rejectReason } = req.body
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' })
+    }
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be approved or rejected' })
+    }
+
+    if (status === 'rejected' && !rejectReason) {
+      return res.status(400).json({ error: 'rejectReason is required when rejecting' })
+    }
+
+    const count = await skillService.batchUpdateSkillStatus(ids, status, rejectReason)
+    res.json({ success: true, count })
+  } catch (error) {
+    logger.error('Batch review skills error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.post('/batch-delete', async (req, res) => {
+  try {
+    const { ids } = req.body
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' })
+    }
+
+    const count = await skillService.batchDeleteSkills(ids)
+    res.json({ success: true, count })
+  } catch (error) {
+    logger.error('Batch delete skills error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
