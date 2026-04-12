@@ -86,18 +86,23 @@ function SkillDetail() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/skills')}>返回列表</Button>
-      </div>
-
-      <Card title={skill.displayName} extra={
-        skill.status === 'pending' && (
+      <Card
+        title={
           <Space>
-            <Button type="primary" icon={<CheckOutlined />} onClick={() => handleReview('approved')}>通过</Button>
-            <Button danger icon={<CloseOutlined />} onClick={() => handleReview('rejected')}>拒绝</Button>
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/skills')} />
+            <span style={{ fontSize: 16, fontWeight: 500 }}>{skill.displayName}</span>
+            <Tag color={statusColors[skill.status]}>{statusLabels[skill.status]}</Tag>
           </Space>
-        )
-      }>
+        }
+        extra={
+          skill.status === 'pending' && (
+            <Space>
+              <Button type="primary" icon={<CheckOutlined />} onClick={() => handleReview('approved')}>通过</Button>
+              <Button danger icon={<CloseOutlined />} onClick={() => handleReview('rejected')}>拒绝</Button>
+            </Space>
+          )
+        }
+      >
         <Descriptions column={2}>
           <Descriptions.Item label="名称">{skill.name}</Descriptions.Item>
           <Descriptions.Item label="Slug">{skill.slug}</Descriptions.Item>
