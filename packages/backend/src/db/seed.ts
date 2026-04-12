@@ -1,4 +1,4 @@
-import { db, users, roles, userRoles, bots, ssoProviders } from './index.js'
+import { db, users, roles, userRoles, bots, ssoProviders, systemSettings } from './index.js'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
@@ -12,6 +12,33 @@ const FEISHU_ICON_BASE64 = Buffer.from(FEISHU_ICON_SVG).toString('base64')
 
 export async function seed() {
   const existingUsers = await db.select().from(users).limit(1)
+  
+  // Seed system settings (always check)
+  const defaultSettings = [
+    { key: 'site.title', value: 'OpenCode QA', description: '用户端标题' },
+    { key: 'site.adminTitle', value: 'OpenCode QA Admin', description: '管理后台标题' },
+    { key: 'login.showPasswordLogin', value: 'true', description: '是否显示普通登录入口' },
+    { key: 'login.showRegister', value: 'true', description: '是否显示注册入口' },
+    { key: 'login.passwordLoginCollapsed', value: 'false', description: '普通登录默认是否折叠' }
+  ]
+
+  for (const setting of defaultSettings) {
+    const existing = await db.select().from(systemSettings)
+      .where(eq(systemSettings.key, setting.key))
+      .get()
+    
+    if (!existing) {
+      const now = new Date()
+      await db.insert(systemSettings).values({
+        id: randomUUID(),
+        key: setting.key,
+        value: setting.value,
+        description: setting.description,
+        createdAt: now,
+        updatedAt: now
+      })
+    }
+  }
   
   if (existingUsers.length > 0) {
     console.log('Database already initialized, skipping seed')

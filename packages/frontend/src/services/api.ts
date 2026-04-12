@@ -503,6 +503,37 @@ export function getUsername(): string {
   return user?.displayName || user?.username || '用户'
 }
 
+export interface PipelineStepCondition {
+  field: string
+  operator: 'exists' | 'equals' | 'notEmpty'
+  value?: string
+}
+
+export interface PipelineStep {
+  name: string
+  url: string
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  params?: Record<string, string>
+  headers?: Record<string, string>
+  body?: Record<string, unknown>
+  contentType?: 'json' | 'form'
+  extract?: Record<string, string>
+  condition?: PipelineStepCondition
+}
+
+export interface UserFieldMapping {
+  id?: string
+  username?: string
+  email?: string
+  displayName?: string
+}
+
+export interface AdvancedConfig {
+  authorizeUrlTemplate?: string
+  pipeline: PipelineStep[]
+  userFieldMapping?: UserFieldMapping
+}
+
 export interface SsoProvider {
   id: string
   name: string
@@ -522,6 +553,7 @@ export interface SsoProvider {
   usernameField: string
   emailField: string
   displayNameField: string
+  advancedConfig?: AdvancedConfig | null
   createdAt: string
   updatedAt: string
 }
@@ -595,4 +627,28 @@ export interface Statistics {
 
 export async function getStatistics(): Promise<Statistics> {
   return request<Statistics>(`${API_BASE}/admin/statistics`)
+}
+
+export interface SystemSetting {
+  id: string
+  key: string
+  value: string
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function getAdminSettings(): Promise<SystemSetting[]> {
+  return request<SystemSetting[]>(`${API_BASE}/admin/settings`)
+}
+
+export async function updateSetting(key: string, value: string): Promise<SystemSetting> {
+  return request<SystemSetting>(`${API_BASE}/admin/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value })
+  })
+}
+
+export async function getPublicSettings(): Promise<Record<string, string>> {
+  return request<Record<string, string>>(`${API_BASE}/settings`)
 }

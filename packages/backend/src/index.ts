@@ -15,6 +15,8 @@ import authRoutes from './routes/auth.js'
 import authSsoRoutes from './routes/auth-sso.js'
 import adminRoutes from './routes/admin.js'
 import adminSsoRoutes from './routes/admin-sso.js'
+import adminSettingsRoutes from './routes/admin-settings.js'
+import settingsRoutes from './routes/settings.js'
 import botRoutes from './routes/bot.js'
 import sessionEventsRoutes from './routes/session-events.js'
 import { startScheduler } from './services/scheduler.js'
@@ -48,6 +50,8 @@ app.use('/api/sessions', sessionRoutes)
 app.use('/api/history', historyRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/admin/sso-providers', adminSsoRoutes)
+app.use('/api/admin/settings', adminSettingsRoutes)
+app.use('/api/settings', settingsRoutes)
 app.use('/api/bots', botRoutes)
 
 app.use(errorLogger)

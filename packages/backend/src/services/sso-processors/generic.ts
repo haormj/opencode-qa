@@ -1,4 +1,4 @@
-import type { SsoProcessor, SsoUserInfo } from '../sso-processor.js'
+import type { SsoProcessor, SsoUserInfo, SsoFieldMapping } from '../sso-processor.js'
 
 const GenericSsoProcessor: SsoProcessor = {
   getAuthorizeUrl(params) {
@@ -57,11 +57,23 @@ const GenericSsoProcessor: SsoProcessor = {
     }
 
     const data = await response.json() as Record<string, unknown>
+    const mapping: SsoFieldMapping = params.fieldMapping || {
+      userIdField: 'sub',
+      usernameField: 'preferred_username',
+      emailField: 'email',
+      displayNameField: 'name'
+    }
+    
+    const idField = mapping.userIdField || 'sub'
+    const usernameField = mapping.usernameField || 'preferred_username'
+    const emailField = mapping.emailField || 'email'
+    const displayNameField = mapping.displayNameField || 'name'
+    
     return {
-      id: String(data.sub || data.id || ''),
-      username: String(data.preferred_username || data.username || data.name || ''),
-      email: data.email ? String(data.email) : undefined,
-      displayName: String(data.name || data.display_name || data.preferred_username || '')
+      id: String(data[idField] || data.sub || data.id || ''),
+      username: String(data[usernameField] || data.preferred_username || data.username || ''),
+      email: data[emailField] ? String(data[emailField]) : data.email ? String(data.email) : undefined,
+      displayName: String(data[displayNameField] || data.name || data.display_name || '')
     }
   }
 }

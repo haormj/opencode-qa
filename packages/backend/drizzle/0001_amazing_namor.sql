@@ -1,0 +1,1 @@
+ALTER TABLE `sso_providers` ADD `advanced_config` text;

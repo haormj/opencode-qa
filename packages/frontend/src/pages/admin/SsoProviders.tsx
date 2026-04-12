@@ -1,14 +1,38 @@
 import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload, Select } from 'antd'
-import { ReloadOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Upload, Select, Collapse, Divider } from 'antd'
+import { ReloadOutlined, EditOutlined, DeleteOutlined, UploadOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAdminSsoProviders, createSsoProvider, updateSsoProvider, deleteSsoProvider, uploadSsoProviderIcon, type SsoProvider } from '../../services/api'
+import { getAdminSsoProviders, createSsoProvider, updateSsoProvider, deleteSsoProvider, uploadSsoProviderIcon, type SsoProvider, type PipelineStep } from '../../services/api'
 import './Admin.css'
 
 const SSO_TYPES = [
   { value: 'GENERIC', label: '通用 OAuth 2.0' },
-  { value: 'FEISHU', label: '飞书' }
+  { value: 'FEISHU', label: '飞书' },
+  { value: 'CUSTOM', label: '自定义' }
 ]
+
+const HTTP_METHODS = [
+  { value: 'GET', label: 'GET' },
+  { value: 'POST', label: 'POST' },
+  { value: 'PUT', label: 'PUT' },
+  { value: 'DELETE', label: 'DELETE' }
+]
+
+const CONTENT_TYPES = [
+  { value: 'json', label: 'JSON' },
+  { value: 'form', label: 'Form URL Encoded' }
+]
+
+const defaultPipelineStep = {
+  name: '',
+  url: '',
+  method: 'GET' as const,
+  params: '',
+  headers: '',
+  body: '',
+  contentType: 'json' as const,
+  extract: ''
+}
 
 function AdminSsoProviders() {
   const [loading, setLoading] = useState(false)
@@ -37,7 +61,23 @@ function AdminSsoProviders() {
   const handleEdit = (provider: SsoProvider) => {
     setEditingProvider(provider)
     setSelectedType(provider.type)
-    form.setFieldsValue(provider)
+    
+    const formValues: Record<string, unknown> = { ...provider }
+    
+    if (provider.advancedConfig?.pipeline) {
+      formValues.advancedConfig = {
+        ...provider.advancedConfig,
+        pipeline: provider.advancedConfig.pipeline.map(step => ({
+          ...step,
+          params: step.params ? JSON.stringify(step.params, null, 2) : '',
+          headers: step.headers ? JSON.stringify(step.headers, null, 2) : '',
+          body: step.body ? JSON.stringify(step.body, null, 2) : '',
+          extract: step.extract ? JSON.stringify(step.extract, null, 2) : ''
+        }))
+      }
+    }
+    
+    form.setFieldsValue(formValues)
     setModalOpen(true)
   }
 
@@ -54,6 +94,42 @@ function AdminSsoProviders() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
+      
+      if (values.advancedConfig?.pipeline) {
+        values.advancedConfig.pipeline = values.advancedConfig.pipeline.map((step: PipelineStep) => {
+          const parsedStep = { ...step }
+          if (typeof step.params === 'string' && step.params) {
+            try {
+              parsedStep.params = JSON.parse(step.params)
+            } catch {
+              parsedStep.params = {}
+            }
+          }
+          if (typeof step.headers === 'string' && step.headers) {
+            try {
+              parsedStep.headers = JSON.parse(step.headers)
+            } catch {
+              parsedStep.headers = {}
+            }
+          }
+          if (typeof step.body === 'string' && step.body) {
+            try {
+              parsedStep.body = JSON.parse(step.body)
+            } catch {
+              parsedStep.body = {}
+            }
+          }
+          if (typeof step.extract === 'string' && step.extract) {
+            try {
+              parsedStep.extract = JSON.parse(step.extract)
+            } catch {
+              parsedStep.extract = {}
+            }
+          }
+          return parsedStep
+        })
+      }
+      
       if (editingProvider) {
         await updateSsoProvider(editingProvider.id, values)
         message.success('更新成功')
@@ -98,7 +174,7 @@ function AdminSsoProviders() {
       width: 120,
       render: (type: string) => {
         const typeInfo = SSO_TYPES.find(t => t.value === type)
-        return <Tag color={type === 'FEISHU' ? 'blue' : 'green'}>{typeInfo?.label || type}</Tag>
+        return <Tag color={type === 'FEISHU' ? 'blue' : type === 'CUSTOM' ? 'purple' : 'green'}>{typeInfo?.label || type}</Tag>
       }
     },
     {
@@ -207,7 +283,7 @@ function AdminSsoProviders() {
         onCancel={() => setModalOpen(false)}
         okText="确定"
         cancelText="取消"
-        width={700}
+        width={800}
       >
         <Form
           form={form}
@@ -323,6 +399,199 @@ function AdminSsoProviders() {
                 rules={[{ required: !editingProvider, message: '请输入 App Secret' }]}
               >
                 <Input.Password placeholder="飞书应用 App Secret" />
+              </Form.Item>
+            </>
+          )}
+
+          {selectedType === 'CUSTOM' && (
+            <>
+              <Form.Item
+                name="clientId"
+                label="Client ID"
+              >
+                <Input placeholder="OAuth Client ID（可选，用于模板变量 {{clientId}}）" />
+              </Form.Item>
+              <Form.Item
+                name="clientSecret"
+                label="Client Secret"
+              >
+                <Input.Password placeholder="OAuth Client Secret（可选，用于模板变量 {{clientSecret}}）" />
+              </Form.Item>
+              <Form.Item
+                name="scope"
+                label="Scope"
+              >
+                <Input placeholder="如：openid profile email" />
+              </Form.Item>
+              
+              <Divider>授权配置</Divider>
+              
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{redirectUri}}'}, {'{{state}}'}, {'{{scope}}'}
+              </div>
+              
+              <Form.Item
+                name={['advancedConfig', 'authorizeUrlTemplate']}
+                label="授权 URL 模板"
+                rules={[{ required: true, message: '请输入授权 URL 模板' }]}
+                extra="redirectUri 为系统自动生成的回调地址，state 为安全校验参数"
+              >
+                <Input.TextArea 
+                  rows={3}
+                  placeholder="https://example.com/oauth/authorize?client_id={{clientId}}&redirect_uri={{redirectUri}}&response_type=code&state={{state}}&scope={{scope}}"
+                />
+              </Form.Item>
+              
+              <Divider>流水线配置</Divider>
+              
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                流水线一次性执行完整流程，包含获取 Token 和用户信息。可用变量：{'{{clientId}}'}, {'{{clientSecret}}'}, {'{{code}}'}, {'{{redirectUri}}'}, {'{{steps.步骤名.字段名}}'}
+              </div>
+              
+              <Form.List name={['advancedConfig', 'pipeline']}>
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }, index) => (
+                      <Collapse
+                        key={key}
+                        style={{ marginBottom: 8 }}
+                        items={[{
+                          key: '1',
+                          label: `步骤 ${index + 1}: ${form.getFieldValue(['advancedConfig', 'pipeline', name, 'name']) || '未命名'}`,
+                          children: (
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'name']}
+                                label="步骤名称"
+                                rules={[{ required: true, message: '请输入步骤名称' }]}
+                              >
+                                <Input placeholder="如：getAppToken" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'url']}
+                                label="请求 URL"
+                                rules={[{ required: true, message: '请输入 URL' }]}
+                              >
+                                <Input placeholder="https://api.example.com/token" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'method']}
+                                label="请求方法"
+                              >
+                                <Select options={HTTP_METHODS} style={{ width: 120 }} />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'params']}
+                                label="URL 参数 (GET 请求)"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='JSON 格式，如：{"appid": "{{clientId}}", "code": "{{code}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'headers']}
+                                label="请求头"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='JSON 格式，如：{"Authorization": "Bearer {{steps.getToken.accessToken}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'contentType']}
+                                label="Content-Type"
+                              >
+                                <Select options={CONTENT_TYPES} style={{ width: 180 }} />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'body']}
+                                label="请求体 (POST/PUT)"
+                              >
+                                <Input.TextArea 
+                                  rows={3} 
+                                  placeholder='JSON 格式，如：{"app_id": "{{appId}}", "app_secret": "{{appSecret}}"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'extract']}
+                                label="响应字段提取"
+                                extra="最后一步需提取 accessToken 和用户字段（id、username、email、displayName）"
+                              >
+                                <Input.TextArea 
+                                  rows={2} 
+                                  placeholder='{"accessToken": "data.access_token", "userId": "data.user.open_id"}' 
+                                />
+                              </Form.Item>
+                              
+                              <Button 
+                                type="dashed" 
+                                danger 
+                                onClick={() => remove(name)}
+                                icon={<MinusCircleOutlined />}
+                              >
+                                删除此步骤
+                              </Button>
+                            </Space>
+                          )
+                        }]}
+                      />
+                    ))}
+                    <Button 
+                      type="dashed" 
+                      onClick={() => add({ ...defaultPipelineStep })} 
+                      block 
+                      icon={<PlusOutlined />}
+                    >
+                      添加步骤
+                    </Button>
+                  </>
+                )}
+              </Form.List>
+              
+              <Divider>字段映射</Divider>
+              
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+                将最后一步 extract 提取的字段映射到用户字段，如 extract 了 myUserId 则填写 myUserId
+              </div>
+              
+              <Form.Item
+                name={['advancedConfig', 'userFieldMapping', 'id']}
+                label="用户 ID 字段名"
+                extra="从 extract 结果中取哪个字段作为用户 ID"
+              >
+                <Input placeholder="默认：id" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userFieldMapping', 'username']}
+                label="用户名字段名"
+              >
+                <Input placeholder="默认：username" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userFieldMapping', 'email']}
+                label="邮箱字段名"
+              >
+                <Input placeholder="默认：email" />
+              </Form.Item>
+              <Form.Item
+                name={['advancedConfig', 'userFieldMapping', 'displayName']}
+                label="显示名称字段名"
+              >
+                <Input placeholder="默认：displayName" />
               </Form.Item>
             </>
           )}

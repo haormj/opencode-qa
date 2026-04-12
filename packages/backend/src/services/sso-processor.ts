@@ -5,6 +5,44 @@ export interface SsoUserInfo {
   displayName: string
 }
 
+export interface PipelineStepCondition {
+  field: string
+  operator: 'exists' | 'equals' | 'notEmpty'
+  value?: string
+}
+
+export interface PipelineStep {
+  name: string
+  url: string
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  params?: Record<string, string>
+  headers?: Record<string, string>
+  body?: Record<string, unknown>
+  contentType?: 'json' | 'form'
+  extract?: Record<string, string>
+  condition?: PipelineStepCondition
+}
+
+export interface UserFieldMapping {
+  id?: string
+  username?: string
+  email?: string
+  displayName?: string
+}
+
+export interface SsoFieldMapping {
+  userIdField: string
+  usernameField: string
+  emailField: string
+  displayNameField: string
+}
+
+export interface AdvancedConfig {
+  authorizeUrlTemplate?: string
+  pipeline: PipelineStep[]
+  userFieldMapping?: UserFieldMapping
+}
+
 export interface SsoProcessor {
   getAuthorizeUrl(params: {
     clientId: string
@@ -22,17 +60,22 @@ export interface SsoProcessor {
     appId?: string
     appSecret?: string
     tokenUrl: string
-  }): Promise<{ accessToken: string }>
+    advancedConfig?: AdvancedConfig
+  }): Promise<{ accessToken?: string; steps?: Record<string, Record<string, unknown>>; userInfo?: SsoUserInfo }>
 
   getUserInfo(params: {
     accessToken: string
     userInfoUrl?: string
+    advancedConfig?: AdvancedConfig
+    steps?: Record<string, Record<string, unknown>>
+    fieldMapping?: SsoFieldMapping
   }): Promise<SsoUserInfo>
 }
 
 export const SSO_PROVIDER_TYPES = {
   GENERIC: 'GENERIC',
-  FEISHU: 'FEISHU'
+  FEISHU: 'FEISHU',
+  CUSTOM: 'CUSTOM'
 } as const
 
 export type SsoProviderType = typeof SSO_PROVIDER_TYPES[keyof typeof SSO_PROVIDER_TYPES]

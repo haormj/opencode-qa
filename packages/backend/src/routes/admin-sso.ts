@@ -33,6 +33,7 @@ router.get('/', authMiddleware, requireAdmin, async (req, res) => {
       usernameField: p.usernameField,
       emailField: p.emailField,
       displayNameField: p.displayNameField,
+      advancedConfig: p.advancedConfig ? JSON.parse(p.advancedConfig) : null,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt
     })))
@@ -55,6 +56,13 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
       if (!data.appId || !data.appSecret) {
         return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
       }
+    } else if (type === SSO_PROVIDER_TYPES.CUSTOM) {
+      if (!data.advancedConfig?.pipeline?.length) {
+        return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
+      }
+      if (!data.advancedConfig?.authorizeUrlTemplate) {
+        return res.status(400).json({ error: 'Authorize URL template is required for CUSTOM type' })
+      }
     }
 
     const now = new Date()
@@ -63,8 +71,8 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
       name: data.name,
       displayName: data.displayName,
       type: type,
-      authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : data.authorizeUrl,
-      tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : data.tokenUrl,
+      authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : (data.authorizeUrl || ''),
+      tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : (data.tokenUrl || ''),
       userInfoUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.USER_INFO_URL : data.userInfoUrl,
       clientId: data.clientId,
       clientSecret: data.clientSecret,
@@ -75,6 +83,7 @@ router.post('/', authMiddleware, requireAdmin, async (req, res) => {
       usernameField: data.usernameField || 'preferred_username',
       emailField: data.emailField || 'email',
       displayNameField: data.displayNameField || 'name',
+      advancedConfig: data.advancedConfig ? JSON.stringify(data.advancedConfig) : null,
       enabled: data.enabled ?? true,
       sortOrder: data.sortOrder ?? 0,
       createdAt: now,
@@ -103,14 +112,21 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
         if (!data.appId || !data.appSecret) {
           return res.status(400).json({ error: 'App ID and App Secret are required for FEISHU type' })
         }
+      } else if (data.type === SSO_PROVIDER_TYPES.CUSTOM) {
+        if (!data.advancedConfig?.pipeline?.length) {
+          return res.status(400).json({ error: 'Pipeline configuration is required for CUSTOM type' })
+        }
+        if (!data.advancedConfig?.authorizeUrlTemplate) {
+          return res.status(400).json({ error: 'Authorize URL template is required for CUSTOM type' })
+        }
       }
     }
 
-    const [provider] = await db.update(ssoProviders).set({
+    const updateData: Record<string, unknown> = {
       displayName: data.displayName,
       type: data.type,
       authorizeUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.AUTHORIZE_URL : data.authorizeUrl,
-      tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : data.tokenUrl,
+      tokenUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.TOKEN_URL : (data.tokenUrl || ''),
       userInfoUrl: type === SSO_PROVIDER_TYPES.FEISHU ? FEISHU_DEFAULTS.USER_INFO_URL : data.userInfoUrl,
       clientId: data.clientId,
       clientSecret: data.clientSecret,
@@ -124,7 +140,13 @@ router.patch('/:id', authMiddleware, requireAdmin, async (req, res) => {
       enabled: data.enabled,
       sortOrder: data.sortOrder,
       updatedAt: new Date()
-    }).where(eq(ssoProviders.id, id)).returning()
+    }
+
+    if (data.advancedConfig !== undefined) {
+      updateData.advancedConfig = data.advancedConfig ? JSON.stringify(data.advancedConfig) : null
+    }
+
+    const [provider] = await db.update(ssoProviders).set(updateData).where(eq(ssoProviders.id, id)).returning()
 
     res.json(provider)
   } catch (error) {
