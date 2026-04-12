@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Button, Tabs, Tree, Spin, message, Modal, Form, Input, Select, Space, Statistic, Row, Col } from 'antd'
+import type { TreeDataNode } from 'antd'
 import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
 import { getAdminSkillById, getAdminSkillFiles, getSkillFileContent, batchReviewSkills, type SkillDetail, type FileNode } from '../../services/api'
 
@@ -15,6 +16,7 @@ function SkillDetail() {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [fileContent, setFileContent] = useState<string>('')
   const [selectedFile, setSelectedFile] = useState<string>('')
+  const [fileLoading, setFileLoading] = useState(false)
   const [reviewModal, setReviewModal] = useState(false)
   const [reviewForm] = Form.useForm()
 
@@ -40,11 +42,14 @@ function SkillDetail() {
   const handleFileSelect = async (path: string) => {
     if (!id) return
     setSelectedFile(path)
+    setFileLoading(true)
     try {
       const content = await getSkillFileContent(id, path)
       setFileContent(content)
     } catch {
       message.error('加载文件内容失败')
+    } finally {
+      setFileLoading(false)
     }
   }
 
@@ -66,7 +71,7 @@ function SkillDetail() {
     }
   }
 
-  const renderFileTree = (nodes: FileNode[]): any[] => {
+  const renderFileTree = (nodes: FileNode[]): TreeDataNode[] => {
     return nodes.map(node => ({
       key: node.path,
       title: node.name,
@@ -133,7 +138,9 @@ function SkillDetail() {
                   />
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                  {selectedFile ? (
+                  {fileLoading ? (
+                    <Spin />
+                  ) : selectedFile ? (
                     <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: 12 }}>{fileContent}</pre>
                   ) : (
                     <div style={{ color: '#999' }}>请选择文件查看内容</div>
@@ -153,8 +160,16 @@ function SkillDetail() {
               <Select.Option value="rejected">拒绝</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="rejectReason" label="拒绝原因" rules={[{ required: true, message: '拒绝时必填' }]}>
-            <Input.TextArea rows={3} />
+          <Form.Item shouldUpdate={(prev, cur) => prev.status !== cur.status}>
+            {({ getFieldValue }) => (
+              <Form.Item 
+                name="rejectReason" 
+                label="拒绝原因"
+                rules={[{ required: getFieldValue('status') === 'rejected', message: '拒绝时必填' }]}
+              >
+                <Input.TextArea rows={3} />
+              </Form.Item>
+            )}
           </Form.Item>
         </Form>
       </Modal>
