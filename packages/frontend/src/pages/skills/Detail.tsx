@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Button, Spin, message, Segmented } from 'antd'
 import { StarOutlined, StarFilled, DownloadOutlined, CopyOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
 import { Streamdown } from 'streamdown'
@@ -32,7 +32,6 @@ function FileTreeNode({ node, level = 0 }: { node: FileNode; level?: number }) {
 
 function Detail() {
   const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
   const [skill, setSkill] = useState<Skill | null>(null)
   const [versions, setVersions] = useState<SkillVersion[]>([])
   const [loading, setLoading] = useState(true)
