@@ -345,10 +345,62 @@ router.get('/statistics', async (req, res) => {
     const usersTotalResult = await db.select({ count: sql<number>`count(*)` }).from(users).get()
     const usersTotal = usersTotalResult?.count || 0
 
+    const botsTotalResult = await db.select({ count: sql<number>`count(*)` }).from(bots).get()
+    const botsTotal = botsTotalResult?.count || 0
+
+    const assistantsTotalResult = await db.select({ count: sql<number>`count(*)` }).from(assistants).get()
+    const assistantsTotal = assistantsTotalResult?.count || 0
+
+    const sessionStats = await db.select({
+      assistantId: sessions.assistantId,
+      status: sessions.status,
+      needHuman: sessions.needHuman,
+      count: sql<number>`count(*)`
+    }).from(sessions).groupBy(sessions.assistantId, sessions.status, sessions.needHuman)
+
+    const allAssistants = await db.select({
+      id: assistants.id,
+      name: assistants.name
+    }).from(assistants)
+
+    const assistantMap = new Map(allAssistants.map(a => [a.id, a.name]))
+
+    const assistantGroups = new Map<string, { total: number; active: number; human: number; closed: number; closedWithNeedHuman: number }>()
+
+    for (const stat of sessionStats) {
+      const key = stat.assistantId || '__unassigned__'
+      if (!assistantGroups.has(key)) {
+        assistantGroups.set(key, { total: 0, active: 0, human: 0, closed: 0, closedWithNeedHuman: 0 })
+      }
+      const group = assistantGroups.get(key)!
+      group.total += stat.count
+      if (stat.status === 'active') group.active += stat.count
+      if (stat.status === 'human') group.human += stat.count
+      if (stat.status === 'closed') {
+        group.closed += stat.count
+        if (stat.needHuman) group.closedWithNeedHuman += stat.count
+      }
+    }
+
+    const assistantStats = Array.from(assistantGroups.entries()).map(([id, stats]) => ({
+      id: id === '__unassigned__' ? null : id,
+      name: id === '__unassigned__' ? '未分配助手' : (assistantMap.get(id) || '未知助手'),
+      total: stats.total,
+      active: stats.active,
+      human: stats.human,
+      closed: stats.closed,
+      interceptionRate: stats.closed > 0
+        ? parseFloat(((1 - stats.closedWithNeedHuman / stats.closed) * 100).toFixed(1))
+        : 100
+    }))
+
     res.json({
       interceptionRate,
       sessions: { total, active, human, closed },
-      users: { total: usersTotal }
+      users: { total: usersTotal },
+      bots: { total: botsTotal },
+      assistants: { total: assistantsTotal },
+      assistantStats
     })
   } catch (error) {
     logger.error('Get statistics error:', error)

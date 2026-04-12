@@ -652,6 +652,16 @@ export async function uploadSsoProviderIcon(id: string, file: File): Promise<voi
   })
 }
 
+export interface AssistantStat {
+  id: string | null
+  name: string
+  total: number
+  active: number
+  human: number
+  closed: number
+  interceptionRate: number
+}
+
 export interface Statistics {
   interceptionRate: number
   sessions: {
@@ -663,6 +673,13 @@ export interface Statistics {
   users: {
     total: number
   }
+  bots: {
+    total: number
+  }
+  assistants: {
+    total: number
+  }
+  assistantStats: AssistantStat[]
 }
 
 export async function getStatistics(): Promise<Statistics> {

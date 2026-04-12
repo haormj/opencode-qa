@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, Row, Col, Spin, Empty } from 'antd'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { getStatistics, type Statistics } from '../../services/api'
 import './Admin.css'
 
@@ -9,6 +9,17 @@ const COLORS = {
   human: '#fa8c16',
   closed: '#d9d9d9'
 }
+
+const ASSISTANT_COLORS = [
+  '#1890ff',
+  '#52c41a',
+  '#fa8c16',
+  '#722ed1',
+  '#13c2c2',
+  '#eb2f96',
+  '#2f54eb',
+  '#faad14'
+]
 
 const STATUS_LABELS: Record<string, string> = {
   active: '进行中',
@@ -49,34 +60,60 @@ function StatisticsOverview() {
     { name: STATUS_LABELS.closed, value: stats.sessions.closed, color: COLORS.closed }
   ].filter(item => item.value > 0)
 
+  const barData = stats.assistantStats.map(stat => ({
+    name: stat.name,
+    拦截率: stat.interceptionRate
+  }))
+
   return (
     <div className="statistics-overview">
       <Row gutter={24} className="stats-cards">
-        <Col span={8}>
-          <Card className="stat-card">
-            <div className="stat-card-title">问题拦截率</div>
-            <div className="stat-card-value">
-              {stats.interceptionRate}%
-            </div>
-          </Card>
-        </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card className="stat-card">
             <div className="stat-card-title">会话总数</div>
-            <div className="stat-card-value">
-              {stats.sessions.total}
-            </div>
+            <div className="stat-card-value">{stats.sessions.total}</div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card className="stat-card">
             <div className="stat-card-title">用户总数</div>
-            <div className="stat-card-value">
-              {stats.users.total}
-            </div>
+            <div className="stat-card-value">{stats.users.total}</div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="stat-card">
+            <div className="stat-card-title">助手数量</div>
+            <div className="stat-card-value">{stats.assistants.total}</div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="stat-card">
+            <div className="stat-card-title">机器人数量</div>
+            <div className="stat-card-value">{stats.bots.total}</div>
           </Card>
         </Col>
       </Row>
+
+      <Card title="助手拦截率" className="pie-chart-card">
+        {barData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={barData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} maxBarSize={60}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <Tooltip formatter={(value) => `${value}%`} />
+              <Legend />
+              <Bar dataKey="拦截率" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                {barData.map((_, index) => (
+                  <Cell key={`bar-${index}`} fill={ASSISTANT_COLORS[index % ASSISTANT_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <Empty description="暂无数据" />
+        )}
+      </Card>
 
       <Card title="会话状态分布" className="pie-chart-card">
         {pieData.length > 0 ? (
