@@ -180,3 +180,36 @@
 .skill-publish .ant-form-item:last-child {
   text-align: center;
 }
+
+.version-info-section {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.version-current {
+  font-size: 14px;
+}
+
+.version-current strong {
+  color: #1890ff;
+}
+
+.version-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.version-new {
+  font-size: 14px;
+}
+
+.version-new strong {
+  color: #52c41a;
+}

@@ -1,65 +1,70 @@
-import { useState, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Form, Input, Button, message } from 'antd'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Form, Input, Button, message, Radio, Spin } from 'antd'
 import { FolderOpenOutlined, FileZipOutlined, ReloadOutlined, InboxOutlined } from '@ant-design/icons'
 import JSZip from 'jszip'
-import { createSkillWithFiles, type UploadFileNode } from '../../services/api'
+import { updateSkillWithFiles, type Skill, type UploadFileNode } from '../../services/api'
 import './Publish.css'
 
-function Publish() {
+function incrementVersion(version: string, type: 'major' | 'minor' | 'patch'): string {
+  const parts = version.split('.').map(Number)
+  const [major = 0, minor = 0, patch = 0] = parts
+
+  switch (type) {
+    case 'major':
+      return `${major + 1}.0.0`
+    case 'minor':
+      return `${major}.${minor + 1}.0`
+    case 'patch':
+    default:
+      return `${major}.${minor}.${patch + 1}`
+  }
+}
+
+function Update() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
   const [form] = Form.useForm()
+  const [loading, setLoading] = useState(true)
+  const [skill, setSkill] = useState<Skill | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [paths, setPaths] = useState<string[]>([])
   const [totalSize, setTotalSize] = useState(0)
   const [hasSkillMd, setHasSkillMd] = useState(false)
+  const [versionType, setVersionType] = useState<'major' | 'minor' | 'patch'>('patch')
   const folderInputRef = useRef<HTMLInputElement>(null)
   const zipInputRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
-  const parseSkillMd = (content: string) => {
-    const result: { name?: string; displayName?: string; description?: string } = {}
-    
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/)
-    if (frontmatterMatch) {
-      const frontmatter = frontmatterMatch[1]
-      const lines = frontmatter.split('\n')
-      for (const line of lines) {
-        const [key, ...valueParts] = line.split(':')
-        if (key && valueParts.length > 0) {
-          const value = valueParts.join(':').trim().replace(/^["']|["']$/g, '')
-          switch (key.trim().toLowerCase()) {
-            case 'name':
-              result.name = value
-              break
-            case 'displayname':
-            case 'display_name':
-            case 'title':
-              result.displayName = value
-              break
-            case 'description':
-              result.description = value
-              break
-          }
+  useEffect(() => {
+    if (id) {
+      loadSkill()
+    }
+  }, [id])
+
+  const loadSkill = async () => {
+    try {
+      const response = await fetch(`/api/skills/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('opencode-qa-token')}`
         }
+      })
+      if (!response.ok) {
+        throw new Error('Skill not found')
       }
+      const data = await response.json()
+      setSkill(data)
+      form.setFieldsValue({
+        displayName: data.displayName,
+        description: data.description
+      })
+    } catch (error) {
+      message.error('加载技能失败')
+      navigate('/skills/my/published')
+    } finally {
+      setLoading(false)
     }
-
-    if (!result.description) {
-      const paragraphs = content.replace(/^---[\s\S]*?---\n?/, '').split('\n\n')
-      const firstParagraph = paragraphs.find(p => p.trim() && !p.startsWith('#') && !p.startsWith('```'))
-      if (firstParagraph) {
-        result.description = firstParagraph.trim().substring(0, 500)
-      }
-    }
-
-    const titleMatch = content.match(/^#\s+(.+)$/m)
-    if (titleMatch && !result.displayName) {
-      result.displayName = titleMatch[1].trim()
-    }
-
-    return result
   }
 
   const processFiles = useCallback(async (filesWithPath: Array<{ file: File; path: string }>) => {
@@ -67,7 +72,6 @@ function Publish() {
     const allPaths: string[] = []
     let total = 0
     let foundSkillMd = false
-    let metadata: { name?: string; displayName?: string; description?: string } = {}
 
     for (const { file, path } of filesWithPath) {
       allFiles.push(file)
@@ -76,12 +80,6 @@ function Publish() {
 
       if (path.endsWith('SKILL.md')) {
         foundSkillMd = true
-        try {
-          const content = await file.text()
-          metadata = parseSkillMd(content)
-        } catch (e) {
-          console.error('Failed to parse SKILL.md:', e)
-        }
       }
     }
 
@@ -89,17 +87,7 @@ function Publish() {
     setPaths(allPaths)
     setTotalSize(total)
     setHasSkillMd(foundSkillMd)
-
-    if (metadata.name) {
-      form.setFieldsValue({ slug: metadata.name })
-    }
-    if (metadata.displayName) {
-      form.setFieldsValue({ displayName: metadata.displayName })
-    }
-    if (metadata.description) {
-      form.setFieldsValue({ description: metadata.description })
-    }
-  }, [form])
+  }, [])
 
   const handleUpload = useCallback(async (fileList: FileList) => {
     const filesWithPath: Array<{ file: File; path: string }> = []
@@ -221,7 +209,6 @@ function Publish() {
     setPaths([])
     setTotalSize(0)
     setHasSkillMd(false)
-    form.resetFields()
   }
 
   const handleSubmit = async (values: Record<string, string>) => {
@@ -235,26 +222,27 @@ function Publish() {
       return
     }
 
-    if (!values.slug || !values.displayName) {
-      message.error('请填写必填字段')
+    if (!values.changeLog) {
+      message.error('请填写变更说明')
       return
     }
 
+    if (!id) return
+
     setSubmitting(true)
     try {
-      await createSkillWithFiles({
+      await updateSkillWithFiles(id, {
         files,
         paths,
-        name: values.slug,
         displayName: values.displayName,
-        slug: values.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         description: values.description,
+        versionType,
         changeLog: values.changeLog,
       })
-      message.success('技能发布成功，等待审核')
+      message.success('技能更新成功，等待审核')
       navigate('/skills/my/published')
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '发布失败')
+      message.error(error instanceof Error ? error.message : '更新失败')
     } finally {
       setSubmitting(false)
     }
@@ -356,11 +344,42 @@ function Publish() {
     ))
   }
 
+  if (loading) {
+    return (
+      <div className="skill-publish" style={{ textAlign: 'center', padding: '100px 0' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!skill) {
+    return null
+  }
+
+  const newVersion = incrementVersion(skill.version, versionType)
+
   return (
     <div className="skill-publish">
       <div className="skill-publish-header">
-        <h1>发布新技能</h1>
-        <p className="skill-publish-desc">上传您的 Skill 文件，审核通过后将展示在技能市场</p>
+        <h1>更新技能</h1>
+        <p className="skill-publish-desc">{skill.displayName} ({skill.slug})</p>
+      </div>
+
+      <div className="version-info-section">
+        <div className="version-current">
+          当前版本：<strong>v{skill.version}</strong>
+        </div>
+        <div className="version-type-selector">
+          <span>版本类型：</span>
+          <Radio.Group value={versionType} onChange={(e) => setVersionType(e.target.value)}>
+            <Radio.Button value="patch">补丁 (Patch)</Radio.Button>
+            <Radio.Button value="minor">小版本 (Minor)</Radio.Button>
+            <Radio.Button value="major">大版本 (Major)</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div className="version-new">
+          新版本：<strong>v{newVersion}</strong>
+        </div>
       </div>
 
       <div className="upload-section">
@@ -432,25 +451,21 @@ function Publish() {
         layout="vertical"
         onFinish={handleSubmit}
       >
-        <Form.Item name="slug" label="Slug" rules={[{ required: true, message: '请输入 Slug' }]}>
-          <Input placeholder="Skill 的唯一标识符，仅允许小写字母、数字和连字符" />
-        </Form.Item>
-        
-        <Form.Item name="displayName" label="显示名称" rules={[{ required: true, message: '请输入显示名称' }]}>
+        <Form.Item name="displayName" label="显示名称">
           <Input placeholder="Skill 显示名称" />
         </Form.Item>
         
         <Form.Item name="description" label="描述">
-          <Input.TextArea rows={3} placeholder="该描述会从 SKILL.md 文件的 description 字段中自动提取，也支持手动修改" />
+          <Input.TextArea rows={3} placeholder="技能描述" />
         </Form.Item>
         
-        <Form.Item name="changeLog" label="变更说明">
-          <Input.TextArea rows={3} placeholder="描述本次发布的主要内容" />
+        <Form.Item name="changeLog" label="变更说明" rules={[{ required: true, message: '请填写变更说明' }]}>
+          <Input.TextArea rows={3} placeholder="描述本次版本的主要变更内容" />
         </Form.Item>
         
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={submitting} size="large" disabled={!hasSkillMd}>
-            发布技能
+            提交更新
           </Button>
         </Form.Item>
       </Form>
@@ -458,4 +473,4 @@ function Publish() {
   )
 }
 
-export default Publish
+export default Update

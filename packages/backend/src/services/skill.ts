@@ -1,6 +1,7 @@
-import { db, skills, skillCategories, skillFavorites, skillRatings, users } from '../db/index.js'
-import { eq, desc, asc, sql, and, like } from 'drizzle-orm'
+import { db, skills, skillCategories, skillFavorites, skillRatings, skillVersions, users } from '../db/index.js'
+import { eq, desc, asc, sql, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
+import * as skillFileService from './skill-file.js'
 
 export async function getSkills(params: {
   page?: number
@@ -54,7 +55,6 @@ export async function getSkills(params: {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,
@@ -95,7 +95,6 @@ export async function getTrendingSkills(limit: number = 10) {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,
@@ -123,11 +122,9 @@ export async function getSkillBySlug(slug: string) {
     displayName: skills.displayName,
     slug: skills.slug,
     description: skills.description,
-    content: skills.content,
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    changeLog: skills.changeLog,
     status: skills.status,
     rejectReason: skills.rejectReason,
     downloadCount: skills.downloadCount,
@@ -145,7 +142,23 @@ export async function getSkillBySlug(slug: string) {
     .where(eq(skills.slug, slug))
     .get()
 
-  return skill
+  if (!skill) {
+    return null
+  }
+
+  let readme: string | null = null
+  if (skill.status === 'approved' || skill.version) {
+    try {
+      const readmeBuffer = await skillFileService.readSkillFile(skill.slug, skill.version, 'SKILL.md')
+      if (readmeBuffer) {
+        readme = readmeBuffer.toString('utf-8')
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return { ...skill, readme }
 }
 
 export async function getSkillById(id: string) {
@@ -157,40 +170,177 @@ export async function createSkill(data: {
   displayName: string
   slug: string
   description?: string
-  content?: string
   categoryId?: number
   authorId: string
-  version?: string
   changeLog?: string
 }) {
   const now = new Date()
-  const [skill] = await db.insert(skills).values({
-    id: randomUUID(),
+  const skillId = randomUUID()
+  const versionId = randomUUID()
+
+  await db.insert(skills).values({
+    id: skillId,
     name: data.name,
     displayName: data.displayName,
     slug: data.slug,
     description: data.description || '',
-    content: data.content || '',
     categoryId: data.categoryId ?? null,
     authorId: data.authorId,
-    version: data.version || '1.0.0',
-    changeLog: data.changeLog,
+    version: '1.0.0',
     status: 'pending',
     createdAt: now,
     updatedAt: now
-  }).returning()
+  })
 
-  return skill
+  await db.insert(skillVersions).values({
+    id: versionId,
+    skillId: skillId,
+    version: '1.0.0',
+    versionType: 'patch',
+    changeLog: data.changeLog || '初始版本',
+    status: 'pending',
+    createdBy: data.authorId,
+    createdAt: now,
+    updatedAt: now
+  })
+
+  return { skillId, versionId, version: '1.0.0' }
+}
+
+export function incrementVersion(currentVersion: string, type: 'major' | 'minor' | 'patch'): string {
+  const parts = currentVersion.split('.').map(Number)
+  const [major = 0, minor = 0, patch = 0] = parts
+
+  switch (type) {
+    case 'major':
+      return `${major + 1}.0.0`
+    case 'minor':
+      return `${major}.${minor + 1}.0`
+    case 'patch':
+    default:
+      return `${major}.${minor}.${patch + 1}`
+  }
+}
+
+export async function createSkillVersion(data: {
+  skillId: string
+  versionType: 'major' | 'minor' | 'patch'
+  changeLog: string
+  createdBy: string
+  displayName?: string
+  description?: string
+}) {
+  const skill = await getSkillById(data.skillId)
+  if (!skill) {
+    throw new Error('Skill not found')
+  }
+
+  const newVersion = incrementVersion(skill.version, data.versionType)
+  const versionId = randomUUID()
+  const now = new Date()
+
+  await db.insert(skillVersions).values({
+    id: versionId,
+    skillId: data.skillId,
+    version: newVersion,
+    versionType: data.versionType,
+    changeLog: data.changeLog,
+    status: 'pending',
+    createdBy: data.createdBy,
+    createdAt: now,
+    updatedAt: now
+  })
+
+  if (data.displayName || data.description) {
+    await db.update(skills).set({
+      displayName: data.displayName ?? skill.displayName,
+      description: data.description ?? skill.description,
+      updatedAt: now
+    }).where(eq(skills.id, data.skillId))
+  }
+
+  return { versionId, version: newVersion }
+}
+
+export async function getSkillVersions(skillId: string) {
+  const versions = await db.select({
+    id: skillVersions.id,
+    version: skillVersions.version,
+    versionType: skillVersions.versionType,
+    changeLog: skillVersions.changeLog,
+    status: skillVersions.status,
+    rejectReason: skillVersions.rejectReason,
+    createdBy: skillVersions.createdBy,
+    approvedBy: skillVersions.approvedBy,
+    createdAt: skillVersions.createdAt,
+    approvedAt: skillVersions.approvedAt,
+    creatorName: users.displayName
+  }).from(skillVersions)
+    .leftJoin(users, eq(skillVersions.createdBy, users.id))
+    .where(eq(skillVersions.skillId, skillId))
+    .orderBy(desc(skillVersions.createdAt))
+
+  return versions
+}
+
+export async function getSkillVersionById(versionId: string) {
+  return db.select().from(skillVersions).where(eq(skillVersions.id, versionId)).get()
+}
+
+export async function approveSkillVersion(versionId: string, approvedBy: string) {
+  const version = await getSkillVersionById(versionId)
+  if (!version) {
+    throw new Error('Version not found')
+  }
+
+  const now = new Date()
+
+  await db.update(skillVersions).set({
+    status: 'approved',
+    approvedBy,
+    approvedAt: now,
+    updatedAt: now
+  }).where(eq(skillVersions.id, versionId))
+
+  const skill = await getSkillById(version.skillId)
+  const updateData: Record<string, unknown> = {
+    version: version.version,
+    updatedAt: now
+  }
+
+  if (skill?.status !== 'approved') {
+    updateData.status = 'approved'
+    updateData.rejectReason = null
+  }
+
+  await db.update(skills).set(updateData).where(eq(skills.id, version.skillId))
+
+  return { success: true }
+}
+
+export async function rejectSkillVersion(versionId: string, rejectReason: string) {
+  const version = await getSkillVersionById(versionId)
+  if (!version) {
+    throw new Error('Version not found')
+  }
+
+  const now = new Date()
+
+  await db.update(skillVersions).set({
+    status: 'rejected',
+    rejectReason,
+    updatedAt: now
+  }).where(eq(skillVersions.id, versionId))
+
+  return { success: true }
 }
 
 export async function updateSkill(id: string, data: Partial<{
   name: string
   displayName: string
   description: string
-  content: string
   categoryId: number | null
   version: string
-  changeLog: string
   status: string
   rejectReason: string | null
 }>) {
@@ -203,6 +353,7 @@ export async function updateSkill(id: string, data: Partial<{
 }
 
 export async function deleteSkill(id: string) {
+  await db.delete(skillVersions).where(eq(skillVersions.skillId, id))
   await db.delete(skillFavorites).where(eq(skillFavorites.skillId, id))
   await db.delete(skillRatings).where(eq(skillRatings.skillId, id))
   await db.delete(skills).where(eq(skills.id, id))
@@ -272,7 +423,6 @@ export async function getUserFavorites(userId: string) {
     categoryId: skills.categoryId,
     authorId: skills.authorId,
     version: skills.version,
-    changeLog: skills.changeLog,
     status: skills.status,
     downloadCount: skills.downloadCount,
     favoriteCount: skills.favoriteCount,

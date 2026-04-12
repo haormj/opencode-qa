@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import * as skillService from '../services/skill.js'
+import * as skillFileService from '../services/skill-file.js'
 import logger from '../services/logger.js'
 
 const router = Router()
@@ -24,36 +25,38 @@ router.get('/', async (req, res) => {
   }
 })
 
-router.put('/:id/review', async (req, res) => {
+router.put('/:id/versions/:versionId/review', async (req, res) => {
   try {
-    const { id } = req.params
-    const { status, rejectReason, name, displayName, categoryId, icon, tags, installCommand } = req.body
+    const { id, versionId } = req.params
+    const { status, rejectReason } = req.body
 
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'Status must be approved or rejected' })
     }
 
-    const updateData: Record<string, unknown> = { status }
-    if (status === 'rejected' && rejectReason) {
-      updateData.rejectReason = rejectReason
+    if (status === 'rejected' && !rejectReason) {
+      return res.status(400).json({ error: 'rejectReason is required when rejecting' })
     }
-    if (status === 'approved') {
-      updateData.rejectReason = null
-    }
-    if (name !== undefined) updateData.name = name
-    if (displayName !== undefined) updateData.displayName = displayName
-    if (categoryId !== undefined) updateData.categoryId = categoryId
-    if (icon !== undefined) updateData.icon = icon
-    if (tags !== undefined) updateData.tags = typeof tags === 'object' ? JSON.stringify(tags) : tags
-    if (installCommand !== undefined) updateData.installCommand = installCommand
 
-    const skill = await skillService.updateSkill(id, updateData as Parameters<typeof skillService.updateSkill>[1])
-    if (!skill) {
-      return res.status(404).json({ error: 'Skill not found' })
+    const version = await skillService.getSkillVersionById(versionId)
+    if (!version) {
+      return res.status(404).json({ error: 'Version not found' })
     }
-    res.json(skill)
+
+    if (version.skillId !== id) {
+      return res.status(400).json({ error: 'Version does not belong to this skill' })
+    }
+
+    if (status === 'approved') {
+      await skillService.approveSkillVersion(versionId, req.user!.id)
+    } else {
+      await skillService.rejectSkillVersion(versionId, rejectReason)
+    }
+
+    const skill = await skillService.getSkillById(id)
+    res.json({ success: true, skill })
   } catch (error) {
-    logger.error('Review skill error:', error)
+    logger.error('Review skill version error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -61,10 +64,10 @@ router.put('/:id/review', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, displayName, description, content, categoryId, version, changeLog } = req.body
+    const { name, displayName, description, categoryId } = req.body
 
     const skill = await skillService.updateSkill(id, {
-      name, displayName, description, content, categoryId, version, changeLog
+      name, displayName, description, categoryId
     })
     if (!skill) {
       return res.status(404).json({ error: 'Skill not found' })
@@ -83,6 +86,8 @@ router.delete('/:id', async (req, res) => {
     if (!skill) {
       return res.status(404).json({ error: 'Skill not found' })
     }
+    
+    await skillFileService.deleteSkillFiles(skill.slug)
     await skillService.deleteSkill(id)
     res.json({ success: true })
   } catch (error) {

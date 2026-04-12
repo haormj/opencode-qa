@@ -19,6 +19,9 @@ function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: B
       if (skillPathname === '/skills/publish') {
         return { first: '技能市场', second: '发布技能' }
       }
+      if (skillPathname.match(/^\/skills\/update\/[^/]+$/)) {
+        return { first: '技能市场', second: '更新技能' }
+      }
       if (skillPathname === '/skills/my/published') {
         return { first: '技能市场', second: '我的技能' }
       }

@@ -77,6 +77,14 @@ function App() {
           }
         />
         <Route
+          path="/skills/update/:id"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/skills/my/published"
           element={
             <PrivateRoute>

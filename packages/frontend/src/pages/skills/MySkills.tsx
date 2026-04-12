@@ -34,7 +34,7 @@ function MySkills() {
   }
 
   const handleUpdate = (skill: Skill) => {
-    navigate(`/skills/publish?id=${skill.id}`)
+    navigate(`/skills/update/${skill.id}`)
   }
 
   const handleOffline = async (skill: Skill) => {

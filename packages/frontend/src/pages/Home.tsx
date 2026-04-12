@@ -10,6 +10,7 @@ import Breadcrumb from '../components/Breadcrumb'
 import SkillMarket from './skills/Market'
 import SkillDetail from './skills/Detail'
 import SkillPublish from './skills/Publish'
+import SkillUpdate from './skills/Update'
 import MySkills from './skills/MySkills'
 import MyFavorites from './skills/MyFavorites'
 import { sendMessageStream, stopMessageStream, sendHumanMessage, getSession, updateSessionStatus, getUsername, generateAvatarColor, createSession, getAssistants, type MessageItem } from '../services/api'
@@ -472,7 +473,9 @@ function Home() {
             (() => {
               const path = locationHook.pathname
               const slug = path.match(/^\/skills\/([^/]+)$/)?.[1]
+              const updateMatch = path.match(/^\/skills\/update\/([^/]+)$/)
               if (path === '/skills/publish') return <SkillPublish />
+              if (updateMatch) return <SkillUpdate />
               if (path === '/skills/my/published') return <MySkills />
               if (path === '/skills/my/favorites') return <MyFavorites />
               if (slug) return <SkillDetail />

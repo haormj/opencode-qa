@@ -786,11 +786,10 @@ export interface Skill {
   displayName: string
   slug: string
   description: string | null
-  content?: string | null
+  readme?: string | null
   categoryId?: number | null
   authorId: string
   version: string
-  changeLog?: string | null
   status: string
   rejectReason: string | null
   downloadCount: number
@@ -839,6 +838,120 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
 
 export async function getSkillBySlug(slug: string): Promise<Skill> {
   return request(`${API_BASE}/skills/${slug}`)
+}
+
+export async function getSkillById(id: string): Promise<Skill> {
+  const result = await request<SkillListResponse>(`${API_BASE}/skills/my/published`)
+  return result.items.find(s => s.id === id) || null as unknown as Skill
+}
+
+export interface CreateSkillResult {
+  id: string
+  versionId: string
+  slug: string
+  version: string
+  status: string
+}
+
+export async function createSkillWithFiles(data: {
+  files: File[]
+  paths: string[]
+  name: string
+  displayName: string
+  slug: string
+  description?: string
+  changeLog?: string
+}): Promise<CreateSkillResult> {
+  const formData = new FormData()
+  data.files.forEach((file) => {
+    formData.append('files', file)
+  })
+  formData.append('paths', JSON.stringify(data.paths))
+  formData.append('name', data.name)
+  formData.append('displayName', data.displayName)
+  formData.append('slug', data.slug)
+  if (data.description) formData.append('description', data.description)
+  if (data.changeLog) formData.append('changeLog', data.changeLog)
+
+  const token = getToken()
+  const response = await fetch(`${API_BASE}/skills`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+export interface UpdateSkillResult {
+  id: string
+  versionId: string
+  newVersion: string
+  status: string
+}
+
+export async function updateSkillWithFiles(id: string, data: {
+  files: File[]
+  paths: string[]
+  displayName?: string
+  description?: string
+  versionType: 'major' | 'minor' | 'patch'
+  changeLog: string
+}): Promise<UpdateSkillResult> {
+  const formData = new FormData()
+  data.files.forEach((file) => {
+    formData.append('files', file)
+  })
+  formData.append('paths', JSON.stringify(data.paths))
+  if (data.displayName) formData.append('displayName', data.displayName)
+  if (data.description) formData.append('description', data.description)
+  formData.append('versionType', data.versionType)
+  formData.append('changeLog', data.changeLog)
+
+  const token = getToken()
+  const response = await fetch(`${API_BASE}/skills/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+export function downloadSkill(slug: string): string {
+  return `${API_BASE}/skills/${slug}/download`
+}
+
+export interface SkillVersion {
+  id: string
+  version: string
+  versionType: string
+  changeLog: string | null
+  status: string
+  rejectReason: string | null
+  createdBy: string
+  approvedBy: string | null
+  createdAt: string
+  approvedAt: string | null
+  creatorName: string | null
+}
+
+export async function getSkillVersions(slug: string): Promise<{ items: SkillVersion[] }> {
+  return request(`${API_BASE}/skills/${slug}/versions`)
 }
 
 export async function createSkill(data: Partial<Skill> & { name: string; displayName: string; slug: string }): Promise<Skill> {
@@ -907,10 +1020,21 @@ export async function getMyFavoriteSkills(): Promise<Skill[]> {
 export interface FileNode {
   name: string
   path: string
-  size: number
   isDirectory: boolean
   children?: FileNode[]
+}
+
+export interface UploadFileNode {
+  name: string
+  path: string
+  size: number
+  isDirectory: boolean
+  children?: UploadFileNode[]
   isSkillMd?: boolean
+}
+
+export async function getSkillFiles(slug: string): Promise<{ tree: FileNode[] }> {
+  return request(`${API_BASE}/skills/${slug}/files`)
 }
 
 export interface UploadResult {
@@ -966,6 +1090,13 @@ export async function getAdminSkills(params?: {
   if (params?.sort) searchParams.set('sort', params.sort)
   const query = searchParams.toString()
   return request(`${API_BASE}/admin/skills${query ? `?${query}` : ''}`)
+}
+
+export async function reviewSkillVersion(skillId: string, versionId: string, data: { status: 'approved' | 'rejected'; rejectReason?: string }): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/skills/${skillId}/versions/${versionId}/review`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
 }
 
 export async function reviewSkill(id: string, data: { status: string; rejectReason?: string; name?: string; displayName?: string; categoryId?: number; icon?: string; tags?: string; installCommand?: string }): Promise<Skill> {

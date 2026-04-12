@@ -158,17 +158,30 @@ export const skills = sqliteTable('skills', {
   displayName: text('display_name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
-  content: text('content'),
   categoryId: integer('category_id').references(() => skillCategories.id, { onDelete: 'set null' }),
   authorId: text('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   version: text('version').notNull().default('1.0.0'),
-  changeLog: text('change_log'),
   status: text('status').notNull().default('pending'),
   rejectReason: text('reject_reason'),
   downloadCount: integer('download_count').notNull().default(0),
   favoriteCount: integer('favorite_count').notNull().default(0),
   averageRating: real('average_rating').notNull().default(0),
   ratingCount: integer('rating_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+export const skillVersions = sqliteTable('skill_versions', {
+  id: text('id').primaryKey(),
+  skillId: text('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  versionType: text('version_type').notNull(),
+  changeLog: text('change_log'),
+  status: text('status').notNull().default('pending'),
+  rejectReason: text('reject_reason'),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  approvedBy: text('approved_by').references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: integer('approved_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
@@ -295,8 +308,24 @@ export const skillsRelations = relations(skills, ({ one, many }) => ({
     fields: [skills.authorId],
     references: [users.id]
   }),
+  versions: many(skillVersions),
   favorites: many(skillFavorites),
   ratings: many(skillRatings)
+}))
+
+export const skillVersionsRelations = relations(skillVersions, ({ one }) => ({
+  skill: one(skills, {
+    fields: [skillVersions.skillId],
+    references: [skills.id]
+  }),
+  creator: one(users, {
+    fields: [skillVersions.createdBy],
+    references: [users.id]
+  }),
+  approver: one(users, {
+    fields: [skillVersions.approvedBy],
+    references: [users.id]
+  })
 }))
 
 export const skillFavoritesRelations = relations(skillFavorites, ({ one }) => ({
@@ -347,6 +376,8 @@ export type SkillCategory = typeof skillCategories.$inferSelect
 export type NewSkillCategory = typeof skillCategories.$inferInsert
 export type Skill = typeof skills.$inferSelect
 export type NewSkill = typeof skills.$inferInsert
+export type SkillVersion = typeof skillVersions.$inferSelect
+export type NewSkillVersion = typeof skillVersions.$inferInsert
 export type SkillFavorite = typeof skillFavorites.$inferSelect
 export type NewSkillFavorite = typeof skillFavorites.$inferInsert
 export type SkillRating = typeof skillRatings.$inferSelect
