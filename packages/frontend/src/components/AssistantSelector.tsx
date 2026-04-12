@@ -21,7 +21,7 @@ function AssistantSelector({ value, onChange, assistants, mode = 'chat', onModeC
   }, [assistants])
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    onChange?.(key === value ? null : key)
+    onChange?.(key)
   }
 
   return (
