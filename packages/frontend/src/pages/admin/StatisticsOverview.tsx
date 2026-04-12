@@ -102,7 +102,6 @@ function StatisticsOverview() {
               <XAxis dataKey="name" />
               <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
               <Tooltip formatter={(value) => `${value}%`} />
-              <Legend />
               <Bar dataKey="拦截率" radius={[4, 4, 0, 0]} maxBarSize={60}>
                 {barData.map((_, index) => (
                   <Cell key={`bar-${index}`} fill={ASSISTANT_COLORS[index % ASSISTANT_COLORS.length]} />
