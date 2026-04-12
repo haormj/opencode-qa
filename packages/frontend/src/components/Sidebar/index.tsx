@@ -46,7 +46,7 @@ function Sidebar({
   refreshTrigger, 
   onSessionsLoad, 
   assistantId,
-  mode = 'chat'
+  mode = 'skill'
 }: SidebarProps) {
   const [siteTitle, setSiteTitle] = useState('OpenCode QA')
   const [expandedKeys, setExpandedKeys] = useState<string[]>(['/skills/my'])

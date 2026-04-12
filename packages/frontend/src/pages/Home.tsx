@@ -36,7 +36,7 @@ function Home() {
   const loadingStatesRef = useRef<Map<string, boolean>>(new Map())
   const streamingMessagesRef = useRef<Map<string, ExtendedMessageProps[]>>(new Map())
   const currentDisplaySessionIdRef = useRef<string | null>(null)
-  const [mode, setMode] = useState<'chat' | 'skill'>('chat')
+  const [mode, setMode] = useState<'chat' | 'skill'>('skill')
   const [currentAssistantId, setCurrentAssistantId] = useState<string | null>(() => {
     return localStorage.getItem('currentAssistantId')
   })

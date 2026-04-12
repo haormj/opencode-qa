@@ -15,7 +15,7 @@ interface BreadcrumbResult {
   third?: string | null
 }
 
-function Breadcrumb({ assistantId, assistants, mode = 'chat', skillPathname }: BreadcrumbProps) {
+function Breadcrumb({ assistantId, assistants, mode = 'skill', skillPathname }: BreadcrumbProps) {
   if (mode === 'skill') {
     const getSkillBreadcrumb = (): BreadcrumbResult => {
       if (!skillPathname) return { root: '技能市场', first: '全部技能', second: null }

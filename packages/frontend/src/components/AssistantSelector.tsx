@@ -12,7 +12,7 @@ interface AssistantSelectorProps {
   onModeChange?: (mode: 'chat' | 'skill') => void
 }
 
-function AssistantSelector({ value, onChange, assistants, mode = 'chat', onModeChange }: AssistantSelectorProps) {
+function AssistantSelector({ value, onChange, assistants, mode = 'skill', onModeChange }: AssistantSelectorProps) {
   const menuItems: MenuProps['items'] = useMemo(() => {
     return assistants.map(assistant => ({
       key: assistant.id,
@@ -26,10 +26,13 @@ function AssistantSelector({ value, onChange, assistants, mode = 'chat', onModeC
 
   return (
     <div className="assistant-selector">
+      <Button type="text" className={`assistant-selector-btn ${mode === 'skill' ? 'active' : ''}`} onClick={() => onModeChange?.('skill')}>
+        技能市场
+      </Button>
       <Dropdown
         menu={{ items: menuItems, onClick: handleMenuClick, selectedKeys: value ? [value] : [] }}
         trigger={['hover']}
-        placement="bottomLeft"
+        placement="bottomRight"
         popupRender={(menu) => (
           <div className="assistant-selector-dropdown">{menu}</div>
         )}
@@ -38,9 +41,6 @@ function AssistantSelector({ value, onChange, assistants, mode = 'chat', onModeC
           智能助手
         </Button>
       </Dropdown>
-      <Button type="text" className={`assistant-selector-btn ${mode === 'skill' ? 'active' : ''}`} onClick={() => onModeChange?.('skill')}>
-        技能市场
-      </Button>
     </div>
   )
 }
