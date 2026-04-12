@@ -51,10 +51,12 @@ function Home() {
   useEffect(() => {
     if (locationHook.pathname.startsWith('/skills')) {
       setMode('skill')
+    } else if (locationHook.pathname === '/') {
+      navigateHook('/skills', { replace: true })
     } else {
       setMode('chat')
     }
-  }, [locationHook.pathname])
+  }, [locationHook.pathname, navigateHook])
 
   const setLoadingState = useCallback((id: string, loading: boolean) => {
     loadingStatesRef.current.set(id, loading)
