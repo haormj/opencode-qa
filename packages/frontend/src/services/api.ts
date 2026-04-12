@@ -804,18 +804,7 @@ export interface Skill {
 }
 
 export interface SkillDetail extends Skill {
-  authorName?: string
   authorUsername?: string
-  categoryName?: string
-  categorySlug?: string
-  readme?: string
-}
-
-export interface FileTreeNode {
-  name: string
-  path: string
-  isDirectory: boolean
-  children?: FileTreeNode[]
 }
 
 export interface SkillListResponse {
@@ -1162,18 +1151,19 @@ export async function getAdminSkillById(id: string): Promise<SkillDetail> {
   return request(`${API_BASE}/admin/skills/${id}`)
 }
 
-export async function getAdminSkillFiles(skillId: string): Promise<{ tree: FileTreeNode[] }> {
+export async function getAdminSkillFiles(skillId: string): Promise<{ tree: FileNode[] }> {
   return request(`${API_BASE}/admin/skills/${skillId}/files`)
 }
 
 export async function getSkillFileContent(skillId: string, filePath: string): Promise<string> {
-  const response = await fetch(`${API_BASE}/admin/skills/${skillId}/files/${filePath}`, {
+  const response = await fetch(`${API_BASE}/admin/skills/${skillId}/files/${encodeURIComponent(filePath)}`, {
     headers: {
       'Authorization': `Bearer ${getToken()}`
     }
   })
   if (!response.ok) {
-    throw new Error('Failed to fetch file content')
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch file content' }))
+    throw new Error(error.error || `HTTP error! status: ${response.status}`)
   }
   return response.text()
 }
