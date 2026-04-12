@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Tag, Button, Tabs, Tree, Spin, message, Modal, Form, Input, Select, Space, Statistic, Row, Col } from 'antd'
 import type { TreeDataNode } from 'antd'
@@ -19,6 +19,9 @@ function SkillDetail() {
   const [fileLoading, setFileLoading] = useState(false)
   const [reviewModal, setReviewModal] = useState(false)
   const [reviewForm] = Form.useForm()
+  const [leftWidth, setLeftWidth] = useState(250)
+  const [isDragging, setIsDragging] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchSkill()
@@ -92,6 +95,33 @@ function SkillDetail() {
     return null
   }
 
+  const handleMouseDown = useCallback(() => {
+    setIsDragging(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const newWidth = e.clientX - rect.left
+      setLeftWidth(Math.max(150, Math.min(500, newWidth)))
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging])
+
   if (loading) return <Spin />
   if (!skill) return <div>技能不存在</div>
 
@@ -141,8 +171,8 @@ function SkillDetail() {
             key: 'files',
             label: '文件预览',
             children: (
-              <div style={{ display: 'flex', gap: 16, minHeight: 400 }}>
-                <div style={{ width: 250, borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
+              <div ref={containerRef} style={{ display: 'flex', minHeight: 400 }}>
+                <div style={{ width: leftWidth, overflow: 'auto' }}>
                   <Tree
                     showIcon
                     expandAction="click"
@@ -157,7 +187,16 @@ function SkillDetail() {
                     }}
                   />
                 </div>
-                <div style={{ flex: 1, overflow: 'auto' }}>
+                <div
+                  style={{
+                    width: 5,
+                    cursor: 'col-resize',
+                    background: isDragging ? '#1890ff' : '#f0f0f0',
+                    transition: isDragging ? 'none' : 'background 0.2s'
+                  }}
+                  onMouseDown={handleMouseDown}
+                />
+                <div style={{ flex: 1, overflow: 'auto', paddingLeft: 16 }}>
                   {fileLoading ? (
                     <Spin />
                   ) : selectedFile ? (
