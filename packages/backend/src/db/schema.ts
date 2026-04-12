@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
 import { relations } from 'drizzle-orm'
 
 export const users = sqliteTable('users', {
@@ -169,7 +169,7 @@ export const skills = sqliteTable('skills', {
   rejectReason: text('reject_reason'),
   downloadCount: integer('download_count').notNull().default(0),
   favoriteCount: integer('favorite_count').notNull().default(0),
-  averageRating: integer('average_rating', { mode: 'real' }).notNull().default(0),
+  averageRating: real('average_rating').notNull().default(0),
   ratingCount: integer('rating_count').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
