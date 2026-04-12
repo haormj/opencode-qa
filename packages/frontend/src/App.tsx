@@ -13,6 +13,7 @@ import AdminAssistants from './pages/admin/Assistants'
 import AdminSsoProviders from './pages/admin/SsoProviders'
 import AdminSystemSettings from './pages/admin/SystemSettings'
 import AdminSkills from './pages/admin/Skills'
+import SkillDetail from './pages/admin/SkillDetail'
 import SkillCategories from './pages/admin/SkillCategories'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
@@ -123,6 +124,7 @@ function App() {
           <Route path="bots" element={<AdminBots />} />
           <Route path="assistants" element={<AdminAssistants />} />
           <Route path="skills" element={<AdminSkills />} />
+          <Route path="skills/:id" element={<SkillDetail />} />
           <Route path="skills/categories" element={<SkillCategories />} />
           <Route path="settings/sso" element={<AdminSsoProviders />} />
           <Route path="settings/system" element={<AdminSystemSettings />} />
