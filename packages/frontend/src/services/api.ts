@@ -803,6 +803,21 @@ export interface Skill {
   authorName?: string | null
 }
 
+export interface SkillDetail extends Skill {
+  authorName?: string
+  authorUsername?: string
+  categoryName?: string
+  categorySlug?: string
+  readme?: string
+}
+
+export interface FileTreeNode {
+  name: string
+  path: string
+  isDirectory: boolean
+  children?: FileTreeNode[]
+}
+
 export interface SkillListResponse {
   total: number
   page: number
@@ -1140,5 +1155,43 @@ export async function updateSkillCategory(id: number, data: Partial<SkillCategor
 export async function deleteSkillCategory(id: number): Promise<void> {
   await request(`${API_BASE}/admin/skills/categories/${id}`, {
     method: 'DELETE',
+  })
+}
+
+export async function getAdminSkillById(id: string): Promise<SkillDetail> {
+  return request(`${API_BASE}/admin/skills/${id}`)
+}
+
+export async function getAdminSkillFiles(skillId: string): Promise<{ tree: FileTreeNode[] }> {
+  return request(`${API_BASE}/admin/skills/${skillId}/files`)
+}
+
+export async function getSkillFileContent(skillId: string, filePath: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/admin/skills/${skillId}/files/${filePath}`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  })
+  if (!response.ok) {
+    throw new Error('Failed to fetch file content')
+  }
+  return response.text()
+}
+
+export async function batchReviewSkills(
+  ids: string[],
+  status: 'approved' | 'rejected',
+  rejectReason?: string
+): Promise<{ success: boolean; count: number }> {
+  return request(`${API_BASE}/admin/skills/batch-review`, {
+    method: 'POST',
+    body: JSON.stringify({ ids, status, rejectReason }),
+  })
+}
+
+export async function batchDeleteSkills(ids: string[]): Promise<{ success: boolean; count: number }> {
+  return request(`${API_BASE}/admin/skills/batch-delete`, {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
   })
 }
