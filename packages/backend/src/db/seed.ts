@@ -1,4 +1,4 @@
-import { db, users, roles, userRoles, bots, ssoProviders, systemSettings, assistants } from './index.js'
+import { db, users, roles, userRoles, bots, ssoProviders, systemSettings, assistants, skillCategories } from './index.js'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
@@ -194,6 +194,35 @@ export async function seed() {
   } else {
     console.log('Feishu SSO provider already exists, skipping')
   }
+
+  // Seed skill categories
+  const defaultCategories = [
+    { name: 'AI增强', slug: 'ai-enhancement', icon: '🤖', sortOrder: 0 },
+    { name: '工具', slug: 'tools', icon: '🔧', sortOrder: 1 },
+    { name: '开发工具', slug: 'dev-tools', icon: '💻', sortOrder: 2 },
+    { name: '搜索研究', slug: 'search-research', icon: '🔍', sortOrder: 3 },
+    { name: '知识管理', slug: 'knowledge-management', icon: '📚', sortOrder: 4 },
+    { name: '信息处理', slug: 'information-processing', icon: '📄', sortOrder: 5 },
+    { name: '浏览器自动化', slug: 'browser-automation', icon: '🌐', sortOrder: 6 },
+    { name: '办公协同', slug: 'office-collaboration', icon: '🏢', sortOrder: 7 },
+    { name: '垂直场景', slug: 'vertical-scenarios', icon: '🎯', sortOrder: 8 },
+    { name: '多媒体', slug: 'multimedia', icon: '🎬', sortOrder: 9 },
+    { name: '数据分析', slug: 'data-analysis', icon: '📊', sortOrder: 10 },
+    { name: '自动化', slug: 'automation', icon: '⚡', sortOrder: 11 }
+  ]
+
+  for (const cat of defaultCategories) {
+    const now2 = new Date()
+    await db.insert(skillCategories).values({
+      ...cat,
+      createdAt: now2,
+      updatedAt: now2
+    }).onConflictDoUpdate({
+      target: skillCategories.slug,
+      set: { name: cat.name, icon: cat.icon, sortOrder: cat.sortOrder, updatedAt: now2 }
+    }).returning()
+  }
+  console.log('Skill categories seeded')
 }
 
 // Run seed if executed directly
