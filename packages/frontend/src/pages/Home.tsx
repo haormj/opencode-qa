@@ -143,6 +143,10 @@ function Home() {
       return
     }
 
+    const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+    const botName = currentAssistant?.defaultBot?.displayName || 'AI 助手'
+    const botColor = currentAssistant?.defaultBot?.avatar || '#52c41a'
+
     const assistantMessageId = (Date.now() + 1).toString()
     const assistantMessage: ExtendedMessageProps = {
       _id: assistantMessageId,
@@ -150,8 +154,8 @@ function Home() {
       content: { text: '' },
       position: 'left',
       sender: {
-        name: 'AI 助手',
-        color: '#52c41a',
+        name: botName,
+        color: botColor,
         type: 'ai'
       },
       reasoning: ''

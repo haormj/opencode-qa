@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { db, users, roles, userRoles, bots, sessions, messages } from '../db/index.js'
+import { db, users, roles, userRoles, bots, sessions, messages, assistants } from '../db/index.js'
 import { eq, and, or, desc, asc, sql, like, inArray } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
@@ -14,7 +14,7 @@ router.use(requireAdmin)
 
 router.get('/sessions', async (req, res) => {
   try {
-    const { status, userId, search, needHuman, page = '1', pageSize = '20' } = req.query
+    const { status, userId, search, needHuman, assistantId, page = '1', pageSize = '20' } = req.query
 
     const pageNum = parseInt(page as string) || 1
     const pageSizeNum = parseInt(pageSize as string) || 20
@@ -38,6 +38,10 @@ router.get('/sessions', async (req, res) => {
       conditions.push(eq(sessions.needHuman, needHuman === 'true'))
     }
 
+    if (assistantId && typeof assistantId === 'string') {
+      conditions.push(eq(sessions.assistantId, assistantId))
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
     const countResult = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(whereClause).get()
@@ -59,6 +63,12 @@ router.get('/sessions', async (req, res) => {
       : []
     const userMap = new Map(userList.map(u => [u.id, u]))
 
+    const assistantIds = [...new Set(sessionList.map(s => s.assistantId).filter(Boolean))] as string[]
+    const assistantList = assistantIds.length > 0
+      ? await db.select({ id: assistants.id, name: assistants.name }).from(assistants).where(inArray(assistants.id, assistantIds))
+      : []
+    const assistantMap = new Map(assistantList.map(a => [a.id, a]))
+
     res.json({
       total,
       page: pageNum,
@@ -67,6 +77,8 @@ router.get('/sessions', async (req, res) => {
         id: s.id,
         title: s.title,
         status: s.status,
+        assistantId: s.assistantId,
+        assistant: s.assistantId ? assistantMap.get(s.assistantId) || null : null,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         messageCount: s.messageCount,

@@ -91,7 +91,7 @@ export const messages = sqliteTable('messages', {
   metadata: text('metadata'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  botId: text('bot_id').references(() => bots.id, { onDelete: 'cascade' })
+  botId: text('bot_id').references(() => bots.id, { onDelete: 'set null' })
 })
 
 export const userTokens = sqliteTable('user_tokens', {

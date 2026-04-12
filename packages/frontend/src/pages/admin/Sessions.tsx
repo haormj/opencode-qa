@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Tag, Input, Select, Button, Space, Avatar, Tooltip, message, Popconfirm } from 'antd'
 import { SearchOutlined, EyeOutlined, PoweroffOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAdminSessions, closeAdminSession, generateAvatarColor, type AdminSession } from '../../services/api'
+import { getAdminSessions, closeAdminSession, getAssistants, generateAvatarColor, type AdminSession, type Assistant } from '../../services/api'
 import './Admin.css'
 
 const statusColors: Record<string, string> = {
@@ -32,6 +32,12 @@ function AdminSessions() {
     searchParams.get('status') || undefined
   )
   const [needHumanFilter, setNeedHumanFilter] = useState<boolean | undefined>(undefined)
+  const [assistantFilter, setAssistantFilter] = useState<string | undefined>(undefined)
+  const [assistants, setAssistants] = useState<Assistant[]>([])
+
+  useEffect(() => {
+    getAssistants().then(setAssistants).catch(() => {})
+  }, [])
 
   const fetchSessions = async () => {
     setLoading(true)
@@ -40,6 +46,7 @@ function AdminSessions() {
         status: statusFilter,
         search: searchText || undefined,
         needHuman: needHumanFilter,
+        assistantId: assistantFilter,
         page,
         pageSize
       })
@@ -54,7 +61,7 @@ function AdminSessions() {
 
   useEffect(() => {
     fetchSessions()
-  }, [page, pageSize, statusFilter, needHumanFilter])
+  }, [page, pageSize, statusFilter, needHumanFilter, assistantFilter])
 
   const handleSearch = () => {
     setPage(1)
@@ -106,6 +113,13 @@ function AdminSessions() {
           <span>{user.displayName}</span>
         </Space>
       )
+    },
+    {
+      title: '助手',
+      dataIndex: 'assistant',
+      key: 'assistant',
+      width: 120,
+      render: (assistant: AdminSession['assistant']) => assistant?.name || '-'
     },
     {
       title: '状态',
@@ -208,6 +222,17 @@ function AdminSessions() {
               { value: true, label: '是' },
               { value: false, label: '否' }
             ]}
+          />
+          <Select
+            placeholder="助手筛选"
+            value={assistantFilter}
+            onChange={(value) => {
+              setAssistantFilter(value)
+              setPage(1)
+            }}
+            allowClear
+            style={{ width: 150 }}
+            options={assistants.map(a => ({ value: a.id, label: a.name }))}
           />
           <Button type="primary" onClick={handleSearch}>
             搜索

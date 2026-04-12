@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm } from 'antd'
-import { ReloadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, Switch, message, Popconfirm, Tooltip } from 'antd'
+import { ReloadOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getBots, createBot, updateBot, deleteBot, type Bot } from '../../services/api'
 import './Admin.css'
@@ -28,6 +28,13 @@ function AdminBots() {
     fetchBots()
   }, [])
 
+  const handleCreate = () => {
+    setEditingBot(null)
+    form.resetFields()
+    form.setFieldsValue({ isActive: true, agent: 'plan' })
+    setModalOpen(true)
+  }
+
   const handleEdit = (bot: Bot) => {
     setEditingBot(bot)
     form.setFieldsValue(bot)
@@ -39,8 +46,9 @@ function AdminBots() {
       await deleteBot(id)
       message.success('删除成功')
       fetchBots()
-    } catch (error) {
-      message.error('删除失败')
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : '删除失败'
+      message.error(errorMsg)
     }
   }
 
@@ -141,16 +149,16 @@ function AdminBots() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 80,
       render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
+        <Space size={4}>
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
           {record.name !== 'default' && (
             <Popconfirm
               title="确认删除"
@@ -159,9 +167,9 @@ function AdminBots() {
               okText="确定"
               cancelText="取消"
             >
-              <Button type="link" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
+              <Tooltip title="删除">
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )}
         </Space>
@@ -173,9 +181,14 @@ function AdminBots() {
     <Card
       title="机器人管理"
       extra={
-        <Button icon={<ReloadOutlined />} onClick={fetchBots}>
-          刷新
-        </Button>
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            新增机器人
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchBots}>
+            刷新
+          </Button>
+        </Space>
       }
     >
       <Table

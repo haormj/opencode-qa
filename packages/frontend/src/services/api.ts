@@ -98,10 +98,10 @@ export interface Assistant {
     id: string
     name: string
     displayName: string
+    avatar: string | null
   }
   isActive: boolean
   createdAt: string
-  updatedAt: string
 }
 
 export interface UserAssistantBot {
@@ -126,6 +126,8 @@ export interface AdminSession {
   id: string
   title: string
   status: string
+  assistantId?: string | null
+  assistant?: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
   messageCount: number
@@ -444,6 +446,7 @@ export async function getAdminSessions(params?: {
   userId?: string
   search?: string
   needHuman?: boolean
+  assistantId?: string
   page?: number
   pageSize?: number
 }): Promise<AdminSessionListResponse> {
@@ -452,6 +455,7 @@ export async function getAdminSessions(params?: {
   if (params?.userId) searchParams.set('userId', params.userId)
   if (params?.search) searchParams.set('search', params.search)
   if (params?.needHuman !== undefined) searchParams.set('needHuman', params.needHuman.toString())
+  if (params?.assistantId) searchParams.set('assistantId', params.assistantId)
   if (params?.page) searchParams.set('page', params.page.toString())
   if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
 

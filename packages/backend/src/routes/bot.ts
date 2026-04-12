@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { db, bots } from '../db/index.js'
-import { eq, desc } from 'drizzle-orm'
+import { db, bots, assistants, userAssistantBots, sessions } from '../db/index.js'
+import { eq, desc, and, sql, inArray } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
 import logger from '../services/logger.js'
@@ -162,6 +162,40 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 
     if (bot.name === 'default') {
       return res.status(400).json({ error: 'Cannot delete default bot' })
+    }
+
+    // 1. Check if any assistant uses this bot as default
+    const assistantRefs = await db.select({ id: assistants.id, name: assistants.name })
+      .from(assistants).where(eq(assistants.defaultBotId, id))
+
+    if (assistantRefs.length > 0) {
+      const names = assistantRefs.map(a => a.name).join('、')
+      return res.status(400).json({ error: `该机器人正在被以下助手使用：${names}，请先修改助手的默认机器人` })
+    }
+
+    // 2. Check if any user-assistant-bot assignment uses this bot
+    const userBotRefs = await db.select()
+      .from(userAssistantBots).where(eq(userAssistantBots.botId, id))
+
+    if (userBotRefs.length > 0) {
+      return res.status(400).json({ error: '该机器人正在被用户分配使用，请先取消相关分配' })
+    }
+
+    // 3. Check if any active session uses this bot through its assistant
+    // Find assistants whose defaultBotId is this bot (already checked above, but also
+    // check sessions directly by assistantId linked to assistants using this bot)
+    const affectedAssistantIds = assistantRefs.map(a => a.id)
+    if (affectedAssistantIds.length > 0) {
+      const activeSessionResult = await db.select({ count: sql<number>`count(*)` })
+        .from(sessions)
+        .where(and(
+          inArray(sessions.assistantId, affectedAssistantIds),
+          eq(sessions.status, 'active')
+        )).get()
+
+      if (activeSessionResult && activeSessionResult.count > 0) {
+        return res.status(400).json({ error: `该机器人正在 ${activeSessionResult.count} 个活跃会话中使用，请先关闭相关会话` })
+      }
     }
 
     await db.delete(bots).where(eq(bots.id, id))
