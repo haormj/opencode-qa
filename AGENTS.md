@@ -275,6 +275,82 @@ git push origin master
 git checkout develop
 ```
 
+## 版本发布
+
+### 发布流程
+
+**前提条件：**
+- master 分支代码已准备就绪
+- WSL 环境可用（Docker 构建需要）
+- Docker Hub 已登录（`docker login`）
+
+**执行步骤：**
+
+```bash
+# 1. 切换到 master 分支
+git checkout master
+
+# 2. 更新版本号（3 个文件）
+# - package.json
+# - packages/backend/package.json
+# - packages/frontend/package.json
+# 将 "version": "x.y.z" 改为新版本号
+
+# 3. 提交版本更新
+git add package.json packages/backend/package.json packages/frontend/package.json
+git commit -m "chore: release vX.Y.Z"
+
+# 4. 创建 tag
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+
+# 5. 推送到远程
+git push origin master
+git push origin vX.Y.Z
+
+# 6. 构建 Docker 镜像（在 WSL 中执行）
+wsl -d Ubuntu-24.04 bash -c "cd /mnt/d/project/github.com/haormj/opencode-qa && docker build -t haormj/opencode-qa:vX.Y.Z ."
+
+# 7. 测试镜像
+wsl -d Ubuntu-24.04 bash -c "docker run -d --name opencode-qa-test -p 8000:8000 -e JWT_SECRET=test-secret -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD=admin123 -e OPENCODE_SERVER_PASSWORD=your-password haormj/opencode-qa:vX.Y.Z"
+
+# 访问 http://localhost:8000 验证功能
+
+# 清理测试容器
+wsl -d Ubuntu-24.04 bash -c "docker stop opencode-qa-test && docker rm opencode-qa-test"
+
+# 8. 推送镜像到 Docker Hub
+wsl -d Ubuntu-24.04 bash -c "docker push haormj/opencode-qa:vX.Y.Z"
+
+# 9. 更新 latest 标签
+wsl -d Ubuntu-24.04 bash -c "docker tag haormj/opencode-qa:vX.Y.Z haormj/opencode-qa:latest && docker push haormj/opencode-qa:latest"
+```
+
+### 发布命令示例
+
+```bash
+# 发布 1.0.3 版本
+git checkout master
+# 编辑版本号...
+git add package.json packages/backend/package.json packages/frontend/package.json
+git commit -m "chore: release v1.0.3"
+git tag -a v1.0.3 -m "Release v1.0.3"
+git push origin master
+git push origin v1.0.3
+wsl -d Ubuntu-24.04 bash -c "cd /mnt/d/project/github.com/haormj/opencode-qa && docker build -t haormj/opencode-qa:v1.0.3 ."
+wsl -d Ubuntu-24.04 bash -c "docker push haormj/opencode-qa:v1.0.3"
+wsl -d Ubuntu-24.04 bash -c "docker tag haormj/opencode-qa:v1.0.3 haormj/opencode-qa:latest && docker push haormj/opencode-qa:latest"
+```
+
+### 查看变更内容
+
+```bash
+# 查看上个版本到当前的所有提交
+git log v1.0.2..master --oneline
+
+# 查看文件变更统计
+git diff v1.0.2..master --stat
+```
+
 ## 提交前检查
 
 ```bash
