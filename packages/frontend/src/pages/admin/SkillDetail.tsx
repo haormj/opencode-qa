@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Tag, Button, Tabs, Tree, Spin, message, Modal, Form, Input, Select, Space, Statistic, Row, Col } from 'antd'
+import { Card, Descriptions, Tag, Button, Tabs, Tree, Spin, message, Modal, Form, Input, Select, Space, Divider } from 'antd'
 import type { TreeDataNode } from 'antd'
 import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
 import { getAdminSkillById, getAdminSkillFiles, getSkillFileContent, batchReviewSkills, type SkillDetail, type FileNode } from '../../services/api'
@@ -129,10 +129,17 @@ function SkillDetail() {
     <div>
       <Card
         title={
-          <Space>
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/skills')} />
-            <span style={{ fontSize: 16, fontWeight: 500 }}>{skill.displayName}</span>
-            <Tag color={statusColors[skill.status]}>{statusLabels[skill.status]}</Tag>
+          <Space split={<Divider type="vertical" />}>
+            <Space>
+              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/skills')} />
+              <span style={{ fontSize: 16, fontWeight: 500 }}>{skill.displayName}</span>
+              <Tag color={statusColors[skill.status]}>{statusLabels[skill.status]}</Tag>
+            </Space>
+            <Space size="middle">
+              <span>下载量: {skill.downloadCount}</span>
+              <span>收藏数: {skill.favoriteCount}</span>
+              <span>更新时间: {new Date(skill.updatedAt).toLocaleDateString()}</span>
+            </Space>
           </Space>
         }
         extra={
@@ -154,15 +161,6 @@ function SkillDetail() {
           <Descriptions.Item label="描述" span={2}>{skill.description || '-'}</Descriptions.Item>
           {skill.rejectReason && <Descriptions.Item label="拒绝原因" span={2}>{skill.rejectReason}</Descriptions.Item>}
         </Descriptions>
-      </Card>
-
-      <Card style={{ marginTop: 16 }}>
-        <Row gutter={24}>
-          <Col span={6}><Statistic title="下载量" value={skill.downloadCount} /></Col>
-          <Col span={6}><Statistic title="收藏数" value={skill.favoriteCount} /></Col>
-          <Col span={6}><Statistic title="评分" value={skill.averageRating} suffix={`/ 5 (${skill.ratingCount} 评价)`} /></Col>
-          <Col span={6}><Statistic title="更新时间" value={new Date(skill.updatedAt).toLocaleDateString()} /></Col>
-        </Row>
       </Card>
 
       <Card style={{ marginTop: 16 }}>
