@@ -142,11 +142,67 @@ export const ssoProviders = sqliteTable('sso_providers', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 })
 
+export const skillCategories = sqliteTable('skill_categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  icon: text('icon'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+export const skills = sqliteTable('skills', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  content: text('content'),
+  categoryId: integer('category_id').notNull().references(() => skillCategories.id, { onDelete: 'restrict' }),
+  authorId: text('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  version: text('version').notNull().default('1.0.0'),
+  icon: text('icon'),
+  tags: text('tags'),
+  installCommand: text('install_command'),
+  status: text('status').notNull().default('pending'),
+  rejectReason: text('reject_reason'),
+  downloadCount: integer('download_count').notNull().default(0),
+  favoriteCount: integer('favorite_count').notNull().default(0),
+  averageRating: integer('average_rating', { mode: 'real' }).notNull().default(0),
+  ratingCount: integer('rating_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+})
+
+export const skillFavorites = sqliteTable('skill_favorites', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  skillId: text('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => ({
+  userSkillUnique: uniqueIndex('user_skill_unique').on(table.userId, table.skillId)
+}))
+
+export const skillRatings = sqliteTable('skill_ratings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  skillId: text('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
+  score: integer('score').notNull(),
+  review: text('review'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => ({
+  userSkillRatingUnique: uniqueIndex('user_skill_rating_unique').on(table.userId, table.skillId)
+}))
+
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   messages: many(messages),
   userRoles: many(userRoles),
-  tokens: many(userTokens)
+  tokens: many(userTokens),
+  skills: many(skills),
+  skillFavorites: many(skillFavorites),
+  skillRatings: many(skillRatings)
 }))
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -228,6 +284,45 @@ export const userTokensRelations = relations(userTokens, ({ one }) => ({
   })
 }))
 
+export const skillCategoriesRelations = relations(skillCategories, ({ many }) => ({
+  skills: many(skills)
+}))
+
+export const skillsRelations = relations(skills, ({ one, many }) => ({
+  category: one(skillCategories, {
+    fields: [skills.categoryId],
+    references: [skillCategories.id]
+  }),
+  author: one(users, {
+    fields: [skills.authorId],
+    references: [users.id]
+  }),
+  favorites: many(skillFavorites),
+  ratings: many(skillRatings)
+}))
+
+export const skillFavoritesRelations = relations(skillFavorites, ({ one }) => ({
+  user: one(users, {
+    fields: [skillFavorites.userId],
+    references: [users.id]
+  }),
+  skill: one(skills, {
+    fields: [skillFavorites.skillId],
+    references: [skills.id]
+  })
+}))
+
+export const skillRatingsRelations = relations(skillRatings, ({ one }) => ({
+  user: one(users, {
+    fields: [skillRatings.userId],
+    references: [users.id]
+  }),
+  skill: one(skills, {
+    fields: [skillRatings.skillId],
+    references: [skills.id]
+  })
+}))
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Role = typeof roles.$inferSelect
@@ -250,3 +345,11 @@ export type Assistant = typeof assistants.$inferSelect
 export type NewAssistant = typeof assistants.$inferInsert
 export type UserAssistantBot = typeof userAssistantBots.$inferSelect
 export type NewUserAssistantBot = typeof userAssistantBots.$inferInsert
+export type SkillCategory = typeof skillCategories.$inferSelect
+export type NewSkillCategory = typeof skillCategories.$inferInsert
+export type Skill = typeof skills.$inferSelect
+export type NewSkill = typeof skills.$inferInsert
+export type SkillFavorite = typeof skillFavorites.$inferSelect
+export type NewSkillFavorite = typeof skillFavorites.$inferInsert
+export type SkillRating = typeof skillRatings.$inferSelect
+export type NewSkillRating = typeof skillRatings.$inferInsert
