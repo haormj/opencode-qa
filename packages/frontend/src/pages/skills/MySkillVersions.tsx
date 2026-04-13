@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Tag, Select, Tooltip, Empty, message } from 'antd'
+import { Table, Card, Tag, Select, Tooltip, Empty, message, Button, Modal } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { getMySkillVersions, type MyPendingVersion } from '../../services/api'
+import { getMySkillVersions, submitSkillVersion, cancelSkillVersion, type MyPendingVersion } from '../../services/api'
 import './MySkills.css'
 
 const statusColors: Record<string, string> = {
+  draft: 'default',
   pending: 'orange',
   approved: 'green',
   rejected: 'red'
 }
 
 const statusLabels: Record<string, string> = {
+  draft: '草稿',
   pending: '待审核',
   approved: '已通过',
   rejected: '已拒绝'
@@ -41,6 +43,38 @@ function MySkillVersions() {
       .finally(() => setLoading(false))
   }
 
+  const handleSubmit = async (versionId: string) => {
+    Modal.confirm({
+      title: '确认提交审核？',
+      content: '提交后将等待管理员审核',
+      onOk: async () => {
+        try {
+          await submitSkillVersion(versionId)
+          message.success('已提交审核')
+          loadVersions()
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '提交失败')
+        }
+      }
+    })
+  }
+
+  const handleCancel = async (versionId: string) => {
+    Modal.confirm({
+      title: '确认取消审核？',
+      content: '取消后版本将变回草稿状态',
+      onOk: async () => {
+        try {
+          await cancelSkillVersion(versionId)
+          message.success('已取消审核')
+          loadVersions()
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '取消失败')
+        }
+      }
+    })
+  }
+
   const columns: ColumnsType<MyPendingVersion> = [
     {
       title: '技能名称',
@@ -56,6 +90,29 @@ function MySkillVersions() {
           {name}
         </span>
       )
+    },
+    {
+      title: 'Slug',
+      dataIndex: 'skillSlug',
+      key: 'skillSlug',
+      width: 150,
+      ellipsis: true,
+      render: (slug: string, record) => (
+        <span
+          style={{ color: '#1890ff', cursor: 'pointer' }}
+          onClick={(e) => { e.stopPropagation(); navigate(`/skills/my/versions/${record.id}`) }}
+        >
+          {slug}
+        </span>
+      )
+    },
+    {
+      title: '显示名',
+      dataIndex: 'displayName',
+      key: 'displayName',
+      width: 150,
+      ellipsis: true,
+      render: (name: string | null) => name || '-'
     },
     {
       title: '版本号',
@@ -106,6 +163,36 @@ function MySkillVersions() {
       ) : '-'
     },
     {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: unknown, record: MyPendingVersion) => {
+        if (record.status === 'draft') {
+          return (
+            <Button 
+              type="link" 
+              size="small"
+              onClick={(e) => { e.stopPropagation(); handleSubmit(record.id) }}
+            >
+              提交审核
+            </Button>
+          )
+        }
+        if (record.status === 'pending') {
+          return (
+            <Button 
+              type="link" 
+              size="small"
+              onClick={(e) => { e.stopPropagation(); handleCancel(record.id) }}
+            >
+              取消
+            </Button>
+          )
+        }
+        return '-'
+      }
+    },
+    {
       title: '提交时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
@@ -124,6 +211,7 @@ function MySkillVersions() {
             onChange={(v) => setStatusFilter(v)}
             style={{ width: 120 }}
             options={[
+              { value: 'draft', label: '草稿' },
               { value: 'pending', label: '待审核' },
               { value: 'approved', label: '已通过' },
               { value: 'rejected', label: '已拒绝' },
