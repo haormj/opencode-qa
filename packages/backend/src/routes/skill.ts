@@ -168,6 +168,28 @@ router.get('/my/versions/:versionId/files/*', async (req, res) => {
   }
 })
 
+router.put('/my/versions/:versionId/submit', async (req, res) => {
+  try {
+    const { versionId } = req.params
+    await skillService.submitSkillVersion(versionId, req.user!.id)
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('Submit version error:', error)
+    if (error instanceof Error) {
+      if (error.message === 'Only draft versions can be submitted') {
+        return res.status(400).json({ error: error.message })
+      }
+      if (error.message === 'Version not found' || error.message === 'Skill not found') {
+        return res.status(404).json({ error: error.message })
+      }
+      if (error.message === 'Not authorized') {
+        return res.status(403).json({ error: error.message })
+      }
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/', async (req, res) => {
   try {
     const result = await skillService.getSkills({
@@ -456,28 +478,6 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
     })
   } catch (error) {
     logger.error('Update skill error:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
-router.put('/my/versions/:versionId/submit', async (req, res) => {
-  try {
-    const { versionId } = req.params
-    await skillService.submitSkillVersion(versionId, req.user!.id)
-    res.json({ success: true })
-  } catch (error) {
-    logger.error('Submit version error:', error)
-    if (error instanceof Error) {
-      if (error.message === 'Only draft versions can be submitted') {
-        return res.status(400).json({ error: error.message })
-      }
-      if (error.message === 'Version not found' || error.message === 'Skill not found') {
-        return res.status(404).json({ error: error.message })
-      }
-      if (error.message === 'Not authorized') {
-        return res.status(403).json({ error: error.message })
-      }
-    }
     res.status(500).json({ error: 'Internal server error' })
   }
 })
