@@ -292,6 +292,16 @@ export function incrementVersion(currentVersion: string, type: 'major' | 'minor'
   }
 }
 
+export async function hasActiveVersion(skillId: string): Promise<boolean> {
+  const activeVersion = await db.select().from(skillVersions)
+    .where(and(
+      eq(skillVersions.skillId, skillId),
+      inArray(skillVersions.status, ['draft', 'pending'])
+    ))
+    .get()
+  return !!activeVersion
+}
+
 export async function createSkillVersion(data: {
   skillId: string
   versionType: 'major' | 'minor' | 'patch'
@@ -299,10 +309,16 @@ export async function createSkillVersion(data: {
   createdBy: string
   displayName?: string
   description?: string
+  status?: 'draft' | 'pending'
 }) {
   const skill = await getSkillById(data.skillId)
   if (!skill) {
     throw new Error('Skill not found')
+  }
+
+  const hasActive = await hasActiveVersion(data.skillId)
+  if (hasActive) {
+    throw new Error('该技能已有一个版本正在处理中，请先处理或取消该版本')
   }
 
   const newVersion = incrementVersion(skill.version, data.versionType)
@@ -317,13 +333,13 @@ export async function createSkillVersion(data: {
     displayName: data.displayName ?? null,
     description: data.description ?? null,
     changeLog: data.changeLog,
-    status: 'pending',
+    status: data.status ?? 'pending',
     createdBy: data.createdBy,
     createdAt: now,
     updatedAt: now
   })
 
-  return { versionId, version: newVersion }
+  return { versionId, version: newVersion, status: data.status ?? 'pending' }
 }
 
 export async function getSkillVersions(skillId: string) {

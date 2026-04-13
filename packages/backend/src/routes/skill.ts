@@ -457,7 +457,7 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       }
     }
 
-    const { displayName, description, versionType, changeLog } = req.body
+    const { displayName, description, versionType, changeLog, status } = req.body
 
     if (!changeLog) {
       return res.status(400).json({ error: 'changeLog is required' })
@@ -465,6 +465,10 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
 
     if (!['major', 'minor', 'patch'].includes(versionType)) {
       return res.status(400).json({ error: 'versionType must be major, minor, or patch' })
+    }
+
+    if (status && !['draft', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'status must be draft or pending' })
     }
 
     const skillMdFile = files.find((file, index) => {
@@ -482,7 +486,8 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       changeLog,
       createdBy: req.user!.id,
       displayName,
-      description
+      description,
+      status: status === 'draft' ? 'draft' : 'pending'
     })
 
     const skillFiles = files.map((file, index) => ({
@@ -496,7 +501,7 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       id,
       versionId: result.versionId,
       newVersion: result.version,
-      status: 'pending'
+      status: result.status
     })
   } catch (error) {
     logger.error('Update skill error:', error)
