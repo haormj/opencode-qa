@@ -176,6 +176,8 @@ export const skillVersions = sqliteTable('skill_versions', {
   skillId: text('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
   version: text('version').notNull(),
   versionType: text('version_type').notNull(),
+  displayName: text('display_name'),
+  description: text('description'),
   changeLog: text('change_log'),
   status: text('status').notNull().default('pending'),
   rejectReason: text('reject_reason'),

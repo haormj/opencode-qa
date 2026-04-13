@@ -314,20 +314,14 @@ export async function createSkillVersion(data: {
     skillId: data.skillId,
     version: newVersion,
     versionType: data.versionType,
+    displayName: data.displayName ?? null,
+    description: data.description ?? null,
     changeLog: data.changeLog,
     status: 'pending',
     createdBy: data.createdBy,
     createdAt: now,
     updatedAt: now
   })
-
-  if (data.displayName || data.description) {
-    await db.update(skills).set({
-      displayName: data.displayName ?? skill.displayName,
-      description: data.description ?? skill.description,
-      updatedAt: now
-    }).where(eq(skills.id, data.skillId))
-  }
 
   return { versionId, version: newVersion }
 }
@@ -337,6 +331,8 @@ export async function getSkillVersions(skillId: string) {
     id: skillVersions.id,
     version: skillVersions.version,
     versionType: skillVersions.versionType,
+    displayName: skillVersions.displayName,
+    description: skillVersions.description,
     changeLog: skillVersions.changeLog,
     status: skillVersions.status,
     rejectReason: skillVersions.rejectReason,
@@ -382,6 +378,8 @@ export async function getAllSkillVersions(params: {
     skillId: skillVersions.skillId,
     version: skillVersions.version,
     versionType: skillVersions.versionType,
+    displayName: skillVersions.displayName,
+    description: skillVersions.description,
     changeLog: skillVersions.changeLog,
     status: skillVersions.status,
     rejectReason: skillVersions.rejectReason,
@@ -414,6 +412,8 @@ export async function getMySkillVersions(authorId: string, status?: string) {
     skillId: skillVersions.skillId,
     version: skillVersions.version,
     versionType: skillVersions.versionType,
+    displayName: skillVersions.displayName,
+    description: skillVersions.description,
     changeLog: skillVersions.changeLog,
     status: skillVersions.status,
     rejectReason: skillVersions.rejectReason,
@@ -445,7 +445,6 @@ export async function approveSkillVersion(versionId: string, approvedBy: string)
     throw new Error('Skill not found')
   }
 
-  // 替换 current 目录
   await skillFileService.approvePendingFiles(skill.slug)
 
   await db.update(skillVersions).set({
@@ -458,6 +457,13 @@ export async function approveSkillVersion(versionId: string, approvedBy: string)
   const updateData: Record<string, unknown> = {
     version: version.version,
     updatedAt: now
+  }
+
+  if (version.displayName) {
+    updateData.displayName = version.displayName
+  }
+  if (version.description) {
+    updateData.description = version.description
   }
 
   if (skill.status !== 'approved') {

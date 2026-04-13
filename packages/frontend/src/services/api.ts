@@ -955,6 +955,8 @@ export interface SkillVersion {
   id: string
   version: string
   versionType: string
+  displayName: string | null
+  description: string | null
   changeLog: string | null
   status: string
   rejectReason: string | null
@@ -974,6 +976,8 @@ export interface MyPendingVersion {
   skillId: string
   version: string
   versionType: string
+  displayName: string | null
+  description: string | null
   changeLog: string | null
   status: string
   rejectReason: string | null
@@ -1263,6 +1267,8 @@ export interface AdminSkillVersion {
   skillId: string
   version: string
   versionType: string
+  displayName: string | null
+  description: string | null
   changeLog: string | null
   status: string
   rejectReason: string | null
