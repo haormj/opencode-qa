@@ -47,7 +47,10 @@ if [ -d "$INSTALL_DIR" ]; then
         rm -rf "$INSTALL_DIR"
     else
         echo "Directory already exists: $INSTALL_DIR"
-        read -p "Overwrite? [y/N] " -n 1 -r
+        if ! read -p "Overwrite? [y/N] " -n 1 -r < /dev/tty; then
+            echo "Cancelled (cannot read from terminal)"
+            exit 0
+        fi
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             echo "Cancelled"
