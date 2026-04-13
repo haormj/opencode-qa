@@ -910,6 +910,7 @@ export async function updateSkillWithFiles(id: string, data: {
   description?: string
   versionType: 'major' | 'minor' | 'patch'
   changeLog: string
+  status?: 'draft' | 'pending'
 }): Promise<UpdateSkillResult> {
   const formData = new FormData()
   data.files.forEach((file) => {
@@ -920,6 +921,7 @@ export async function updateSkillWithFiles(id: string, data: {
   if (data.description) formData.append('description', data.description)
   formData.append('versionType', data.versionType)
   formData.append('changeLog', data.changeLog)
+  if (data.status) formData.append('status', data.status)
 
   const token = getToken()
   const response = await fetch(`${API_BASE}/skills/${id}`, {
@@ -1340,4 +1342,16 @@ export async function getSkillVersionFileContent(versionId: string, filePath: st
     throw new Error(error.error || `HTTP error! status: ${response.status}`)
   }
   return response.text()
+}
+
+export async function submitSkillVersion(versionId: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/skills/my/versions/${versionId}/submit`, {
+    method: 'PUT',
+  })
+}
+
+export async function cancelSkillVersion(versionId: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/skills/my/versions/${versionId}/cancel`, {
+    method: 'PUT',
+  })
 }
