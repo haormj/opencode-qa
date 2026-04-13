@@ -84,7 +84,7 @@ function Detail() {
     if (platform === 'linux') {
       return `curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- ${skill.slug}`
     }
-    return `powershell -Command "$tempFile = Join-Path $env:TEMP 'install-skill.ps1'; Invoke-WebRequest -Uri '${serverUrl}/api/public/scripts/install-skill.ps1' -OutFile $tempFile -UseBasicParsing; & $tempFile -Slug '${skill.slug}'; Remove-Item $tempFile"`
+    return `powershell -ExecutionPolicy Bypass -Command "$tempFile = Join-Path $env:TEMP 'install-skill.ps1'; Invoke-WebRequest -Uri '${serverUrl}/api/public/scripts/install-skill.ps1' -OutFile $tempFile -UseBasicParsing; & $tempFile -Slug '${skill.slug}'; Remove-Item $tempFile"`
   }
 
   const handleFavorite = async () => {
