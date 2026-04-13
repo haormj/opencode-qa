@@ -97,7 +97,7 @@ function SkillVersions() {
       width: 200,
       ellipsis: true,
       render: (name: string, record) => (
-        <a onClick={() => navigate(`/admin/skills/${record.skillId}`)}>{name}</a>
+        <a onClick={() => navigate(`/admin/skill-versions/${record.id}`)}>{name}</a>
       )
     },
     {
