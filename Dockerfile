@@ -28,7 +28,7 @@ COPY packages/backend/package.json ./
 RUN npm install --omit=dev
 
 COPY --from=backend-builder /app/packages/backend/dist ./dist
-COPY --from=backend-builder /app/packages/backend/scripts ./dist/scripts
+COPY --from=backend-builder /app/packages/backend/scripts ./scripts
 COPY --from=backend-builder /app/packages/backend/drizzle ./drizzle
 COPY --from=frontend-builder /app/packages/frontend/dist ./public
 
