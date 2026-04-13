@@ -240,7 +240,7 @@ function Update() {
     setHasSkillMd(false)
   }
 
-  const handleConfirmSubmit = async (status: 'draft' | 'pending') => {
+  const handleConfirmSubmit = async (status: 'draft' | 'pending', overwriteDraft?: string) => {
     const values = await form.validateFields()
     
     if (!hasSkillMd) {
@@ -270,11 +270,24 @@ function Update() {
         versionType,
         changeLog: values.changeLog,
         status,
+        overwriteDraft,
       })
       message.success(status === 'draft' ? '已保存为草稿' : '技能更新成功，等待审核')
       setSubmitModalVisible(false)
       navigate('/skills/my/versions')
     } catch (error) {
+      const err = error as Error & { draftVersion?: string; draftVersionId?: string }
+      if (err.message === 'DRAFT_EXISTS' && err.draftVersion && err.draftVersionId) {
+        setSubmitting(false)
+        Modal.confirm({
+          title: '存在未提交的草稿版本',
+          content: `存在未提交的草稿版本 v${err.draftVersion}，是否覆盖？`,
+          okText: '覆盖',
+          cancelText: '取消',
+          onOk: () => handleConfirmSubmit(status, err.draftVersionId)
+        })
+        return
+      }
       message.error(error instanceof Error ? error.message : '更新失败')
     } finally {
       setSubmitting(false)

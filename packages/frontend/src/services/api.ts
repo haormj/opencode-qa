@@ -911,6 +911,7 @@ export async function updateSkillWithFiles(id: string, data: {
   versionType: 'major' | 'minor' | 'patch'
   changeLog: string
   status?: 'draft' | 'pending'
+  overwriteDraft?: string
 }): Promise<UpdateSkillResult> {
   const formData = new FormData()
   data.files.forEach((file) => {
@@ -922,6 +923,7 @@ export async function updateSkillWithFiles(id: string, data: {
   formData.append('versionType', data.versionType)
   formData.append('changeLog', data.changeLog)
   if (data.status) formData.append('status', data.status)
+  if (data.overwriteDraft) formData.append('overwriteDraft', data.overwriteDraft)
 
   const token = getToken()
   const response = await fetch(`${API_BASE}/skills/${id}`, {
@@ -934,7 +936,10 @@ export async function updateSkillWithFiles(id: string, data: {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(error.error || `HTTP error! status: ${response.status}`)
+    const err = new Error(error.error || `HTTP error! status: ${response.status}`) as Error & { draftVersion?: string; draftVersionId?: string }
+    if (error.draftVersion) err.draftVersion = error.draftVersion
+    if (error.draftVersionId) err.draftVersionId = error.draftVersionId
+    throw err
   }
 
   return response.json()

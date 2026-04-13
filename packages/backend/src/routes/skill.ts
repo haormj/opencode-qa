@@ -457,7 +457,7 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       }
     }
 
-    const { displayName, description, versionType, changeLog, status } = req.body
+    const { displayName, description, versionType, changeLog, status, overwriteDraft } = req.body
 
     if (!changeLog) {
       return res.status(400).json({ error: 'changeLog is required' })
@@ -487,7 +487,8 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
       createdBy: req.user!.id,
       displayName,
       description,
-      status: status === 'draft' ? 'draft' : 'pending'
+      status: status === 'draft' ? 'draft' : 'pending',
+      overwriteDraft
     })
 
     const skillFiles = files.map((file, index) => ({
@@ -506,6 +507,14 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
   } catch (error) {
     logger.error('Update skill error:', error)
     if (error instanceof Error) {
+      if (error.message === 'DRAFT_EXISTS') {
+        const err = error as Error & { draftVersion?: string; draftVersionId?: string }
+        return res.status(409).json({ 
+          error: 'DRAFT_EXISTS', 
+          draftVersion: err.draftVersion,
+          draftVersionId: err.draftVersionId
+        })
+      }
       return res.status(400).json({ error: error.message })
     }
     res.status(500).json({ error: 'Internal server error' })
