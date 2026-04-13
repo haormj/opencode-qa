@@ -7,6 +7,7 @@ import { code } from '@streamdown/code'
 import { mermaid } from '@streamdown/mermaid'
 import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
+import copy from 'copy-to-clipboard'
 import { getSkillBySlug, toggleSkillFavorite, getSkillVersions, downloadSkill, getSkillFiles, type Skill, type SkillVersion, type FileNode } from '../../services/api'
 import './Detail.css'
 
@@ -116,7 +117,7 @@ function Detail() {
   }
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
+    copy(text)
     message.success('已复制到剪贴板')
   }
 

@@ -178,6 +178,24 @@ await db.delete(users).where(eq(users.id, id))
 import { Button } from '@/components/ui/button'
 ```
 
+### 前端开发规范
+
+#### 复制到剪贴板
+
+项目使用 `copy-to-clipboard` 库处理复制操作，该库兼容非 HTTPS 环境：
+
+```typescript
+import copy from 'copy-to-clipboard'
+
+// 正确
+copy(text)
+
+// 错误（非 HTTPS 环境下 navigator.clipboard 为 undefined）
+navigator.clipboard.writeText(text)
+```
+
+**原因**：`navigator.clipboard` API 仅在 HTTPS 或 localhost 环境下可用。
+
 ### Tailwind CSS v4 + Streamdown
 
 Streamdown 使用的动态类名无法被 Tailwind 扫描，需要在 `packages/frontend/src/index.css` 手动添加：
