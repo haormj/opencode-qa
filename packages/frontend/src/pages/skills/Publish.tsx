@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Form, Input, Button, message } from 'antd'
+import { Form, Input, Button, message, Modal } from 'antd'
 import { FolderOpenOutlined, FileZipOutlined, ReloadOutlined, InboxOutlined } from '@ant-design/icons'
 import JSZip from 'jszip'
 import { createSkillWithFiles, type UploadFileNode } from '../../services/api'
@@ -282,7 +282,22 @@ function Publish() {
       message.success('技能发布成功，等待审核')
       navigate('/skills/my/published')
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '发布失败')
+      if (error instanceof Error) {
+        if (error.message.includes('已存在')) {
+          const slug = values.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+          Modal.confirm({
+            title: '技能已存在',
+            content: '该技能已存在，是否前往更新页面？',
+            okText: '前往更新',
+            cancelText: '取消',
+            onOk: () => navigate(`/skills/update/${slug}`)
+          })
+          return
+        }
+        message.error(error.message)
+      } else {
+        message.error('发布失败')
+      }
     } finally {
       setSubmitting(false)
     }

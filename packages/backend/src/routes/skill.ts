@@ -347,6 +347,15 @@ router.post('/', upload.array('files', 200), async (req, res) => {
       return res.status(400).json({ error: 'SKILL.md file is required' })
     }
 
+    const existing = await skillService.getSkillBySlug(slug)
+    if (existing) {
+      return res.status(409).json({ 
+        error: '该技能已存在，如需更新请前往我的技能页面',
+        slug,
+        exists: true 
+      })
+    }
+
     const result = await skillService.createSkill({
       name,
       displayName,
@@ -372,12 +381,6 @@ router.post('/', upload.array('files', 200), async (req, res) => {
     })
   } catch (error) {
     logger.error('Create skill error:', error)
-    if (error instanceof Error && (
-      error.message.includes('UNIQUE constraint') ||
-      error.message.includes('UNIQUE constraint failed')
-    )) {
-      return res.status(409).json({ error: '技能名称或 slug 已存在' })
-    }
     res.status(500).json({ error: 'Internal server error' })
   }
 })
