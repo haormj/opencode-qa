@@ -190,6 +190,28 @@ router.put('/my/versions/:versionId/submit', async (req, res) => {
   }
 })
 
+router.put('/my/versions/:versionId/cancel', async (req, res) => {
+  try {
+    const { versionId } = req.params
+    await skillService.cancelSkillVersion(versionId, req.user!.id)
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('Cancel version error:', error)
+    if (error instanceof Error) {
+      if (error.message === 'Only pending versions can be cancelled') {
+        return res.status(400).json({ error: error.message })
+      }
+      if (error.message === 'Version not found' || error.message === 'Skill not found') {
+        return res.status(404).json({ error: error.message })
+      }
+      if (error.message === 'Not authorized') {
+        return res.status(403).json({ error: error.message })
+      }
+    }
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/', async (req, res) => {
   try {
     const result = await skillService.getSkills({
