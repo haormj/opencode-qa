@@ -505,6 +505,9 @@ router.put('/:id', upload.array('files', 200), async (req, res) => {
     })
   } catch (error) {
     logger.error('Update skill error:', error)
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message })
+    }
     res.status(500).json({ error: 'Internal server error' })
   }
 })
