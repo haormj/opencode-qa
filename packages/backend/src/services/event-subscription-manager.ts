@@ -117,7 +117,12 @@ class EventSubscriptionManager {
       
       this.processEventStream(subscription)
     } catch (error: any) {
-      logger.error(`[EventSubscriptionManager] Event stream connection failed for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
+      const errorCode = error.code || error.cause?.code
+      if (errorCode === 'UND_ERR_BODY_TIMEOUT' || errorCode === 'UND_ERR_CONNECT_TIMEOUT') {
+        logger.error(`[EventSubscriptionManager] Event stream connection timeout for apiUrl: ${subscription.apiUrl}`)
+      } else {
+        logger.error(`[EventSubscriptionManager] Event stream connection failed for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
+      }
       this.reconnect(subscription)
     }
   }
@@ -130,7 +135,12 @@ class EventSubscriptionManager {
         this.handleEvent(subscription, event)
       }
     } catch (error: any) {
-      logger.error(`[EventSubscriptionManager] Event stream error for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
+      const errorCode = error.code || error.cause?.code
+      if (errorCode === 'UND_ERR_BODY_TIMEOUT' || errorCode === 'UND_ERR_CONNECT_TIMEOUT') {
+        logger.error(`[EventSubscriptionManager] Event stream timeout for apiUrl: ${subscription.apiUrl}`)
+      } else {
+        logger.error(`[EventSubscriptionManager] Event stream error for apiUrl: ${subscription.apiUrl}, error: ${error.message || error}`)
+      }
       if (!subscription.isReconnecting) {
         this.reconnect(subscription)
       }

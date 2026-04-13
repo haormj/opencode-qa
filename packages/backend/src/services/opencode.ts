@@ -48,26 +48,34 @@ export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: s
         logger.debug('[OpenCode] Session exists:', sessionId)
         return { sessionId, needsRebuild: false }
       }
-    } catch (error) {
-      logger.debug('[OpenCode] Session check failed, will create new one')
+    } catch (error: any) {
+      logger.debug('[OpenCode] Session check failed, will create new one:', error.message || error)
     }
   }
   
   logger.info('[OpenCode] Creating new session...')
-  const result = await client.session.create({
-    title: 'OpenCode QA Session'
-  })
-  
-  if (!result.data?.id) {
-    const errorDetail = result.error 
-      ? JSON.stringify(result.error) 
-      : 'No session ID returned'
-    logger.error(`[OpenCode] Session creation failed: ${errorDetail}`)
-    throw new Error(`Failed to create OpenCode session: ${errorDetail}`)
+  try {
+    const result = await client.session.create({
+      title: 'OpenCode QA Session'
+    })
+    
+    if (!result.data?.id) {
+      const errorDetail = result.error 
+        ? JSON.stringify(result.error) 
+        : 'No session ID returned'
+      logger.error(`[OpenCode] Session creation failed: ${errorDetail}`)
+      throw new Error(`Failed to create OpenCode session: ${errorDetail}`)
+    }
+    
+    logger.info('[OpenCode] New session created:', result.data.id)
+    return { sessionId: result.data.id, needsRebuild: !!sessionId }
+  } catch (error: any) {
+    if (error.code === 'UND_ERR_BODY_TIMEOUT' || error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      logger.error(`[OpenCode] Session creation timeout: ${error.message}`)
+      throw new Error(`OpenCode server timeout: ${error.message}`)
+    }
+    throw error
   }
-  
-  logger.info('[OpenCode] New session created:', result.data.id)
-  return { sessionId: result.data.id, needsRebuild: !!sessionId }
 }
 
 export async function rebuildContext(
@@ -79,18 +87,26 @@ export async function rebuildContext(
   
   const client = getClient(botConfig.apiUrl)
   
-  await client.session.prompt({
-    sessionID: sessionId,
-    model: {
-      providerID: botConfig.provider,
-      modelID: botConfig.model
-    },
-    agent: botConfig.agent,
-    noReply: true,
-    parts: historyParts
-  })
-  
-  logger.info('[OpenCode] Context rebuilt successfully')
+  try {
+    await client.session.prompt({
+      sessionID: sessionId,
+      model: {
+        providerID: botConfig.provider,
+        modelID: botConfig.model
+      },
+      agent: botConfig.agent,
+      noReply: true,
+      parts: historyParts
+    })
+    
+    logger.info('[OpenCode] Context rebuilt successfully')
+  } catch (error: any) {
+    if (error.code === 'UND_ERR_BODY_TIMEOUT' || error.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      logger.error(`[OpenCode] Context rebuild timeout: ${error.message}`)
+      throw new Error(`OpenCode server timeout during context rebuild: ${error.message}`)
+    }
+    throw error
+  }
 }
 
 export async function sendOpenCodeMessage(

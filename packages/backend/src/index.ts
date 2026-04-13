@@ -92,3 +92,11 @@ process.on('SIGTERM', async () => {
   await eventSubscriptionManager.shutdown()
   process.exit(0)
 })
+
+process.on('uncaughtException', (error) => {
+  logger.error('[UncaughtException]', error)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('[UnhandledRejection]', { reason, promise })
+})
