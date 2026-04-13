@@ -372,7 +372,10 @@ router.post('/', upload.array('files', 200), async (req, res) => {
     })
   } catch (error) {
     logger.error('Create skill error:', error)
-    if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
+    if (error instanceof Error && (
+      error.message.includes('UNIQUE constraint') ||
+      error.message.includes('UNIQUE constraint failed')
+    )) {
       return res.status(409).json({ error: '技能名称或 slug 已存在' })
     }
     res.status(500).json({ error: 'Internal server error' })
