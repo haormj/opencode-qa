@@ -232,15 +232,14 @@ npm run db:studio
 
 ### 分支角色
 
-- **master** - 稳定分支（生产就绪代码）
-- **develop** - 开发分支（集成最新开发内容）
+- **develop** - 主分支（发布分支）
 - **feat/xxx** - 特性分支
 - **fix/xxx** - 修复分支
 
 ### 工作流程
 
 ```
-develop (开发分支)
+develop (主分支)
     ↓ 拉取新分支
 feat/xxx 或 fix/xxx (特性/修复分支)
     ↓ 开发完成
@@ -248,13 +247,7 @@ feat/xxx 或 fix/xxx (特性/修复分支)
     ↓ 测试通过
 用户验证质量
     ↓ 质量通过
-合入 develop → 删除特性/修复分支
-    ↓ 用户在 develop 验证
-用户决定合入 master
-    ↓ 告知执行
-执行单元测试
-    ↓ 测试通过
-合入 master 并推送
+合入 develop → 删除特性/修复分支 → 发布版本
 ```
 
 ### 关键规则
@@ -263,7 +256,6 @@ feat/xxx 或 fix/xxx (特性/修复分支)
 2. **单元测试**：开发完成后必须执行所有单元测试
 3. **质量把控**：用户决定是否合入 develop
 4. **分支清理**：合入 develop 后删除特性分支
-5. **master 合并**：用户验证 develop 后决定合入时执行，合入前需执行单元测试
 
 ### 示例流程
 
@@ -282,15 +274,6 @@ git checkout develop
 git merge feat/new-feature
 git branch -d feat/new-feature
 git push origin develop
-
-# 用户在 develop 验证通过后，告知合入 master
-# 执行单元测试
-npm run test
-
-git checkout master
-git merge develop
-git push origin master
-git checkout develop
 ```
 
 ## 版本发布
@@ -298,15 +281,15 @@ git checkout develop
 ### 发布流程
 
 **前提条件：**
-- master 分支代码已准备就绪
+- develop 分支代码已准备就绪
 - WSL 环境可用（Docker 构建需要）
 - Docker Hub 已登录（`docker login`）
 
 **执行步骤：**
 
 ```bash
-# 1. 切换到 master 分支
-git checkout master
+# 1. 切换到 develop 分支
+git checkout develop
 
 # 2. 更新版本号（3 个文件）
 # - package.json
@@ -322,7 +305,7 @@ git commit -m "chore: release vX.Y.Z"
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 
 # 5. 推送到远程
-git push origin master
+git push origin develop
 git push origin vX.Y.Z
 
 # 6. 构建 Docker 镜像（在 WSL 中执行）
@@ -346,27 +329,27 @@ wsl -d Ubuntu-24.04 bash -c "docker tag haormj/opencode-qa:vX.Y.Z haormj/opencod
 ### 发布命令示例
 
 ```bash
-# 发布 1.0.3 版本
-git checkout master
+# 发布 1.1.3 版本
+git checkout develop
 # 编辑版本号...
 git add package.json packages/backend/package.json packages/frontend/package.json
-git commit -m "chore: release v1.0.3"
-git tag -a v1.0.3 -m "Release v1.0.3"
-git push origin master
-git push origin v1.0.3
-wsl -d Ubuntu-24.04 bash -c "cd /mnt/d/project/github.com/haormj/opencode-qa && docker build -t haormj/opencode-qa:v1.0.3 ."
-wsl -d Ubuntu-24.04 bash -c "docker push haormj/opencode-qa:v1.0.3"
-wsl -d Ubuntu-24.04 bash -c "docker tag haormj/opencode-qa:v1.0.3 haormj/opencode-qa:latest && docker push haormj/opencode-qa:latest"
+git commit -m "chore: release v1.1.3"
+git tag -a v1.1.3 -m "Release v1.1.3"
+git push origin develop
+git push origin v1.1.3
+wsl -d Ubuntu-24.04 bash -c "cd /mnt/d/project/github.com/haormj/opencode-qa && docker build -t haormj/opencode-qa:v1.1.3 ."
+wsl -d Ubuntu-24.04 bash -c "docker push haormj/opencode-qa:v1.1.3"
+wsl -d Ubuntu-24.04 bash -c "docker tag haormj/opencode-qa:v1.1.3 haormj/opencode-qa:latest && docker push haormj/opencode-qa:latest"
 ```
 
 ### 查看变更内容
 
 ```bash
 # 查看上个版本到当前的所有提交
-git log v1.0.2..master --oneline
+git log v1.1.2..develop --oneline
 
 # 查看文件变更统计
-git diff v1.0.2..master --stat
+git diff v1.1.2..develop --stat
 ```
 
 ## 提交前检查
