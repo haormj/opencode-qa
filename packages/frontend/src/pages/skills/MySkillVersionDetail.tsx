@@ -131,7 +131,9 @@ function MySkillVersionDetail() {
             <a onClick={() => navigate(`/skills/my/${version.skillSlug}`)}>{version.skillName}</a>
           </Descriptions.Item>
           <Descriptions.Item label="版本号">{version.version}</Descriptions.Item>
+          <Descriptions.Item label="显示名">{version.displayName || '-'}</Descriptions.Item>
           <Descriptions.Item label="版本类型">{versionTypeLabels[version.versionType] || version.versionType}</Descriptions.Item>
+          <Descriptions.Item label="描述" span={2}>{version.description || '-'}</Descriptions.Item>
           <Descriptions.Item label="状态"><Tag color="orange">待审核</Tag></Descriptions.Item>
           <Descriptions.Item label="变更说明" span={2}>{version.changeLog || '-'}</Descriptions.Item>
         </Descriptions>
