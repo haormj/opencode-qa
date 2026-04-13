@@ -171,7 +171,7 @@ function SkillVersions() {
   ]
 
   return (
-    <div className="admin-page">
+    <>
       <Card 
         title="技能版本"
         extra={
@@ -223,7 +223,7 @@ function SkillVersions() {
           />
         </Form.Item>
       </Modal>
-    </div>
+    </>
   )
 }
 
