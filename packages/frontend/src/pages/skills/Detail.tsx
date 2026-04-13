@@ -38,7 +38,7 @@ function Detail() {
   const [loading, setLoading] = useState(true)
   const [favorited, setFavorited] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'versions'>('overview')
-  const [installTab, setInstallTab] = useState<'cli' | 'zip'>('cli')
+  const [installTab, setInstallTab] = useState<'prompt' | 'cli' | 'zip'>('prompt')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [platform, setPlatform] = useState<'linux' | 'windows'>('linux')
   const [serverUrl, setServerUrl] = useState('')
@@ -84,7 +84,26 @@ function Detail() {
     if (platform === 'linux') {
       return `curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- ${skill.slug}`
     }
-    return `powershell -ExecutionPolicy Bypass -Command "$tempFile = Join-Path $env:TEMP 'install-skill.ps1'; Invoke-WebRequest -Uri '${serverUrl}/api/public/scripts/install-skill.ps1' -OutFile $tempFile -UseBasicParsing; & $tempFile -Slug '${skill.slug}'; Remove-Item $tempFile"`
+    return `powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${skill.slug}'"`
+  }
+
+  const getPromptInstallCommand = () => {
+    if (!skill) return ''
+    return `Install the skill "${skill.slug}" from the internal skill server.
+
+First, check if the skill already exists at ~/.opencode/skills/${skill.slug}/SKILL.md
+
+If it already exists, inform the user and ask if they want to overwrite.
+
+If it doesn't exist or user confirms, execute the appropriate command based on the current platform:
+
+For Linux/macOS:
+curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y ${skill.slug}
+
+For Windows PowerShell:
+powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${skill.slug}' -Force"
+
+After installation, verify by listing the installed files.`
   }
 
   const handleFavorite = async () => {
@@ -200,13 +219,30 @@ function Detail() {
             <div className="install-tabs">
               <Segmented
                 value={installTab}
-                onChange={value => setInstallTab(value as 'cli' | 'zip')}
+                onChange={value => setInstallTab(value as 'prompt' | 'cli' | 'zip')}
                 options={[
+                  { label: '通过对话安装', value: 'prompt' },
                   { label: '命令行安装', value: 'cli' },
                   { label: 'Zip包安装', value: 'zip' },
                 ]}
               />
             </div>
+
+            {installTab === 'prompt' && (
+              <div className="install-content">
+                <p className="install-desc">将以下提示词复制到 OpenCode CLI 中，AI 会自动执行安装命令。</p>
+                <div className="install-prompt-block">
+                  <Button 
+                    icon={<CopyOutlined />} 
+                    onClick={() => handleCopy(getPromptInstallCommand())}
+                    className="copy-button"
+                  >
+                    复制
+                  </Button>
+                  <pre>{getPromptInstallCommand()}</pre>
+                </div>
+              </div>
+            )}
 
             {installTab === 'cli' && (
               <div className="install-content">

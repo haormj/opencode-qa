@@ -3,7 +3,8 @@
 
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [string]$Slug
+    [string]$Slug,
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,13 +18,18 @@ Write-Host "Target: $InstallDir"
 Write-Host ""
 
 if (Test-Path $InstallDir) {
-    Write-Host "Directory already exists: $InstallDir"
-    $response = Read-Host "Overwrite? [y/N]"
-    if ($response -ne 'y' -and $response -ne 'Y') {
-        Write-Host "Cancelled"
-        exit 0
+    if ($Force) {
+        Write-Host "Overwriting existing installation..."
+        Remove-Item -Recurse -Force $InstallDir
+    } else {
+        Write-Host "Directory already exists: $InstallDir"
+        $response = Read-Host "Overwrite? [y/N]"
+        if ($response -ne 'y' -and $response -ne 'Y') {
+            Write-Host "Cancelled"
+            exit 0
+        }
+        Remove-Item -Recurse -Force $InstallDir
     }
-    Remove-Item -Recurse -Force $InstallDir
 }
 
 $TempDir = Join-Path $env:TEMP "opencode-skill-$(Get-Random)"
