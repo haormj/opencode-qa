@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Form, Input, Button, message, Radio, Spin } from 'antd'
+import { Form, Input, Button, message, Radio, Spin, Modal } from 'antd'
 import { FolderOpenOutlined, FileZipOutlined, ReloadOutlined, InboxOutlined } from '@ant-design/icons'
 import JSZip from 'jszip'
 import { updateSkillWithFiles, type Skill, type UploadFileNode } from '../../services/api'
@@ -33,6 +33,7 @@ function Update() {
   const [totalSize, setTotalSize] = useState(0)
   const [hasSkillMd, setHasSkillMd] = useState(false)
   const [versionType, setVersionType] = useState<'major' | 'minor' | 'patch'>('patch')
+  const [submitModalVisible, setSubmitModalVisible] = useState(false)
   const folderInputRef = useRef<HTMLInputElement>(null)
   const zipInputRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
@@ -239,7 +240,9 @@ function Update() {
     setHasSkillMd(false)
   }
 
-  const handleSubmit = async (values: Record<string, string>) => {
+  const handleConfirmSubmit = async (status: 'draft' | 'pending') => {
+    const values = await form.validateFields()
+    
     if (!hasSkillMd) {
       message.error('必须包含 SKILL.md 文件')
       return
@@ -266,9 +269,11 @@ function Update() {
         description: values.description,
         versionType,
         changeLog: values.changeLog,
+        status,
       })
-      message.success('技能更新成功，等待审核')
-      navigate('/skills/my/published')
+      message.success(status === 'draft' ? '已保存为草稿' : '技能更新成功，等待审核')
+      setSubmitModalVisible(false)
+      navigate('/skills/my/versions')
     } catch (error) {
       message.error(error instanceof Error ? error.message : '更新失败')
     } finally {
@@ -477,7 +482,6 @@ function Update() {
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
       >
         <Form.Item name="displayName" label="显示名称">
           <Input placeholder="Skill 显示名称" />
@@ -492,11 +496,49 @@ function Update() {
         </Form.Item>
         
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={submitting} size="large" disabled={!hasSkillMd}>
+          <Button 
+            type="primary" 
+            onClick={() => setSubmitModalVisible(true)} 
+            loading={submitting} 
+            size="large" 
+            disabled={!hasSkillMd}
+          >
             提交更新
           </Button>
         </Form.Item>
       </Form>
+
+      <Modal
+        title="选择提交方式"
+        open={submitModalVisible}
+        onCancel={() => setSubmitModalVisible(false)}
+        footer={null}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Button 
+            type="primary" 
+            block 
+            onClick={() => handleConfirmSubmit('pending')}
+            loading={submitting}
+          >
+            直接提交审核
+          </Button>
+          <Button 
+            block 
+            onClick={() => handleConfirmSubmit('draft')}
+            loading={submitting}
+          >
+            保存为草稿
+          </Button>
+          <Button 
+            type="text" 
+            block 
+            onClick={() => setSubmitModalVisible(false)}
+          >
+            取消
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }
