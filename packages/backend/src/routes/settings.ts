@@ -10,7 +10,8 @@ router.get('/', async (_req, res) => {
     const settings = await db.select().from(systemSettings)
       .where(or(
         like(systemSettings.key, 'login.%'),
-        like(systemSettings.key, 'site.%')
+        like(systemSettings.key, 'site.%'),
+        like(systemSettings.key, 'install.%')
       ))
 
     const result: Record<string, string> = {}

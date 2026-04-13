@@ -37,8 +37,10 @@ function Detail() {
   const [loading, setLoading] = useState(true)
   const [favorited, setFavorited] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'versions'>('overview')
-  const [installTab, setInstallTab] = useState<'dialog' | 'cli' | 'zip'>('dialog')
+  const [installTab, setInstallTab] = useState<'cli' | 'zip'>('cli')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
+  const [platform, setPlatform] = useState<'linux' | 'windows'>('linux')
+  const [serverUrl, setServerUrl] = useState('')
 
   useEffect(() => {
     if (!slug) return
@@ -64,6 +66,25 @@ function Detail() {
         .catch(() => setFileTree([]))
     }
   }, [installTab, slug, skill?.status])
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        setServerUrl(data['install.serverUrl'] || window.location.origin)
+      })
+      .catch(() => {
+        setServerUrl(window.location.origin)
+      })
+  }, [])
+
+  const getInstallCommand = () => {
+    if (!skill) return ''
+    if (platform === 'linux') {
+      return `curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- ${skill.slug}`
+    }
+    return `powershell -Command "$tempFile = Join-Path $env:TEMP 'install-skill.ps1'; Invoke-WebRequest -Uri '${serverUrl}/api/public/scripts/install-skill.ps1' -OutFile $tempFile -UseBasicParsing; & $tempFile -Slug '${skill.slug}'; Remove-Item $tempFile"`
+  }
 
   const handleFavorite = async () => {
     if (!skill) return
@@ -178,38 +199,32 @@ function Detail() {
             <div className="install-tabs">
               <Segmented
                 value={installTab}
-                onChange={value => setInstallTab(value as 'dialog' | 'cli' | 'zip')}
+                onChange={value => setInstallTab(value as 'cli' | 'zip')}
                 options={[
-                  { label: '通过对话安装', value: 'dialog' },
                   { label: '命令行安装', value: 'cli' },
                   { label: 'Zip包安装', value: 'zip' },
                 ]}
               />
             </div>
 
-            {installTab === 'dialog' && (
-              <div className="install-content">
-                <p className="install-desc">复制提示词，发送给 AI 助手即可安装技能。</p>
-                <div className="install-code-block">
-                  <code>请安装技能 {skill.slug}</code>
-                  <Button 
-                    icon={<CopyOutlined />} 
-                    onClick={() => handleCopy(`请安装技能 ${skill.slug}`)}
-                  >
-                    复制
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {installTab === 'cli' && (
               <div className="install-content">
-                <p className="install-desc">在终端中执行以下命令安装技能：</p>
+                <p className="install-desc">选择平台，在终端中执行以下命令安装技能：</p>
+                <div className="install-platform-selector">
+                  <Segmented
+                    value={platform}
+                    onChange={value => setPlatform(value as 'linux' | 'windows')}
+                    options={[
+                      { label: 'Linux/macOS', value: 'linux' },
+                      { label: 'Windows', value: 'windows' },
+                    ]}
+                  />
+                </div>
                 <div className="install-code-block">
-                  <code>opencode-skill install {skill.slug}</code>
+                  <code>{getInstallCommand()}</code>
                   <Button 
                     icon={<CopyOutlined />} 
-                    onClick={() => handleCopy(`opencode-skill install ${skill.slug}`)}
+                    onClick={() => handleCopy(getInstallCommand())}
                   >
                     复制
                   </Button>
@@ -232,7 +247,7 @@ function Detail() {
                     <span className="step-number">2</span>
                     <div className="step-content">
                       <span className="step-title">解压</span>
-                      <p className="step-desc">将压缩包解压到 <code>~/.config/opencode/skills/</code> 目录下，请保持内部目录结构。</p>
+                      <p className="step-desc">将压缩包解压到 <code>~/.opencode/skills/</code> 目录下，请保持内部目录结构。</p>
                     </div>
                   </div>
                   <div className="install-step">

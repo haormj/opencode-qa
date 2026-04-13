@@ -19,7 +19,8 @@ export async function seed() {
     { key: 'site.adminTitle', value: 'OpenCode QA Admin', description: '管理后台标题' },
     { key: 'login.showPasswordLogin', value: 'true', description: '是否显示普通登录入口' },
     { key: 'login.showRegister', value: 'true', description: '是否显示注册入口' },
-    { key: 'login.passwordLoginCollapsed', value: 'false', description: '普通登录默认是否折叠' }
+    { key: 'login.passwordLoginCollapsed', value: 'false', description: '普通登录默认是否折叠' },
+    { key: 'install.serverUrl', value: '', description: '安装脚本服务器地址（为空则使用当前域名）' }
   ]
 
   for (const setting of defaultSettings) {

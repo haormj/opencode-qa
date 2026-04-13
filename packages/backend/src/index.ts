@@ -24,6 +24,7 @@ import adminAssistantRoutes from './routes/admin-assistant.js'
 import skillRoutes from './routes/skill.js'
 import adminSkillRoutes from './routes/admin-skill.js'
 import adminSkillVersionRoutes from './routes/admin-skill-version.js'
+import publicSkillRoutes from './routes/public-skill.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
 import { accessLogger, errorLogger } from './middleware/logger.js'
@@ -63,6 +64,7 @@ app.use('/api/admin/assistants', adminAssistantRoutes)
 app.use('/api/skills', skillRoutes)
 app.use('/api/admin/skills', adminSkillRoutes)
 app.use('/api/admin/skill-versions', adminSkillVersionRoutes)
+app.use('/api/public', publicSkillRoutes)
 
 app.use(errorLogger)
 
