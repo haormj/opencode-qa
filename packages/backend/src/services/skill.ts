@@ -380,7 +380,7 @@ export async function getSkillVersions(skillId: string) {
     .leftJoin(users, eq(skillVersions.createdBy, users.id))
     .where(and(
       eq(skillVersions.skillId, skillId),
-      ne(skillVersions.status, 'rejected')
+      eq(skillVersions.status, 'approved')
     ))
     .orderBy(desc(skillVersions.createdAt))
 
