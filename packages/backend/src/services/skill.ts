@@ -700,3 +700,31 @@ export async function batchDeleteSkills(ids: string[]): Promise<number> {
   }
   return ids.length
 }
+
+export async function submitSkillVersion(versionId: string, userId: string) {
+  const version = await getSkillVersionById(versionId)
+  if (!version) {
+    throw new Error('Version not found')
+  }
+
+  const skill = await getSkillById(version.skillId)
+  if (!skill) {
+    throw new Error('Skill not found')
+  }
+
+  if (skill.authorId !== userId) {
+    throw new Error('Not authorized')
+  }
+
+  if (version.status !== 'draft') {
+    throw new Error('Only draft versions can be submitted')
+  }
+
+  const now = new Date()
+  await db.update(skillVersions).set({
+    status: 'pending',
+    updatedAt: now
+  }).where(eq(skillVersions.id, versionId))
+
+  return { success: true }
+}
