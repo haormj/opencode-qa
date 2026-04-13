@@ -77,21 +77,6 @@ function MySkillVersions() {
 
   const columns: ColumnsType<MyPendingVersion> = [
     {
-      title: '技能名称',
-      dataIndex: 'skillName',
-      key: 'skillName',
-      width: 200,
-      ellipsis: true,
-      render: (name: string, record) => (
-        <span
-          style={{ color: '#1890ff', cursor: 'pointer' }}
-          onClick={(e) => { e.stopPropagation(); navigate(`/skills/my/${record.skillSlug}`) }}
-        >
-          {name}
-        </span>
-      )
-    },
-    {
       title: 'Slug',
       dataIndex: 'skillSlug',
       key: 'skillSlug',
