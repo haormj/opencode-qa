@@ -350,7 +350,7 @@ export async function ssoLogin(
   redirectUri: string,
   userAgent?: string,
   ipAddress?: string
-): Promise<{ token: string; user: { id: string; username: string; displayName: string; email: string | null } }> {
+): Promise<{ token: string; user: { id: string; username: string; displayName: string; email: string | null; roles: string[] } }> {
   logger.debug(`[SSO] ssoLogin started: provider=${providerName}`)
   
   const provider = await getSsoProvider(providerName)
@@ -368,9 +368,17 @@ export async function ssoLogin(
   logger.debug(`[SSO] ssoLogin: step 3/4 - finding or creating user`)
   const user = await findOrCreateUser(providerName, userInfo, provider)
   
+  const userRoleRecords = await db
+    .select({ role: roles })
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(eq(userRoles.userId, user.id))
+
+  const rolesList = userRoleRecords.map(ur => ur.role.name)
+  
   logger.debug(`[SSO] ssoLogin: step 4/4 - creating token`)
   const token = await createToken(user.id, userAgent, ipAddress)
 
-  logger.debug(`[SSO] ssoLogin completed: userId=${user.id}, username=${user.username}`)
-  return { token, user }
+  logger.debug(`[SSO] ssoLogin completed: userId=${user.id}, username=${user.username}, roles=${rolesList.join(',')}`)
+  return { token, user: { ...user, roles: rolesList } }
 }

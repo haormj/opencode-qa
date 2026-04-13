@@ -62,7 +62,8 @@ router.post('/:provider/callback', async (req, res) => {
         id: result.user.id,
         username: result.user.username,
         displayName: result.user.displayName,
-        email: result.user.email
+        email: result.user.email,
+        roles: result.user.roles
       }
     })
   } catch (error) {
