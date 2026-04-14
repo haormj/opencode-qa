@@ -131,7 +131,7 @@ function Sidebar({
 
   return (
     <div className="sidebar">
-      <div className="sidebar-brand">
+      <div className="sidebar-brand" onClick={() => navigate('/skills')}>
         <span className="brand-text">{siteTitle}</span>
       </div>
 

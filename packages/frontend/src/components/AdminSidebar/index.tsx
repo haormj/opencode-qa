@@ -108,7 +108,7 @@ function AdminSidebar() {
 
   return (
     <div className="admin-sidebar">
-      <div className="admin-sidebar-brand">
+      <div className="admin-sidebar-brand" onClick={() => navigate('/admin/sessions')}>
         <span className="brand-text">{adminTitle}</span>
       </div>
 
