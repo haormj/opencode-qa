@@ -61,13 +61,29 @@ router.get('/public/:id/info', async (req, res) => {
   try {
     const { id } = req.params
 
-    const session = await db.select({ id: sessions.id, userId: sessions.userId, status: sessions.status }).from(sessions).where(eq(sessions.id, id)).get()
+    const session = await db.select({ 
+      id: sessions.id, 
+      userId: sessions.userId, 
+      status: sessions.status,
+      assistantId: sessions.assistantId
+    }).from(sessions).where(eq(sessions.id, id)).get()
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    res.json(session)
+    let assistantSlug: string | null = null
+    if (session.assistantId) {
+      const assistant = await db.select({ slug: assistants.slug }).from(assistants).where(eq(assistants.id, session.assistantId)).get()
+      assistantSlug = assistant?.slug || null
+    }
+
+    res.json({
+      id: session.id,
+      userId: session.userId,
+      status: session.status,
+      assistantSlug
+    })
   } catch (error) {
     logger.error('Get session info error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -120,6 +136,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Session not found' })
     }
 
+    let assistantSlug: string | null = null
+    if (session.assistantId) {
+      const assistant = await db.select({ slug: assistants.slug }).from(assistants).where(eq(assistants.id, session.assistantId)).get()
+      assistantSlug = assistant?.slug || null
+    }
+
     const sessionMessages = await db.select({
       id: messages.id,
       senderType: messages.senderType,
@@ -155,6 +177,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     res.json({
       id: session.id,
+      assistantId: session.assistantId,
+      assistantSlug,
       title: session.title,
       status: session.status,
       needHuman: session.needHuman,

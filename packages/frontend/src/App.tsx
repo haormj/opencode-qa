@@ -36,7 +36,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
   if (!isAdmin()) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/skills" replace />
   }
   return <>{children}</>
 }
@@ -47,11 +47,7 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            <PrivateRoute>
-              <Home />
-            </PrivateRoute>
-          }
+          element={<Navigate to="/skills" replace />}
         />
         <Route path="/login" element={<Login />} />
         <Route path="/sso/callback" element={<SsoCallback />} />
@@ -60,6 +56,14 @@ function App() {
           element={
             <PrivateRoute>
               <SessionRedirect />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/assistants/:slug"
+          element={
+            <PrivateRoute>
+              <Home />
             </PrivateRoute>
           }
         />

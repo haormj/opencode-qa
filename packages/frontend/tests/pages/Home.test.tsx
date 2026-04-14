@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import Home from '../../src/pages/Home'
 
 vi.mock('antd', async () => {
@@ -24,7 +24,6 @@ delete (window as any).location
 window.location = {
   ...originalLocation,
   origin: 'http://localhost:3000',
-  search: '?sessionId=test-session-id',
 } as Location
 
 const mockFetch = vi.fn()
@@ -52,11 +51,12 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 })
 
-const renderHome = () => {
+const renderHome = (initialPath = '/assistants/default') => {
+  const searchParams = initialPath.includes('?') ? '' : ''
   return render(
-    <BrowserRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <Home />
-    </BrowserRouter>
+    </MemoryRouter>
   )
 }
 
@@ -81,6 +81,8 @@ describe('Home - handleCopyLink', () => {
             id: 'test-session-id',
             title: 'Test Session',
             status: 'active',
+            assistantId: 'test-assistant-id',
+            assistantSlug: 'default',
             messages: [],
           }),
         })
@@ -88,7 +90,9 @@ describe('Home - handleCopyLink', () => {
       if (url.includes('/api/assistants')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([]),
+          json: () => Promise.resolve([
+            { id: 'test-assistant-id', name: 'Default', slug: 'default' }
+          ]),
         })
       }
       if (url.includes('/api/messages/')) {
@@ -101,6 +105,12 @@ describe('Home - handleCopyLink', () => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]),
+        })
+      }
+      if (url.includes('/api/settings/public')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
         })
       }
       return Promise.resolve({
@@ -117,7 +127,7 @@ describe('Home - handleCopyLink', () => {
   it('should copy session link to clipboard successfully', async () => {
     mockCopy.mockReturnValue(true)
     
-    renderHome()
+    renderHome('/assistants/default?sessionId=test-session-id')
     
     const copyButton = await screen.findByRole('button', { name: /复制链接/i }, { timeout: 5000 })
     fireEvent.click(copyButton)
@@ -131,7 +141,7 @@ describe('Home - handleCopyLink', () => {
   it('should show error message when clipboard write fails', async () => {
     mockCopy.mockReturnValue(false)
     
-    renderHome()
+    renderHome('/assistants/default?sessionId=test-session-id')
     
     const copyButton = await screen.findByRole('button', { name: /复制链接/i }, { timeout: 5000 })
     fireEvent.click(copyButton)
@@ -144,25 +154,12 @@ describe('Home - handleCopyLink', () => {
   })
 
   it('should not attempt to copy if no sessionId', async () => {
-    window.location = {
-      ...originalLocation,
-      origin: 'http://localhost:3000',
-      search: '',
-    } as Location
-    
-    renderHome()
-    
-    const copyButton = screen.queryByRole('button', { name: /复制链接/i })
+    renderHome('/assistants/default')
     
     await waitFor(() => {
+      const copyButton = screen.queryByRole('button', { name: /复制链接/i })
       expect(copyButton).toBeNull()
       expect(mockCopy).not.toHaveBeenCalled()
     })
-    
-    window.location = {
-      ...originalLocation,
-      origin: 'http://localhost:3000',
-      search: '?sessionId=test-session-id',
-    } as Location
   })
 })

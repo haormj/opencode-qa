@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
+import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
 import Sidebar from '../components/Sidebar'
@@ -22,10 +22,12 @@ import type { Session, Assistant } from '../services/api'
 import './Home.css'
 
 function Home() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const navigateHook = useNavigate()
   const locationHook = useLocation()
+  const params = useParams<{ slug?: string }>()
   const sessionId = searchParams.get('sessionId')
+  const urlSlug = params.slug
 
   const [messages, setMessages] = useState<ExtendedMessageProps[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -51,12 +53,22 @@ function Home() {
   useEffect(() => {
     if (locationHook.pathname.startsWith('/skills')) {
       setMode('skill')
-    } else if (locationHook.pathname === '/') {
-      navigateHook('/skills', { replace: true })
-    } else {
+    } else if (locationHook.pathname.startsWith('/assistants')) {
       setMode('chat')
+    } else {
+      navigateHook('/skills', { replace: true })
     }
   }, [locationHook.pathname, navigateHook])
+
+  useEffect(() => {
+    if (urlSlug && assistants.length > 0 && mode === 'chat') {
+      const assistant = assistants.find(a => a.slug === urlSlug)
+      if (assistant && assistant.id !== currentAssistantId) {
+        setCurrentAssistantId(assistant.id)
+        localStorage.setItem('currentAssistantId', assistant.id)
+      }
+    }
+  }, [urlSlug, assistants, mode, currentAssistantId])
 
   const setLoadingState = useCallback((id: string, loading: boolean) => {
     loadingStatesRef.current.set(id, loading)
@@ -67,26 +79,28 @@ function Home() {
   }, [])
 
   const handleAssistantChange = useCallback((assistantId: string | null) => {
-    setCurrentAssistantId(assistantId)
     if (assistantId) {
-      localStorage.setItem('currentAssistantId', assistantId)
-    } else {
-      localStorage.removeItem('currentAssistantId')
+      const assistant = assistants.find(a => a.id === assistantId)
+      if (assistant) {
+        setCurrentAssistantId(assistantId)
+        localStorage.setItem('currentAssistantId', assistantId)
+        navigateHook(`/assistants/${assistant.slug}`)
+        setMessages([])
+        setSessionStatus('active')
+      }
     }
-    setSearchParams({})
-    setMessages([])
-    setSessionStatus('active')
-    setMode('chat')
-  }, [setSearchParams])
+  }, [assistants, navigateHook])
 
   const handleModeChange = useCallback((newMode: 'chat' | 'skill') => {
     setMode(newMode)
     if (newMode === 'skill') {
       navigateHook('/skills')
     } else {
-      navigateHook('/')
+      const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+      const slug = currentAssistant?.slug || 'default'
+      navigateHook(`/assistants/${slug}`)
     }
-  }, [navigateHook])
+  }, [navigateHook, assistants, currentAssistantId])
 
   const loadSession = useCallback(async (id: string) => {
     if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
@@ -96,6 +110,19 @@ function Home() {
     
     try {
       const session = await getSession(id)
+      
+      if (session.assistantId) {
+        const assistant = assistants.find(a => a.id === session.assistantId)
+        if (assistant) {
+          setCurrentAssistantId(assistant.id)
+          localStorage.setItem('currentAssistantId', assistant.id)
+        }
+        
+        if (session.assistantSlug && session.assistantSlug !== urlSlug) {
+          navigateHook(`/assistants/${session.assistantSlug}?sessionId=${id}`, { replace: true })
+        }
+      }
+      
       const loadedMessages: ExtendedMessageProps[] = []
       
       session.messages.forEach((msg: MessageItem) => {
@@ -139,12 +166,14 @@ function Home() {
       if (errorMessage.includes('Session not found')) {
         notFoundRef.current = true
         message.error('会话不存在或已被删除')
-        setSearchParams({})
+        const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+        const slug = currentAssistant?.slug || 'default'
+        navigateHook(`/assistants/${slug}`, { replace: true })
       } else {
         message.error('加载会话失败')
       }
     }
-  }, [setSearchParams])
+  }, [assistants, urlSlug, navigateHook, currentAssistantId])
 
   const sendMessage = useCallback(async (text: string, currentSessionId: string) => {
     const username = getUsername()
@@ -318,7 +347,9 @@ function Home() {
       try {
         const newSession = await createSession(text, currentAssistantId || undefined)
         sessionStorage.setItem(`pendingMessage_${newSession.id}`, text)
-        setSearchParams({ sessionId: newSession.id })
+        const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+        const slug = urlSlug || currentAssistant?.slug || 'default'
+        navigateHook(`/assistants/${slug}?sessionId=${newSession.id}`)
         setRefreshTrigger(prev => prev + 1)
       } catch (error) {
         console.error('Create session error:', error)
@@ -328,7 +359,7 @@ function Home() {
     }
 
     await sendMessage(text, sessionId)
-  }, [sessionId, sendMessage, setSearchParams])
+  }, [sessionId, sendMessage, navigateHook, assistants, currentAssistantId, urlSlug])
 
   const handleStop = useCallback(async () => {
     const currentSessionId = sessionId || new URLSearchParams(window.location.search).get('sessionId')
@@ -367,7 +398,9 @@ function Home() {
   }, [sessionId])
 
   const handleSelectSession = (id: string) => {
-    setSearchParams({ sessionId: id })
+    const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+    const slug = urlSlug || currentAssistant?.slug || 'default'
+    navigateHook(`/assistants/${slug}?sessionId=${id}`)
     if (loadingStatesRef.current.get(id) && streamingMessagesRef.current.has(id)) {
       setMessages(streamingMessagesRef.current.get(id)!)
     }
@@ -375,7 +408,9 @@ function Home() {
   }
 
   const handleNewSession = () => {
-    setSearchParams({})
+    const currentAssistant = assistants.find(a => a.id === currentAssistantId)
+    const slug = urlSlug || currentAssistant?.slug || 'default'
+    navigateHook(`/assistants/${slug}`)
     setMessages([])
     setSessionStatus('active')
     setTimeout(() => chatBoxRef.current?.focus(), 0)

@@ -29,6 +29,8 @@ export interface Session {
 
 export interface SessionDetail {
   id: string
+  assistantId?: string | null
+  assistantSlug?: string | null
   title: string
   status: string
   needHuman: boolean
@@ -272,6 +274,7 @@ export interface SessionInfo {
   id: string
   userId: string
   status: string
+  assistantSlug?: string | null
 }
 
 export async function getSessionInfo(id: string): Promise<SessionInfo> {

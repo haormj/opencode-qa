@@ -10,7 +10,7 @@ function SessionRedirect() {
 
   useEffect(() => {
     if (!id) {
-      navigate('/')
+      navigate('/skills')
       return
     }
 
@@ -25,12 +25,13 @@ function SessionRedirect() {
         const currentUser = getStoredUser()
 
         if (sessionInfo.userId === currentUser?.id) {
-          navigate(`/?sessionId=${id}`, { replace: true })
+          const slug = sessionInfo.assistantSlug || 'default'
+          navigate(`/assistants/${slug}?sessionId=${id}`, { replace: true })
         } else if (isAdmin()) {
           navigate(`/admin/sessions/${id}`, { replace: true })
         } else {
           message.error('无权访问此会话')
-          navigate('/', { replace: true })
+          navigate('/skills', { replace: true })
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '获取会话信息失败'
@@ -39,7 +40,7 @@ function SessionRedirect() {
         } else {
           message.error(errorMessage)
         }
-        navigate('/', { replace: true })
+        navigate('/skills', { replace: true })
       } finally {
         setLoading(false)
       }
