@@ -230,7 +230,7 @@ After installation, verify by listing the installed files.`
 
             {installTab === 'prompt' && (
               <div className="install-content">
-                <p className="install-desc">将以下提示词复制到 OpenCode CLI 中，AI 会自动执行安装命令。</p>
+                <p className="install-desc">将以下提示词复制到 OpenCode CLI 中，AI 会自动执行安装命令。安装成功后请重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。</p>
                 <div className="install-prompt-block">
                   <Button 
                     icon={<CopyOutlined />} 
