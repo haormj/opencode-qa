@@ -8,7 +8,7 @@ import { mermaid } from '@streamdown/mermaid'
 import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import copy from 'copy-to-clipboard'
-import { getSkillBySlug, toggleSkillFavorite, getSkillVersions, downloadSkill, getSkillFiles, type Skill, type SkillVersion, type FileNode } from '../../services/api'
+import { getSkillBySlug, toggleSkillFavorite, getSkillVersions, downloadSkill, getSkillFiles, getSkillReadme, type Skill, type SkillVersion, type FileNode } from '../../services/api'
 import './Detail.css'
 
 const streamdownPlugins = { cjk, code, math, mermaid }
@@ -37,11 +37,13 @@ function Detail() {
   const [versions, setVersions] = useState<SkillVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [favorited, setFavorited] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'versions'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'readme' | 'versions'>('overview')
   const [installTab, setInstallTab] = useState<'prompt' | 'cli' | 'zip'>('prompt')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [platform, setPlatform] = useState<'linux' | 'windows'>('linux')
   const [serverUrl, setServerUrl] = useState('')
+  const [readmeContent, setReadmeContent] = useState<string | null>(null)
+  const [readmeLoading, setReadmeLoading] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -78,6 +80,16 @@ function Detail() {
         setServerUrl(window.location.origin)
       })
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'readme' && slug && readmeContent === null && !readmeLoading) {
+      setReadmeLoading(true)
+      getSkillReadme(slug)
+        .then(content => setReadmeContent(content))
+        .catch(() => setReadmeContent(null))
+        .finally(() => setReadmeLoading(false))
+    }
+  }, [activeTab, slug, readmeContent, readmeLoading])
 
   const getInstallCommand = () => {
     if (!skill) return ''
@@ -181,13 +193,19 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
           className={`skill-detail-tab ${activeTab === 'overview' ? 'active' : ''}`}
           onClick={() => setActiveTab('overview')}
         >
-          概述
+          技能定义
         </button>
         <button 
           className={`skill-detail-tab ${activeTab === 'install' ? 'active' : ''}`}
           onClick={() => setActiveTab('install')}
         >
           安装方式
+        </button>
+        <button 
+          className={`skill-detail-tab ${activeTab === 'readme' ? 'active' : ''}`}
+          onClick={() => setActiveTab('readme')}
+        >
+          使用说明
         </button>
         <button 
           className={`skill-detail-tab ${activeTab === 'versions' ? 'active' : ''}`}
@@ -304,6 +322,20 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+        
+        {activeTab === 'readme' && (
+          <div className="skill-detail-markdown">
+            {readmeLoading ? (
+              <div className="skill-detail-loading"><Spin /></div>
+            ) : readmeContent ? (
+              <Streamdown plugins={streamdownPlugins}>
+                {readmeContent}
+              </Streamdown>
+            ) : (
+              <p className="skill-detail-no-content">暂无使用说明</p>
             )}
           </div>
         )}

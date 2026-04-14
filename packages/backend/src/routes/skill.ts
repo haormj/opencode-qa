@@ -286,6 +286,49 @@ router.get('/:slug/download', async (req, res) => {
   }
 })
 
+router.get('/:slug/readme', async (req, res) => {
+  try {
+    const skill = await skillService.getSkillBySlug(req.params.slug)
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+    if (skill.status !== 'approved' && skill.authorId !== req.user!.id && !req.user!.roles.includes('admin')) {
+      return res.status(404).json({ error: 'Skill not found' })
+    }
+
+    let location: 'current' | 'pending' = 'current'
+    if (skill.authorId === req.user!.id || req.user!.roles.includes('admin')) {
+      const pendingPath = skillFileService.getPendingPath(skill.slug)
+      try {
+        await fs.access(pendingPath)
+        location = 'pending'
+      } catch {
+        location = 'current'
+      }
+    }
+
+    const tree = await skillFileService.getSkillFileTree(skill.slug, location)
+    
+    const readmeNode = tree.find(node => 
+      !node.isDirectory && node.name.toLowerCase() === 'readme.md'
+    )
+
+    if (!readmeNode) {
+      return res.status(404).json({ error: 'README not found' })
+    }
+
+    const content = await skillFileService.readSkillFileFromLocation(skill.slug, readmeNode.path, location)
+    if (!content) {
+      return res.status(404).json({ error: 'README not found' })
+    }
+
+    res.json({ content: content.toString('utf-8') })
+  } catch (error) {
+    logger.error('Get skill readme error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/:slug/files', async (req, res) => {
   try {
     const skill = await skillService.getSkillBySlug(req.params.slug)
