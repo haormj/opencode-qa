@@ -111,16 +111,18 @@ function Home() {
     try {
       const session = await getSession(id)
       
+      const sessionSlug = session.assistantSlug || 'default'
+      
       if (session.assistantId) {
         const assistant = assistants.find(a => a.id === session.assistantId)
         if (assistant) {
           setCurrentAssistantId(assistant.id)
           localStorage.setItem('currentAssistantId', assistant.id)
         }
-        
-        if (session.assistantSlug && session.assistantSlug !== urlSlug) {
-          navigateHook(`/assistants/${session.assistantSlug}?sessionId=${id}`, { replace: true })
-        }
+      }
+      
+      if (sessionSlug !== urlSlug) {
+        navigateHook(`/assistants/${sessionSlug}?sessionId=${id}`, { replace: true })
       }
       
       const loadedMessages: ExtendedMessageProps[] = []
