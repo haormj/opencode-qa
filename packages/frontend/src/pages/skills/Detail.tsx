@@ -89,21 +89,17 @@ function Detail() {
 
   const getPromptInstallCommand = () => {
     if (!skill) return ''
-    return `Install the skill "${skill.slug}" from the internal skill server.
+    return `安装技能 "${skill.slug}"。
 
-First, check if the skill already exists at ~/.opencode/skills/${skill.slug}/SKILL.md
+根据当前平台执行以下命令：
 
-If it already exists, inform the user and ask if they want to overwrite.
-
-If it doesn't exist or user confirms, execute the appropriate command based on the current platform:
-
-For Linux/macOS:
+Linux/macOS:
 curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y ${skill.slug}
 
-For Windows PowerShell:
+Windows PowerShell:
 powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${skill.slug}' -Force"
 
-After installation, verify by listing the installed files.`
+安装完成后，列出安装的文件确认安装成功。安装成功后请告知用户重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。`
   }
 
   const handleFavorite = async () => {
