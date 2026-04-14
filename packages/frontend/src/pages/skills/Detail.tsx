@@ -44,6 +44,7 @@ function Detail() {
   const [serverUrl, setServerUrl] = useState('')
   const [readmeContent, setReadmeContent] = useState<string | null>(null)
   const [readmeLoading, setReadmeLoading] = useState(false)
+  const [readmeLoaded, setReadmeLoaded] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -82,14 +83,17 @@ function Detail() {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'readme' && slug && readmeContent === null && !readmeLoading) {
+    if (activeTab === 'readme' && slug && !readmeLoaded && !readmeLoading) {
       setReadmeLoading(true)
       getSkillReadme(slug)
         .then(content => setReadmeContent(content))
         .catch(() => setReadmeContent(null))
-        .finally(() => setReadmeLoading(false))
+        .finally(() => {
+          setReadmeLoading(false)
+          setReadmeLoaded(true)
+        })
     }
-  }, [activeTab, slug, readmeContent, readmeLoading])
+  }, [activeTab, slug, readmeLoaded, readmeLoading])
 
   const getInstallCommand = () => {
     if (!skill) return ''
