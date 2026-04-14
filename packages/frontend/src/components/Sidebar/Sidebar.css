@@ -26,6 +26,7 @@
   justify-content: center;
   border-bottom: 1px solid #e8e8e8;
   height: 56px;
+  cursor: pointer;
 }
 
 .brand-text {

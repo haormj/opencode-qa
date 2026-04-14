@@ -8,7 +8,7 @@ import { mermaid } from '@streamdown/mermaid'
 import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import copy from 'copy-to-clipboard'
-import { getSkillBySlug, toggleSkillFavorite, getSkillVersions, downloadSkill, getSkillFiles, type Skill, type SkillVersion, type FileNode } from '../../services/api'
+import { getSkillBySlug, toggleSkillFavorite, getSkillVersions, downloadSkill, getSkillFiles, getSkillReadme, type Skill, type SkillVersion, type FileNode } from '../../services/api'
 import './Detail.css'
 
 const streamdownPlugins = { cjk, code, math, mermaid }
@@ -37,11 +37,14 @@ function Detail() {
   const [versions, setVersions] = useState<SkillVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [favorited, setFavorited] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'versions'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'install' | 'readme' | 'versions'>('overview')
   const [installTab, setInstallTab] = useState<'prompt' | 'cli' | 'zip'>('prompt')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [platform, setPlatform] = useState<'linux' | 'windows'>('linux')
   const [serverUrl, setServerUrl] = useState('')
+  const [readmeContent, setReadmeContent] = useState<string | null>(null)
+  const [readmeLoading, setReadmeLoading] = useState(false)
+  const [readmeLoaded, setReadmeLoaded] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -79,6 +82,19 @@ function Detail() {
       })
   }, [])
 
+  useEffect(() => {
+    if (activeTab === 'readme' && slug && !readmeLoaded && !readmeLoading) {
+      setReadmeLoading(true)
+      getSkillReadme(slug)
+        .then(content => setReadmeContent(content))
+        .catch(() => setReadmeContent(null))
+        .finally(() => {
+          setReadmeLoading(false)
+          setReadmeLoaded(true)
+        })
+    }
+  }, [activeTab, slug, readmeLoaded, readmeLoading])
+
   const getInstallCommand = () => {
     if (!skill) return ''
     if (platform === 'linux') {
@@ -89,21 +105,17 @@ function Detail() {
 
   const getPromptInstallCommand = () => {
     if (!skill) return ''
-    return `Install the skill "${skill.slug}" from the internal skill server.
+    return `安装技能 "${skill.slug}"。
 
-First, check if the skill already exists at ~/.opencode/skills/${skill.slug}/SKILL.md
+根据当前平台执行以下命令：
 
-If it already exists, inform the user and ask if they want to overwrite.
-
-If it doesn't exist or user confirms, execute the appropriate command based on the current platform:
-
-For Linux/macOS:
+Linux/macOS:
 curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y ${skill.slug}
 
-For Windows PowerShell:
+Windows PowerShell:
 powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${skill.slug}' -Force"
 
-After installation, verify by listing the installed files.`
+安装完成后，列出安装的文件确认安装成功。安装成功后请告知用户重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。`
   }
 
   const handleFavorite = async () => {
@@ -185,13 +197,19 @@ After installation, verify by listing the installed files.`
           className={`skill-detail-tab ${activeTab === 'overview' ? 'active' : ''}`}
           onClick={() => setActiveTab('overview')}
         >
-          概述
+          技能定义
         </button>
         <button 
           className={`skill-detail-tab ${activeTab === 'install' ? 'active' : ''}`}
           onClick={() => setActiveTab('install')}
         >
           安装方式
+        </button>
+        <button 
+          className={`skill-detail-tab ${activeTab === 'readme' ? 'active' : ''}`}
+          onClick={() => setActiveTab('readme')}
+        >
+          使用说明
         </button>
         <button 
           className={`skill-detail-tab ${activeTab === 'versions' ? 'active' : ''}`}
@@ -230,7 +248,7 @@ After installation, verify by listing the installed files.`
 
             {installTab === 'prompt' && (
               <div className="install-content">
-                <p className="install-desc">将以下提示词复制到 OpenCode CLI 中，AI 会自动执行安装命令。</p>
+                <p className="install-desc">将以下提示词复制到 OpenCode CLI 中，AI 会自动执行安装命令。安装成功后请重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。</p>
                 <div className="install-prompt-block">
                   <Button 
                     icon={<CopyOutlined />} 
@@ -308,6 +326,20 @@ After installation, verify by listing the installed files.`
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+        
+        {activeTab === 'readme' && (
+          <div className="skill-detail-markdown">
+            {readmeLoading ? (
+              <div className="skill-detail-loading"><Spin /></div>
+            ) : readmeContent ? (
+              <Streamdown plugins={streamdownPlugins}>
+                {readmeContent}
+              </Streamdown>
+            ) : (
+              <p className="skill-detail-no-content">暂无使用说明</p>
             )}
           </div>
         )}

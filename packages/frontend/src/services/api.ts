@@ -1127,6 +1127,15 @@ export async function getSkillFileContentBySlug(slug: string, filePath: string):
   return response.text()
 }
 
+export async function getSkillReadme(slug: string): Promise<string | null> {
+  try {
+    const result = await request<{ content: string }>(`${API_BASE}/skills/${slug}/readme`)
+    return result.content
+  } catch {
+    return null
+  }
+}
+
 export interface UploadResult {
   files: FileNode[]
   totalSize: number

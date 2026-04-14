@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { isAuthenticated, isAdmin } from './services/api'
+import { PageTitle } from './components/PageTitle'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import SsoCallback from './pages/SsoCallback'
@@ -44,6 +45,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
+      <PageTitle />
       <Routes>
         <Route
           path="/"
