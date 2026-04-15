@@ -149,7 +149,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
       reasoning: messages.reasoning,
       createdAt: messages.createdAt,
       userId: messages.userId,
-      botId: messages.botId
+      botId: messages.botId,
+      inputTokens: messages.inputTokens,
+      outputTokens: messages.outputTokens
     }).from(messages).where(eq(messages.sessionId, id)).orderBy(asc(messages.createdAt))
 
     const messagesWithDetails = await Promise.all(sessionMessages.map(async (m) => {
@@ -171,7 +173,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
         reasoning: m.reasoning,
         createdAt: m.createdAt,
         user,
-        bot
+        bot,
+        inputTokens: m.inputTokens,
+        outputTokens: m.outputTokens
       }
     }))
 

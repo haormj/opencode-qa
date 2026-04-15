@@ -213,7 +213,9 @@ router.post('/stream', authMiddleware, async (req, res) => {
       sessionId,
       content: botMessage.content,
       senderType: botMessage.senderType,
-      createdAt: botMessage.createdAt
+      createdAt: botMessage.createdAt,
+      inputTokens: botMessage.inputTokens,
+      outputTokens: botMessage.outputTokens
     })
     res.end()
 
