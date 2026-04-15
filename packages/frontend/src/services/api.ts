@@ -665,6 +665,13 @@ export interface AssistantStat {
   interceptionRate: number
 }
 
+export interface TokenStat {
+  assistantId: string
+  assistantName: string
+  totalInputTokens: number
+  totalOutputTokens: number
+}
+
 export interface Statistics {
   interceptionRate: number
   sessions: {
@@ -683,6 +690,7 @@ export interface Statistics {
     total: number
   }
   assistantStats: AssistantStat[]
+  tokenStats: TokenStat[]
 }
 
 export async function getStatistics(): Promise<Statistics> {
