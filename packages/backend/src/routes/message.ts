@@ -203,8 +203,8 @@ router.post('/stream', authMiddleware, async (req, res) => {
       content: answer || '抱歉，我无法回答这个问题。',
       reasoning: reasoningContent || null,
       botId: userBot.id,
-      inputTokens: tokens?.input || null,
-      outputTokens: tokens?.output || null,
+      inputTokens: tokens?.input ?? null,
+      outputTokens: tokens?.output ?? null,
       createdAt: new Date()
     }).returning()
 
