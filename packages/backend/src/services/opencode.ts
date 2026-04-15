@@ -162,7 +162,7 @@ export async function sendOpenCodeMessageStream(
   opencodeSessionId: string | undefined,
   onChunk: (chunk: string, type: ChunkType) => void,
   onSessionId: (sessionId: string) => void
-): Promise<{ sessionId: string; answer: string }> {
+): Promise<{ sessionId: string; answer: string; tokens?: { input: number; output: number } }> {
   logger.debug('[OpenCode] sendOpenCodeMessageStream called:', { message: message.substring(0, 50), opencodeSessionId })
   
   const { sessionId } = await checkOrCreateOpenCodeSession(botConfig.apiUrl, opencodeSessionId)
@@ -171,6 +171,7 @@ export async function sendOpenCodeMessageStream(
   const client = getClient(botConfig.apiUrl)
   
   let answer = ''
+  let tokensData: { input: number; output: number } | undefined = undefined
   let messageCompleted = false
   let completionResolver: () => void
   let intervalId: NodeJS.Timeout | null = null
@@ -231,23 +232,27 @@ export async function sendOpenCodeMessageStream(
     
     await completionPromise
     
+    const result = await promptPromise
+    
+    if (result.data?.info?.tokens) {
+      tokensData = {
+        input: result.data.info.tokens.input || 0,
+        output: result.data.info.tokens.output || 0
+      }
+    }
+    
     if (!answer) {
       logger.info(`[OpenCode] No answer from stream for session: ${sessionId}, trying prompt result`)
-      try {
-        const result = await promptPromise
-        if (!result.data?.parts || result.data.parts.length === 0) {
-          logger.warn(`[OpenCode] Prompt result empty for session: ${sessionId}, error: ${result.error ? JSON.stringify(result.error) : 'none'}`)
-        }
-        if (result.data?.parts) {
-          for (const part of result.data.parts) {
-            if (part.type === 'text' && 'text' in part && part.text) {
-              answer += part.text
-              onChunk(part.text, 'text')
-            }
+      if (!result.data?.parts || result.data.parts.length === 0) {
+        logger.warn(`[OpenCode] Prompt result empty for session: ${sessionId}, error: ${result.error ? JSON.stringify(result.error) : 'none'}`)
+      }
+      if (result.data?.parts) {
+        for (const part of result.data.parts) {
+          if (part.type === 'text' && 'text' in part && part.text) {
+            answer += part.text
+            onChunk(part.text, 'text')
           }
         }
-      } catch (error: any) {
-        logger.error(`[OpenCode] Prompt request failed for session: ${sessionId}, error: ${error.message || error}`)
       }
     }
   } finally {
@@ -265,7 +270,8 @@ export async function sendOpenCodeMessageStream(
   
   return {
     sessionId,
-    answer: answer || '抱歉，我无法回答这个问题。'
+    answer: answer || '抱歉，我无法回答这个问题。',
+    tokens: tokensData
   }
 }
 
