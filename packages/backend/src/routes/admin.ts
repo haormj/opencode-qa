@@ -394,13 +394,31 @@ router.get('/statistics', async (req, res) => {
         : 100
     }))
 
+    const tokenStats = await db.select({
+      assistantId: sessions.assistantId,
+      assistantName: assistants.name,
+      totalInputTokens: sql<number>`sum(${messages.inputTokens})`,
+      totalOutputTokens: sql<number>`sum(${messages.outputTokens})`
+    })
+      .from(messages)
+      .innerJoin(sessions, eq(messages.sessionId, sessions.id))
+      .innerJoin(assistants, eq(sessions.assistantId, assistants.id))
+      .where(eq(messages.senderType, 'bot'))
+      .groupBy(sessions.assistantId, assistants.name)
+
     res.json({
       interceptionRate,
       sessions: { total, active, human, closed },
       users: { total: usersTotal },
       bots: { total: botsTotal },
       assistants: { total: assistantsTotal },
-      assistantStats
+      assistantStats,
+      tokenStats: tokenStats.map(stat => ({
+        assistantId: stat.assistantId,
+        assistantName: stat.assistantName,
+        totalInputTokens: Number(stat.totalInputTokens) || 0,
+        totalOutputTokens: Number(stat.totalOutputTokens) || 0
+      }))
     })
   } catch (error) {
     logger.error('Get statistics error:', error)
