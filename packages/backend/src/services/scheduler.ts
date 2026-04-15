@@ -46,6 +46,19 @@ async function closeInactiveSessions(): Promise<number> {
 }
 
 export function startScheduler(): void {
+  const now = new Date()
+  const nextRun = new Date()
+  nextRun.setHours(0, 5, 0, 0)
+  if (nextRun <= now) {
+    nextRun.setDate(nextRun.getDate() + 1)
+  }
+
+  const hoursUntilNextRun = (nextRun.getTime() - now.getTime()) / (60 * 60 * 1000)
+
+  if (hoursUntilNextRun > 1) {
+    closeInactiveSessions().catch(err => logger.error('启动时执行关闭任务失败', err))
+  }
+
   schedule.scheduleJob('5 0 * * *', async () => {
     try {
       await closeInactiveSessions()
