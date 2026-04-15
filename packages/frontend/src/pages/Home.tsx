@@ -323,21 +323,22 @@ function Home() {
   useEffect(() => {
     currentDisplaySessionIdRef.current = sessionId
     if (sessionId) {
-      loadSession(sessionId)
-      
-      const pendingKey = `pendingMessage_${sessionId}`
-      const pendingMessage = sessionStorage.getItem(pendingKey)
-      if (pendingMessage) {
-        sessionStorage.removeItem(pendingKey)
-        setTimeout(() => {
-          sendMessage(pendingMessage, sessionId)
-        }, 100)
+      const initSession = async () => {
+        await loadSession(sessionId)
+        
+        const pendingKey = `pendingMessage_${sessionId}`
+        const pendingMessage = sessionStorage.getItem(pendingKey)
+        if (pendingMessage) {
+          sessionStorage.removeItem(pendingKey)
+          await sendMessage(pendingMessage, sessionId)
+        }
       }
+      initSession()
     } else {
       setMessages([])
       setSessionStatus('active')
     }
-  }, [sessionId, loadSession, sendMessage])
+  }, [sessionId])
 
   const handleSend = useCallback(async (_type: string, text: string) => {
     if (!text.trim()) {
