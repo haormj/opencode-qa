@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import logger from './logger.js'
 
-const DEFAULT_BACKUP_PATH = './backups'
+const DEFAULT_BACKUP_PATH = './data/backups'
 const DEFAULT_RETENTION_DAYS = 7
 
 interface BackupOptions {

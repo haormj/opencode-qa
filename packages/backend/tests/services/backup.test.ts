@@ -109,7 +109,7 @@ describe('Backup Service', () => {
       const status = getBackupStatus()
 
       expect(status.enabled).toBe(true)
-      expect(status.backupPath).toBe('./backups')
+      expect(status.backupPath).toBe('./data/backups')
       expect(status.retentionDays).toBe(7)
     })
 
