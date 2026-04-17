@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Controls, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber } from 'antd'
+import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
+import type { MenuProps } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
 
@@ -64,7 +65,54 @@ function TaskEditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [scheduleType, setScheduleType] = useState<string>('none')
   const [leftPanelVisible, setLeftPanelVisible] = useState(true)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    nodeId: string;
+  } | null>(null)
+
+  // 右键菜单项
+  const contextMenuItems: MenuProps['items'] = [
+    {
+      key: 'duplicate',
+      icon: <CopyOutlined />,
+      label: '复制节点',
+      onClick: () => {
+        if (contextMenu?.nodeId) {
+          const node = nodes.find(n => n.id === contextMenu.nodeId)
+          if (node) {
+            const newNode: Node = {
+              ...node,
+              id: `${node.type}-${Date.now()}`,
+              position: { x: node.position.x + 30, y: node.position.y + 30 },
+              selected: false,
+              data: { ...node.data }
+            }
+            setNodes([...nodes, newNode])
+          }
+          setContextMenu(null)
+        }
+      }
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      label: '删除节点',
+      danger: true,
+      onClick: () => {
+        if (contextMenu?.nodeId) {
+          setNodes(nodes.filter(n => n.id !== contextMenu.nodeId))
+          setEdges(edges.filter(e =>
+            e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
+          ))
+          setContextMenu(null)
+        }
+      }
+    },
+  ]
 
   // 键盘删除功能
   useEffect(() => {
@@ -91,39 +139,23 @@ function TaskEditorContent() {
   // 右键菜单
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault()
-    setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id })
+    // 获取画布容器的位置
+    const canvasRect = reactFlowWrapper.current?.getBoundingClientRect()
+    if (canvasRect) {
+      // 计算节点在屏幕上的位置（节点右侧）
+      const nodeWidth = 160 // 节点宽度
+      const menuOffset = 10 // 菜单距离节点的偏移
+      setContextMenu({
+        x: canvasRect.left + node.position.x + nodeWidth + menuOffset,
+        y: canvasRect.top + node.position.y + 50,
+        nodeId: node.id
+      })
+    }
   }, [])
 
   const onPaneClick = useCallback(() => {
     setContextMenu(null)
   }, [])
-
-  const handleDeleteNode = useCallback(() => {
-    if (contextMenu?.nodeId) {
-      setNodes(nodes.filter(n => n.id !== contextMenu.nodeId))
-      setEdges(edges.filter(e =>
-        e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
-      ))
-      setContextMenu(null)
-    }
-  }, [contextMenu, nodes, edges, setNodes, setEdges])
-
-  const handleDuplicateNode = useCallback(() => {
-    if (contextMenu?.nodeId) {
-      const node = nodes.find(n => n.id === contextMenu.nodeId)
-      if (node) {
-        const newNode: Node = {
-          ...node,
-          id: `${node.type}-${Date.now()}`,
-          position: { x: node.position.x + 20, y: node.position.y + 20 },
-          selected: false,
-          data: { ...node.data }
-        }
-        setNodes([...nodes, newNode])
-      }
-      setContextMenu(null)
-    }
-  }, [contextMenu, nodes, setNodes])
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -383,28 +415,21 @@ function TaskEditorContent() {
           {/* 右键菜单 */}
           {contextMenu && (
             <div
-              className="absolute bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50 min-w-[140px]"
+              className="fixed z-50"
               style={{ 
                 left: contextMenu.x, 
                 top: contextMenu.y,
-                boxShadow: '0 6px 16px rgba(0,0,0,0.12)'
               }}
             >
-              <div
-                className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-sm transition-colors"
-                onClick={handleDuplicateNode}
-              >
-                <CopyOutlined className="text-gray-400" />
-                <span>复制节点</span>
-              </div>
-              <div className="h-px bg-gray-100 my-1 mx-2" />
-              <div
-                className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-sm text-red-500 transition-colors"
-                onClick={handleDeleteNode}
-              >
-                <DeleteOutlined />
-                <span>删除节点</span>
-              </div>
+              <Menu
+                items={contextMenuItems}
+                style={{ 
+                  border: '1px solid #f0f0f0',
+                  borderRadius: 8,
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
+                  minWidth: 140
+                }}
+              />
             </div>
           )}
         </div>
