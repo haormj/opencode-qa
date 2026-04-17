@@ -501,6 +501,11 @@ function TaskEditorContent() {
               onNodeContextMenu={onNodeContextMenu}
               onPaneClick={onPaneClick}
               nodeTypes={nodeTypes}
+              defaultEdgeOptions={{
+                type: 'smoothstep',
+                animated: true,
+                style: { stroke: '#3B82F6', strokeWidth: 2 },
+              }}
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.3}
               maxZoom={2}
