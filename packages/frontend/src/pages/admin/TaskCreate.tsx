@@ -5,7 +5,7 @@ import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined, UndoOutlined, RedoOutlined, SearchOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -80,7 +80,6 @@ function TaskEditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [scheduleType, setScheduleType] = useState<string>('none')
   const [leftPanelVisible, setLeftPanelVisible] = useState(true)
-  const [nodeSearchText, setNodeSearchText] = useState('')
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   
@@ -396,40 +395,26 @@ function TaskEditorContent() {
           <Typography.Title level={5} className="mb-3">
             节点库
           </Typography.Title>
-          <Input
-            size="small"
-            placeholder="搜索节点..."
-            prefix={<SearchOutlined className="text-gray-400" />}
-            value={nodeSearchText}
-            onChange={(e) => setNodeSearchText(e.target.value)}
-            className="mb-3"
-          />
-          {nodeLibrary.map((category) => {
-            const filteredItems = category.items.filter(item =>
-              item.label.toLowerCase().includes(nodeSearchText.toLowerCase())
-            )
-            if (filteredItems.length === 0) return null
-            return (
-              <div key={category.category} className="mb-3">
-                <Typography.Text type="secondary" className="text-xs">
-                  {category.category}
-                </Typography.Text>
-                <div className="space-y-1 mt-1">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.type}
-                      className="p-2 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
-                      draggable
-                      onDragStart={(e) => onDragStart(e, item.type)}
-                    >
-                      <span>{item.icon}</span>
-                      <span className="text-sm">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
+          {nodeLibrary.map((category) => (
+            <div key={category.category} className="mb-3">
+              <Typography.Text type="secondary" className="text-xs">
+                {category.category}
+              </Typography.Text>
+              <div className="space-y-1 mt-1">
+                {category.items.map((item) => (
+                  <div
+                    key={item.type}
+                    className="p-2 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, item.type)}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="text-sm">{item.label}</span>
+                  </div>
+                ))}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       </div>
 
