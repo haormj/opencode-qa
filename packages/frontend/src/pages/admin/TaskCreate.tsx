@@ -297,15 +297,19 @@ function TaskEditorContent() {
           onDrop={onDrop}
           onDragOver={onDragOver}
         >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            fitView
-          >
+<ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+              minZoom={0.3}
+              maxZoom={2}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+            >
             <Controls />
             <MiniMap />
             <Background />
