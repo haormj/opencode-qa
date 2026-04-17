@@ -409,9 +409,10 @@ class TaskScheduler {
 
 ### 敏感数据处理
 
-- Git 仓库密码：加密存储，执行时解密
-- Webhook 密钥：加密存储
-- 邮箱配置：可选加密
+- Git 仓库密码：使用 AES-256-GCM 加密存储，密钥从环境变量 `TASK_ENCRYPTION_KEY` 读取
+- Webhook 密钥：使用相同加密方式
+- 邮箱配置：明文存储（非敏感信息）
+- 加密工具：使用 Node.js 内置 `crypto` 模块
 
 ### 权限控制
 
