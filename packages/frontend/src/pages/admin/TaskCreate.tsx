@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Controls, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
+import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -82,6 +82,7 @@ function TaskEditorContent() {
   const [leftPanelVisible, setLeftPanelVisible] = useState(true)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   
   // 撤销/重做历史
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
@@ -134,12 +135,16 @@ function TaskEditorContent() {
     nodeId: string;
   } | null>(null)
 
-  // 右键菜单项
+  const [edgeContextMenu, setEdgeContextMenu] = useState<{
+    x: number;
+    y: number;
+    edgeId: string;
+  } | null>(null)
+
   const contextMenuItems: MenuProps['items'] = [
     {
       key: 'duplicate',
-      icon: <CopyOutlined />,
-      label: '复制节点',
+      label: '复制',
       onClick: () => {
         if (contextMenu?.nodeId) {
           const node = nodes.find(n => n.id === contextMenu.nodeId)
@@ -158,13 +163,13 @@ function TaskEditorContent() {
       }
     },
     {
-      type: 'divider',
-    },
-    {
       key: 'delete',
-      icon: <DeleteOutlined />,
-      label: '删除节点',
-      danger: true,
+      label: (
+        <div className="flex justify-between items-center w-full">
+          <span className="text-red-500">删除</span>
+          <span className="text-gray-400 text-xs ml-6">Del</span>
+        </div>
+      ),
       onClick: () => {
         if (contextMenu?.nodeId) {
           setNodes(nodes.filter(n => n.id !== contextMenu.nodeId))
@@ -177,7 +182,24 @@ function TaskEditorContent() {
     },
   ]
 
-  // 键盘删除功能
+  const edgeContextMenuItems: MenuProps['items'] = [
+    {
+      key: 'delete',
+      label: (
+        <div className="flex justify-between items-center w-full">
+          <span className="text-red-500">删除</span>
+          <span className="text-gray-400 text-xs ml-6">Del</span>
+        </div>
+      ),
+      onClick: () => {
+        if (edgeContextMenu?.edgeId) {
+          setEdges(edges.filter(e => e.id !== edgeContextMenu.edgeId))
+          setEdgeContextMenu(null)
+        }
+      }
+    },
+  ]
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -187,6 +209,12 @@ function TaskEditorContent() {
         }
         
         const selectedNodes = nodes.filter(n => n.selected)
+        const selectedEdges = edges.filter(e => e.selected)
+        
+        if (selectedEdges.length > 0) {
+          setEdges(edges.filter(e => !e.selected))
+        }
+        
         if (selectedNodes.length > 0) {
           setNodes(nodes.filter(n => !n.selected))
           setEdges(edges.filter(e =>
@@ -209,13 +237,59 @@ function TaskEditorContent() {
     })
   }, [])
 
-  const onPaneClick = useCallback(() => {
-    setContextMenu(null)
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault()
+    setEdgeContextMenu({
+      x: event.clientX + 4,
+      y: event.clientY + 4,
+      edgeId: edge.id
+    })
   }, [])
 
+  const onPaneClick = useCallback(() => {
+    setContextMenu(null)
+    setEdgeContextMenu(null)
+  }, [])
+
+  const onNodeMouseEnter = useCallback((event: React.MouseEvent, node: Node) => {
+    setHoveredNode(node.id)
+  }, [])
+
+  const onNodeMouseLeave = useCallback(() => {
+    setHoveredNode(null)
+  }, [])
+
+  const edgesWithHighlight = edges.map(edge => ({
+    ...edge,
+    style: {
+      stroke: hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode)
+        ? '#296DFF'
+        : '#D0D5DC',
+      strokeWidth: 2
+    }
+  }))
+
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      const hasSourceEdge = edges.some(e => e.source === params.source)
+      const hasTargetEdge = edges.some(e => e.target === params.target)
+      
+      if (hasSourceEdge && hasTargetEdge) {
+        message.warning('两个节点都已连接，请先删除现有连接')
+        return
+      }
+      if (hasSourceEdge) {
+        message.warning('每个节点只能连接一个下游节点')
+        return
+      }
+      if (hasTargetEdge) {
+        message.warning('每个节点只能接收一个上游节点')
+        return
+      }
+      
+      setEdges((eds) => addEdge(params, eds))
+    },
+    [edges, setEdges]
   )
 
   useEffect(() => {
@@ -479,23 +553,25 @@ function TaskEditorContent() {
         >
 <ReactFlow
               nodes={nodes}
-              edges={edges}
+              edges={edgesWithHighlight}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeContextMenu={onNodeContextMenu}
+              onEdgeContextMenu={onEdgeContextMenu}
+              onNodeMouseEnter={onNodeMouseEnter}
+              onNodeMouseLeave={onNodeMouseLeave}
               onPaneClick={onPaneClick}
               nodeTypes={nodeTypes}
               defaultEdgeOptions={{
-                type: 'smoothstep',
-                animated: true,
-                style: { stroke: '#3B82F6', strokeWidth: 2 },
+                type: 'default',
+                animated: false,
+                style: { stroke: '#D0D5DC', strokeWidth: 2 },
               }}
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.3}
               maxZoom={2}
             >
-            <Controls />
             <MiniMap />
             <Background />
             <Panel position="bottom-center">
@@ -505,7 +581,6 @@ function TaskEditorContent() {
             </Panel>
           </ReactFlow>
 
-          {/* 右键菜单 */}
           {contextMenu && (
             <div
               className="fixed z-50"
@@ -517,10 +592,34 @@ function TaskEditorContent() {
               <Menu
                 items={contextMenuItems}
                 style={{ 
-                  border: '1px solid #f0f0f0',
+                  background: '#fafafa',
+                  border: 'none',
                   borderRadius: 8,
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
-                  minWidth: 140
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  minWidth: 120,
+                  padding: '4px 0'
+                }}
+              />
+            </div>
+          )}
+
+          {edgeContextMenu && (
+            <div
+              className="fixed z-50"
+              style={{ 
+                left: edgeContextMenu.x, 
+                top: edgeContextMenu.y,
+              }}
+            >
+              <Menu
+                items={edgeContextMenuItems}
+                style={{ 
+                  background: '#fafafa',
+                  border: 'none',
+                  borderRadius: 8,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  minWidth: 120,
+                  padding: '4px 0'
                 }}
               />
             </div>

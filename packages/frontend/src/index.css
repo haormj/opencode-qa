@@ -216,7 +216,52 @@ body {
 .text-primary { color: var(--color-primary) !important; }
 .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
 
-/* Fix Streamdown heading style override - let Tailwind utility classes take effect */
 [data-streamdown^="heading-"] {
   font-size: revert !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #555555 !important;
+}
+
+.react-flow__handle {
+  width: 16px !important;
+  height: 16px !important;
+  background: transparent !important;
+  border: none !important;
+  transition: transform 0.2s, opacity 0.2s;
+  left: 50% !important;
+  transform: translateX(-50%);
+}
+
+.react-flow__handle:hover {
+  transform: translateX(-50%) scale(1.25);
+}
+
+.react-flow__handle-top {
+  top: -9px !important;
+}
+
+.react-flow__handle-bottom {
+  bottom: -9px !important;
+}
+
+.react-flow__handle::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background: #296DFF;
+  border-radius: 1px;
+}
+
+.react-flow__handle-top::after {
+  left: 4px;
+  top: 6px;
+}
+
+.react-flow__handle-bottom::after {
+  left: 4px;
+  bottom: 6px;
 }

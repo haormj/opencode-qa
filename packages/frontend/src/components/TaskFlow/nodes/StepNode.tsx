@@ -26,7 +26,7 @@ function StepNode({ data, selected }: StepNodeProps) {
       style={{
         position: 'relative',
         borderRadius: 8,
-        overflow: 'hidden',
+        overflow: 'visible',
         boxShadow: selected 
           ? '0 0 0 2px #F59E0B, 0 4px 12px rgba(0,0,0,0.1)'
           : '0 2px 8px rgba(0,0,0,0.08)',
@@ -34,7 +34,7 @@ function StepNode({ data, selected }: StepNodeProps) {
         width: 240,
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Top} />
       
       {/* 左侧彩色条 */}
       <div
@@ -81,7 +81,7 @@ function StepNode({ data, selected }: StepNodeProps) {
         />
       </div>
 
-      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   )
 }

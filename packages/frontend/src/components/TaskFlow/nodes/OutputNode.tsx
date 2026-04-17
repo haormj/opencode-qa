@@ -67,7 +67,7 @@ function OutputNode({ data, selected }: OutputNodeProps) {
       style={{
         position: 'relative',
         borderRadius: 8,
-        overflow: 'hidden',
+        overflow: 'visible',
         boxShadow: selected 
           ? '0 0 0 2px #8B5CF6, 0 4px 12px rgba(0,0,0,0.1)'
           : '0 2px 8px rgba(0,0,0,0.08)',
@@ -75,7 +75,7 @@ function OutputNode({ data, selected }: OutputNodeProps) {
         width: 240,
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Top} />
       
       {/* 左侧彩色条 */}
       <div
@@ -118,7 +118,7 @@ function OutputNode({ data, selected }: OutputNodeProps) {
         {renderConfigField()}
       </div>
 
-      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   )
 }

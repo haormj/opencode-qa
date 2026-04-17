@@ -29,7 +29,7 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
       style={{
         position: 'relative',
         borderRadius: 8,
-        overflow: 'hidden',
+        overflow: 'visible',
         boxShadow: selected 
           ? '0 0 0 2px #10B981, 0 4px 12px rgba(0,0,0,0.1)'
           : '0 2px 8px rgba(0,0,0,0.08)',
@@ -37,7 +37,7 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
         width: 240,
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Top} />
       
       {/* 左侧彩色条 */}
       <div
@@ -95,7 +95,7 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
         />
       </div>
 
-      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   )
 }
