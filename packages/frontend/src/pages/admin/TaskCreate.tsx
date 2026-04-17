@@ -383,22 +383,27 @@ function TaskEditorContent() {
           {/* 右键菜单 */}
           {contextMenu && (
             <div
-              className="absolute bg-white border border-gray-200 rounded shadow-lg py-1 z-50"
-              style={{ left: contextMenu.x, top: contextMenu.y }}
+              className="absolute bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50 min-w-[140px]"
+              style={{ 
+                left: contextMenu.x, 
+                top: contextMenu.y,
+                boxShadow: '0 6px 16px rgba(0,0,0,0.12)'
+              }}
             >
               <div
-                className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-sm transition-colors"
                 onClick={handleDuplicateNode}
               >
-                <CopyOutlined />
-                复制节点
+                <CopyOutlined className="text-gray-400" />
+                <span>复制节点</span>
               </div>
+              <div className="h-px bg-gray-100 my-1 mx-2" />
               <div
-                className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-red-500"
+                className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-sm text-red-500 transition-colors"
                 onClick={handleDeleteNode}
               >
                 <DeleteOutlined />
-                删除节点
+                <span>删除节点</span>
               </div>
             </div>
           )}
