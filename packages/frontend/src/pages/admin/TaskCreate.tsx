@@ -64,7 +64,6 @@ function TaskEditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [scheduleType, setScheduleType] = useState<string>('none')
   const [leftPanelVisible, setLeftPanelVisible] = useState(true)
-  const [rightPanelVisible, setRightPanelVisible] = useState(true)
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -199,50 +198,14 @@ function TaskEditorContent() {
               <Input placeholder="请输入任务名称" />
             </Form.Item>
             <Form.Item name="description" label="描述">
-              <Input.TextArea rows={3} placeholder="请输入任务描述" />
+              <Input.TextArea rows={2} placeholder="请输入任务描述" />
             </Form.Item>
-          </Form>
 
-          <Divider className="my-4" />
+            <Divider className="my-3" />
 
-          <Typography.Title level={5} className="mb-4">
-            节点库
-          </Typography.Title>
-          <div className="space-y-2">
-            {nodeLibrary.map((item) => (
-              <div
-                key={item.type}
-                className="p-3 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
-                draggable
-                onDragStart={(e) => onDragStart(e, item.type)}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 左侧面板收起/展开按钮 */}
-      <Button
-        className="absolute top-4 z-30 shadow"
-        style={{ left: leftPanelVisible ? 280 : 16 }}
-        icon={leftPanelVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-        onClick={() => setLeftPanelVisible(!leftPanelVisible)}
-      />
-
-      {/* 右侧悬浮面板 */}
-      <div
-        className={`absolute right-0 top-0 bottom-0 w-80 bg-white shadow-lg z-20 transition-transform duration-300 overflow-auto ${
-          rightPanelVisible ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="p-4">
-          <Typography.Title level={5} className="mb-4">
-            调度配置
-          </Typography.Title>
-          <Form form={form} layout="vertical">
+            <Typography.Title level={5} className="mb-3">
+              调度配置
+            </Typography.Title>
             <Form.Item
               name="scheduleType"
               label="调度类型"
@@ -273,15 +236,34 @@ function TaskEditorContent() {
               </Form.Item>
             )}
           </Form>
+
+          <Divider className="my-3" />
+
+          <Typography.Title level={5} className="mb-3">
+            节点库
+          </Typography.Title>
+          <div className="space-y-2">
+            {nodeLibrary.map((item) => (
+              <div
+                key={item.type}
+                className="p-3 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                draggable
+                onDragStart={(e) => onDragStart(e, item.type)}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* 右侧面板收起/展开按钮 */}
+      {/* 左侧面板收起/展开按钮 */}
       <Button
         className="absolute top-4 z-30 shadow"
-        style={{ right: rightPanelVisible ? 320 : 16 }}
-        icon={rightPanelVisible ? <MenuFoldOutlined style={{ transform: 'rotate(180deg)' }} /> : <MenuUnfoldOutlined style={{ transform: 'rotate(180deg)' }} />}
-        onClick={() => setRightPanelVisible(!rightPanelVisible)}
+        style={{ left: leftPanelVisible ? 280 : 16 }}
+        icon={leftPanelVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+        onClick={() => setLeftPanelVisible(!leftPanelVisible)}
       />
 
       {/* 顶部工具栏 */}
