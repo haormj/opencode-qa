@@ -304,7 +304,7 @@ function TaskEditorContent() {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
-              defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.3}
               maxZoom={2}
             >
