@@ -27,10 +27,10 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
       size="small"
       title="📥 代码下载"
       style={{
-        width: 200,
+        width: 160,
         border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
       }}
-      bodyStyle={{ padding: 8 }}
+      bodyStyle={{ padding: 6 }}
     >
       <Handle type="target" position={Position.Left} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

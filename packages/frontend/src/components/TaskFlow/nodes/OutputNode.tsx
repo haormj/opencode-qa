@@ -65,10 +65,10 @@ function OutputNode({ data, selected }: OutputNodeProps) {
       size="small"
       title="📤 输出配置"
       style={{
-        width: 180,
+        width: 160,
         border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
       }}
-      bodyStyle={{ padding: 8 }}
+      bodyStyle={{ padding: 6 }}
     >
       <Handle type="target" position={Position.Left} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

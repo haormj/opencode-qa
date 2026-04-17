@@ -34,10 +34,10 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
       size="small"
       title="📦 技能安装"
       style={{
-        width: 180,
+        width: 160,
         border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
       }}
-      bodyStyle={{ padding: 8 }}
+      bodyStyle={{ padding: 6 }}
     >
       <Handle type="target" position={Position.Left} />
       <Select
