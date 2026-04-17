@@ -1,11 +1,45 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Controls, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
-import type { Connection, Node, Edge } from '@xyflow/react'
+import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, Space, message, Typography, Divider, InputNumber } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
+
+import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
+import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
+import StepNode from '../../components/TaskFlow/nodes/StepNode'
+import OutputNode from '../../components/TaskFlow/nodes/OutputNode'
+
+const nodeTypes: NodeTypes = {
+  skillInstall: SkillInstallNode,
+  codeDownload: CodeDownloadNode,
+  step: StepNode,
+  output: OutputNode,
+}
+
+const nodeLibrary = [
+  { type: 'skillInstall', label: '技能安装', icon: '📦' },
+  { type: 'codeDownload', label: '代码下载', icon: '📥' },
+  { type: 'step', label: '步骤定义', icon: '📝' },
+  { type: 'output', label: '输出配置', icon: '📤' },
+]
+
+function getDefaultNodeData(type: string): Record<string, unknown> {
+  switch (type) {
+    case 'skillInstall':
+      return { skillId: '', skillName: '', skillSlug: '' }
+    case 'codeDownload':
+      return { repoUrl: '', username: '', password: '', branch: 'main', targetPath: '/tmp/repo' }
+    case 'step':
+      return { name: '', instruction: '' }
+    case 'output':
+      return { type: 'email', config: { to: '', subject: '' } }
+    default:
+      return {}
+  }
+}
 
 const scheduleTypeOptions = [
   { value: 'none', label: '手动执行' },
@@ -123,9 +157,9 @@ function TaskEditorContent() {
 
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
-        type: 'default',
+        type,
         position,
-        data: { label: type }
+        data: getDefaultNodeData(type)
       }
 
       setNodes((nds) => nds.concat(newNode))
@@ -167,14 +201,15 @@ function TaskEditorContent() {
           节点库
         </Typography.Title>
         <div className="space-y-2">
-          {['开始', '结束', 'API调用', '条件判断', '消息发送'].map((type) => (
+          {nodeLibrary.map((item) => (
             <div
-              key={type}
-              className="p-2 bg-white border rounded cursor-move hover:border-blue-400"
+              key={item.type}
+              className="p-2 bg-white border rounded cursor-move hover:border-blue-400 flex items-center gap-2"
               draggable
-              onDragStart={(e) => onDragStart(e, type)}
+              onDragStart={(e) => onDragStart(e, item.type)}
             >
-              {type}
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
             </div>
           ))}
         </div>
@@ -219,6 +254,7 @@ function TaskEditorContent() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              nodeTypes={nodeTypes}
               fitView
             >
               <Controls />
