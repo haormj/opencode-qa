@@ -18,6 +18,8 @@ import SkillDetail from './pages/admin/SkillDetail'
 import SkillCategories from './pages/admin/SkillCategories'
 import SkillVersions from './pages/admin/SkillVersions'
 import SkillVersionDetail from './pages/admin/SkillVersionDetail'
+import Tasks from './pages/admin/Tasks'
+import TaskCreate from './pages/admin/TaskCreate'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -155,6 +157,9 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="bots" element={<AdminBots />} />
           <Route path="assistants" element={<AdminAssistants />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="tasks/create" element={<TaskCreate />} />
+          <Route path="tasks/:id/edit" element={<TaskCreate />} />
           <Route path="skills" element={<AdminSkills />} />
           <Route path="skills/:id" element={<SkillDetail />} />
           <Route path="skills/categories" element={<SkillCategories />} />

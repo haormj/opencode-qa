@@ -1383,3 +1383,117 @@ export async function cancelSkillVersion(versionId: string): Promise<{ success: 
     method: 'PUT',
   })
 }
+
+export interface Task {
+  id: string
+  name: string
+  description?: string | null
+  flowData: string
+  scheduleType: 'none' | 'cron' | 'interval'
+  scheduleConfig?: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: Task[]
+}
+
+export interface TaskExecution {
+  id: string
+  taskId: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  startedAt?: string | null
+  completedAt?: string | null
+  createdAt: string
+}
+
+export interface TaskExecutionListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: TaskExecution[]
+}
+
+export interface ExecutionMessage {
+  id: string
+  executionId: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  createdAt: string
+}
+
+export async function getTasks(params: { page: number; pageSize: number }): Promise<TaskListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  return request(`${API_BASE}/admin/tasks?${searchParams.toString()}`)
+}
+
+export async function getTask(id: string): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}`)
+}
+
+export async function createTask(data: {
+  name: string
+  description?: string
+  flowData: string
+  scheduleType: string
+  scheduleConfig?: string | null
+}): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateTask(id: string, data: Partial<{
+  name: string
+  description: string
+  flowData: string
+  scheduleType: string
+  scheduleConfig: string
+  isActive: boolean
+}>): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await request(`${API_BASE}/admin/tasks/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function toggleTask(id: string): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}/toggle`, {
+    method: 'PATCH',
+  })
+}
+
+export async function executeTask(id: string): Promise<{ executionId: string }> {
+  return request(`${API_BASE}/admin/tasks/${id}/execute`, {
+    method: 'POST',
+  })
+}
+
+export async function getTaskExecutions(taskId: string, params: { page: number; pageSize: number }): Promise<TaskExecutionListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  return request(`${API_BASE}/admin/tasks/${taskId}/executions?${searchParams.toString()}`)
+}
+
+export async function getExecution(id: string): Promise<TaskExecution> {
+  return request(`${API_BASE}/admin/executions/${id}`)
+}
+
+export async function getExecutionMessages(executionId: string): Promise<ExecutionMessage[]> {
+  return request(`${API_BASE}/admin/executions/${executionId}/messages`)
+}
