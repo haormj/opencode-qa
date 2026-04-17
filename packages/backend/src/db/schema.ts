@@ -210,6 +210,44 @@ export const skillRatings = sqliteTable('skill_ratings', {
   userSkillRatingUnique: uniqueIndex('user_skill_rating_unique').on(table.userId, table.skillId)
 }))
 
+export const tasks = sqliteTable('tasks', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  flowData: text('flow_data').notNull().default('{"nodes":[],"edges":[]}'),
+  scheduleType: text('schedule_type').notNull().default('none'),
+  scheduleConfig: text('schedule_config'),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+})
+
+export const taskExecutions = sqliteTable('task_executions', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'),
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  result: text('result'),
+  logs: text('logs'),
+  triggerType: text('trigger_type').notNull(),
+  triggeredBy: text('triggered_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+}, (table) => ({
+  taskIdIdx: index('task_executions_task_id_idx').on(table.taskId)
+}))
+
+export const taskExecutionMessages = sqliteTable('task_execution_messages', {
+  id: text('id').primaryKey(),
+  executionId: text('execution_id').notNull().references(() => taskExecutions.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+}, (table) => ({
+  executionIdIdx: index('task_execution_messages_execution_id_idx').on(table.executionId)
+}))
+
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   messages: many(messages),
@@ -217,7 +255,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   tokens: many(userTokens),
   skills: many(skills),
   skillFavorites: many(skillFavorites),
-  skillRatings: many(skillRatings)
+  skillRatings: many(skillRatings),
+  tasks: many(tasks)
 }))
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -354,6 +393,33 @@ export const skillRatingsRelations = relations(skillRatings, ({ one }) => ({
   })
 }))
 
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [tasks.createdBy],
+    references: [users.id]
+  }),
+  executions: many(taskExecutions)
+}))
+
+export const taskExecutionsRelations = relations(taskExecutions, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [taskExecutions.taskId],
+    references: [tasks.id]
+  }),
+  triggerUser: one(users, {
+    fields: [taskExecutions.triggeredBy],
+    references: [users.id]
+  }),
+  messages: many(taskExecutionMessages)
+}))
+
+export const taskExecutionMessagesRelations = relations(taskExecutionMessages, ({ one }) => ({
+  execution: one(taskExecutions, {
+    fields: [taskExecutionMessages.executionId],
+    references: [taskExecutions.id]
+  })
+}))
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Role = typeof roles.$inferSelect
@@ -386,3 +452,9 @@ export type SkillFavorite = typeof skillFavorites.$inferSelect
 export type NewSkillFavorite = typeof skillFavorites.$inferInsert
 export type SkillRating = typeof skillRatings.$inferSelect
 export type NewSkillRating = typeof skillRatings.$inferInsert
+export type Task = typeof tasks.$inferSelect
+export type NewTask = typeof tasks.$inferInsert
+export type TaskExecution = typeof taskExecutions.$inferSelect
+export type NewTaskExecution = typeof taskExecutions.$inferInsert
+export type TaskExecutionMessage = typeof taskExecutionMessages.$inferSelect
+export type NewTaskExecutionMessage = typeof taskExecutionMessages.$inferInsert
