@@ -404,7 +404,7 @@ function TaskEditorContent() {
                 {category.items.map((item) => (
                   <div
                     key={item.type}
-                    className="p-2 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    className="px-3 py-2 cursor-move hover:bg-gray-100 flex items-center gap-2 transition-colors rounded"
                     draggable
                     onDragStart={(e) => onDragStart(e, item.type)}
                   >
