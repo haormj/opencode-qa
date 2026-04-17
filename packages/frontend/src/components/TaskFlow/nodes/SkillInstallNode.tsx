@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react'
-import { Card, Select } from 'antd'
+import { Select } from 'antd'
 import { Handle, Position } from '@xyflow/react'
 
 export interface SkillInstallNodeData {
@@ -19,6 +19,8 @@ const skills = [
   { value: 'skill-3', label: '测试用例生成' },
 ]
 
+const NODE_COLOR = '#3B82F6'
+
 function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
   const handleChange = useCallback((value: string) => {
     const skill = skills.find(s => s.value === value)
@@ -30,26 +32,62 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
   }, [data])
 
   return (
-    <Card
-      size="small"
-      title="📦 技能安装"
+    <div
       style={{
-        width: 160,
-        border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
+        position: 'relative',
+        borderRadius: 8,
+        overflow: 'hidden',
+        boxShadow: selected 
+          ? '0 0 0 2px #3B82F6, 0 4px 12px rgba(0,0,0,0.1)'
+          : '0 2px 8px rgba(0,0,0,0.08)',
+        backgroundColor: '#fff',
+        width: 240,
       }}
-      bodyStyle={{ padding: 6 }}
     >
-      <Handle type="target" position={Position.Left} />
-      <Select
-        size="small"
-        placeholder="选择技能"
-        options={skills}
-        defaultValue={data.skillId}
-        onChange={handleChange}
-        style={{ width: '100%' }}
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      
+      {/* 左侧彩色条 */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          backgroundColor: NODE_COLOR,
+        }}
       />
-      <Handle type="source" position={Position.Right} />
-    </Card>
+      
+      {/* 标题区域 */}
+      <div
+        style={{
+          padding: '10px 12px 10px 16px',
+          borderBottom: '1px solid #f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 16 }}>📦</span>
+        <span style={{ fontWeight: 500, fontSize: 14, color: '#1f2937' }}>
+          技能安装
+        </span>
+      </div>
+      
+      {/* 内容区域 */}
+      <div style={{ padding: 12 }}>
+        <Select
+          size="small"
+          placeholder="选择要安装的技能"
+          options={skills}
+          defaultValue={data.skillId}
+          onChange={handleChange}
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+    </div>
   )
 }
 

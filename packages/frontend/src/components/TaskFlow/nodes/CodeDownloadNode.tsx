@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react'
-import { Card, Input } from 'antd'
+import { Input } from 'antd'
 import { Handle, Position } from '@xyflow/react'
 
 const { Password } = Input
@@ -17,23 +17,58 @@ interface CodeDownloadNodeProps {
   selected?: boolean
 }
 
+const NODE_COLOR = '#10B981'
+
 function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
   const updateData = useCallback((field: keyof CodeDownloadNodeData, value: string) => {
     data[field] = value as never
   }, [data])
 
   return (
-    <Card
-      size="small"
-      title="📥 代码下载"
+    <div
       style={{
-        width: 160,
-        border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
+        position: 'relative',
+        borderRadius: 8,
+        overflow: 'hidden',
+        boxShadow: selected 
+          ? '0 0 0 2px #10B981, 0 4px 12px rgba(0,0,0,0.1)'
+          : '0 2px 8px rgba(0,0,0,0.08)',
+        backgroundColor: '#fff',
+        width: 240,
       }}
-      bodyStyle={{ padding: 6 }}
     >
-      <Handle type="target" position={Position.Left} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      
+      {/* 左侧彩色条 */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          backgroundColor: NODE_COLOR,
+        }}
+      />
+      
+      {/* 标题区域 */}
+      <div
+        style={{
+          padding: '10px 12px 10px 16px',
+          borderBottom: '1px solid #f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 16 }}>📥</span>
+        <span style={{ fontWeight: 500, fontSize: 14, color: '#1f2937' }}>
+          代码下载
+        </span>
+      </div>
+      
+      {/* 内容区域 */}
+      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Input
           size="small"
           placeholder="仓库地址"
@@ -59,8 +94,9 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
           onChange={(e) => updateData('branch', e.target.value)}
         />
       </div>
-      <Handle type="source" position={Position.Right} />
-    </Card>
+
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+    </div>
   )
 }
 

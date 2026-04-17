@@ -5,7 +5,7 @@ import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DeleteOutlined, CopyOutlined, UndoOutlined, RedoOutlined, SearchOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -21,10 +21,25 @@ const nodeTypes: NodeTypes = {
 }
 
 const nodeLibrary = [
-  { type: 'skillInstall', label: '技能安装', icon: '📦' },
-  { type: 'codeDownload', label: '代码下载', icon: '📥' },
-  { type: 'step', label: '步骤定义', icon: '📝' },
-  { type: 'output', label: '输出配置', icon: '📤' },
+  { 
+    category: '基础节点',
+    items: [
+      { type: 'skillInstall', label: '技能安装', icon: '📦' },
+      { type: 'codeDownload', label: '代码下载', icon: '📥' },
+    ]
+  },
+  { 
+    category: '流程控制',
+    items: [
+      { type: 'step', label: '步骤定义', icon: '📝' },
+    ]
+  },
+  { 
+    category: '输出',
+    items: [
+      { type: 'output', label: '输出配置', icon: '📤' },
+    ]
+  },
 ]
 
 function getDefaultNodeData(type: string): Record<string, unknown> {
@@ -65,6 +80,55 @@ function TaskEditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [scheduleType, setScheduleType] = useState<string>('none')
   const [leftPanelVisible, setLeftPanelVisible] = useState(true)
+  const [nodeSearchText, setNodeSearchText] = useState('')
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  
+  // 撤销/重做历史
+  const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [isUndoRedo, setIsUndoRedo] = useState(false)
+  
+  const canUndo = historyIndex > 0
+  const canRedo = historyIndex < history.length - 1
+  
+  const handleUndo = useCallback(() => {
+    if (canUndo) {
+      setIsUndoRedo(true)
+      const prevState = history[historyIndex - 1]
+      setNodes(prevState.nodes)
+      setEdges(prevState.edges)
+      setHistoryIndex(historyIndex - 1)
+      setHasUnsavedChanges(true)
+      setTimeout(() => setIsUndoRedo(false), 0)
+    }
+  }, [canUndo, history, historyIndex, setNodes, setEdges])
+  
+  const handleRedo = useCallback(() => {
+    if (canRedo) {
+      setIsUndoRedo(true)
+      const nextState = history[historyIndex + 1]
+      setNodes(nextState.nodes)
+      setEdges(nextState.edges)
+      setHistoryIndex(historyIndex + 1)
+      setHasUnsavedChanges(true)
+      setTimeout(() => setIsUndoRedo(false), 0)
+    }
+  }, [canRedo, history, historyIndex, setNodes, setEdges])
+  
+  // 记录历史（用于撤销/重做）
+  useEffect(() => {
+    if (!isUndoRedo && nodes.length > 0) {
+      setHistory(prev => {
+        const newHistory = prev.slice(0, historyIndex + 1)
+        newHistory.push({ nodes: [...nodes], edges: [...edges] })
+        return newHistory
+      })
+      setHistoryIndex(prev => prev + 1)
+      setHasUnsavedChanges(true)
+    }
+  }, [nodes, edges, isUndoRedo, historyIndex])
+  
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -139,18 +203,11 @@ function TaskEditorContent() {
   // 右键菜单
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault()
-    // 获取画布容器的位置
-    const canvasRect = reactFlowWrapper.current?.getBoundingClientRect()
-    if (canvasRect) {
-      // 计算节点在屏幕上的位置（节点右侧）
-      const nodeWidth = 160 // 节点宽度
-      const menuOffset = 10 // 菜单距离节点的偏移
-      setContextMenu({
-        x: canvasRect.left + node.position.x + nodeWidth + menuOffset,
-        y: canvasRect.top + node.position.y + 50,
-        nodeId: node.id
-      })
-    }
+    setContextMenu({
+      x: event.clientX + 4,
+      y: event.clientY + 4,
+      nodeId: node.id
+    })
   }, [])
 
   const onPaneClick = useCallback(() => {
@@ -209,8 +266,13 @@ function TaskEditorContent() {
       } else {
         await createTask(data)
         message.success('创建成功')
+        setLastSavedAt(new Date())
+        setHasUnsavedChanges(false)
         navigate('/admin/tasks')
+        return
       }
+      setLastSavedAt(new Date())
+      setHasUnsavedChanges(false)
     } catch (error) {
       if (error instanceof Error) {
         message.error(error.message)
@@ -334,19 +396,40 @@ function TaskEditorContent() {
           <Typography.Title level={5} className="mb-3">
             节点库
           </Typography.Title>
-          <div className="space-y-2">
-            {nodeLibrary.map((item) => (
-              <div
-                key={item.type}
-                className="p-3 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
-                draggable
-                onDragStart={(e) => onDragStart(e, item.type)}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
+          <Input
+            size="small"
+            placeholder="搜索节点..."
+            prefix={<SearchOutlined className="text-gray-400" />}
+            value={nodeSearchText}
+            onChange={(e) => setNodeSearchText(e.target.value)}
+            className="mb-3"
+          />
+          {nodeLibrary.map((category) => {
+            const filteredItems = category.items.filter(item =>
+              item.label.toLowerCase().includes(nodeSearchText.toLowerCase())
+            )
+            if (filteredItems.length === 0) return null
+            return (
+              <div key={category.category} className="mb-3">
+                <Typography.Text type="secondary" className="text-xs">
+                  {category.category}
+                </Typography.Text>
+                <div className="space-y-1 mt-1">
+                  {filteredItems.map((item) => (
+                    <div
+                      key={item.type}
+                      className="p-2 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                      draggable
+                      onDragStart={(e) => onDragStart(e, item.type)}
+                    >
+                      <span>{item.icon}</span>
+                      <span className="text-sm">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </div>
 
@@ -359,11 +442,31 @@ function TaskEditorContent() {
       />
 
       {/* 顶部工具栏 */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-4">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
+        <Button 
+          icon={<UndoOutlined />} 
+          onClick={handleUndo}
+          disabled={!canUndo}
+          title="撤销 (Ctrl+Z)"
+        />
+        <Button 
+          icon={<RedoOutlined />} 
+          onClick={handleRedo}
+          disabled={!canRedo}
+          title="重做 (Ctrl+Y)"
+        />
+        <Divider type="vertical" />
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/tasks')}>
           返回
         </Button>
         <Divider type="vertical" />
+        <div className="text-sm text-gray-500">
+          {hasUnsavedChanges ? (
+            <span className="text-orange-500">未保存</span>
+          ) : lastSavedAt ? (
+            <span>已保存 {lastSavedAt.toLocaleTimeString()}</span>
+          ) : null}
+        </div>
         <Button
           type="primary"
           icon={<SaveOutlined />}
@@ -377,7 +480,7 @@ function TaskEditorContent() {
             icon={<PlayCircleOutlined />}
             onClick={handleExecute}
           >
-            保存并执行
+            执行
           </Button>
         )}
       </div>
