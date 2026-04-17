@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Controls, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Card, Form, Input, Select, Button, Space, message, Typography, Divider, InputNumber } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber } from 'antd'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -63,6 +63,8 @@ function TaskEditorContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [scheduleType, setScheduleType] = useState<string>('none')
+  const [leftPanelVisible, setLeftPanelVisible] = useState(true)
+  const [rightPanelVisible, setRightPanelVisible] = useState(true)
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -177,134 +179,161 @@ function TaskEditorContent() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-120px)]">
-      <div className="w-64 border-r bg-gray-50 p-4 overflow-auto">
-        <Typography.Title level={5} className="mb-4">
-          {isEdit ? '编辑任务' : '新建任务'}
-        </Typography.Title>
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="任务名称"
-            rules={[{ required: true, message: '请输入任务名称' }]}
-          >
-            <Input placeholder="请输入任务名称" />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入任务描述" />
-          </Form.Item>
-        </Form>
-
-        <Divider className="my-4" />
-
-        <Typography.Title level={5} className="mb-4">
-          节点库
-        </Typography.Title>
-        <div className="space-y-2">
-          {nodeLibrary.map((item) => (
-            <div
-              key={item.type}
-              className="p-2 bg-white border rounded cursor-move hover:border-blue-400 flex items-center gap-2"
-              draggable
-              onDragStart={(e) => onDragStart(e, item.type)}
+    <div className="relative w-full h-[calc(100vh-120px)]">
+      {/* 左侧悬浮面板 */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-72 bg-white shadow-lg z-20 transition-transform duration-300 overflow-auto ${
+          leftPanelVisible ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="p-4">
+          <Typography.Title level={5} className="mb-4">
+            {isEdit ? '编辑任务' : '新建任务'}
+          </Typography.Title>
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="name"
+              label="任务名称"
+              rules={[{ required: true, message: '请输入任务名称' }]}
             >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+              <Input placeholder="请输入任务名称" />
+            </Form.Item>
+            <Form.Item name="description" label="描述">
+              <Input.TextArea rows={3} placeholder="请输入任务描述" />
+            </Form.Item>
+          </Form>
 
-      <div className="flex-1 flex flex-col">
-        <div className="h-12 border-b bg-white flex items-center px-4 justify-between">
-          <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/tasks')}>
-              返回
-            </Button>
-          </Space>
-          <Space>
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSave}
-            >
-              保存
-            </Button>
-            {isEdit && (
-              <Button
-                icon={<PlayCircleOutlined />}
-                onClick={handleExecute}
+          <Divider className="my-4" />
+
+          <Typography.Title level={5} className="mb-4">
+            节点库
+          </Typography.Title>
+          <div className="space-y-2">
+            {nodeLibrary.map((item) => (
+              <div
+                key={item.type}
+                className="p-3 bg-gray-50 border rounded cursor-move hover:border-blue-400 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                draggable
+                onDragStart={(e) => onDragStart(e, item.type)}
               >
-                保存并执行
-              </Button>
-            )}
-          </Space>
-        </div>
-
-        <div className="flex-1" ref={reactFlowWrapper}>
-          <div
-            className="w-full h-full"
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          >
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              nodeTypes={nodeTypes}
-              fitView
-            >
-              <Controls />
-              <MiniMap />
-              <Background />
-              <Panel position="top-center">
-                <Typography.Text type="secondary">
-                  拖拽左侧节点到画布中创建流程
-                </Typography.Text>
-              </Panel>
-            </ReactFlow>
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="w-80 border-l bg-gray-50 p-4 overflow-auto">
-        <Typography.Title level={5} className="mb-4">
-          调度配置
-        </Typography.Title>
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="scheduleType"
-            label="调度类型"
-            rules={[{ required: true }]}
+      {/* 左侧面板收起/展开按钮 */}
+      <Button
+        className="absolute top-4 z-30 shadow"
+        style={{ left: leftPanelVisible ? 280 : 16 }}
+        icon={leftPanelVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+        onClick={() => setLeftPanelVisible(!leftPanelVisible)}
+      />
+
+      {/* 右侧悬浮面板 */}
+      <div
+        className={`absolute right-0 top-0 bottom-0 w-80 bg-white shadow-lg z-20 transition-transform duration-300 overflow-auto ${
+          rightPanelVisible ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="p-4">
+          <Typography.Title level={5} className="mb-4">
+            调度配置
+          </Typography.Title>
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="scheduleType"
+              label="调度类型"
+              rules={[{ required: true }]}
+            >
+              <Select
+                options={scheduleTypeOptions}
+                onChange={(value) => setScheduleType(value)}
+              />
+            </Form.Item>
+            {scheduleType === 'cron' && (
+              <Form.Item
+                name="scheduleConfig"
+                label="Cron 表达式"
+                rules={[{ required: true, message: '请输入 Cron 表达式' }]}
+                extra="例如: 0 0 * * * (每天凌晨执行)"
+              >
+                <Input placeholder="0 0 * * *" />
+              </Form.Item>
+            )}
+            {scheduleType === 'interval' && (
+              <Form.Item
+                name="scheduleConfig"
+                label="间隔时间(分钟)"
+                rules={[{ required: true, message: '请输入间隔时间' }]}
+              >
+                <InputNumber min={1} className="w-full" placeholder="60" />
+              </Form.Item>
+            )}
+          </Form>
+        </div>
+      </div>
+
+      {/* 右侧面板收起/展开按钮 */}
+      <Button
+        className="absolute top-4 z-30 shadow"
+        style={{ right: rightPanelVisible ? 320 : 16 }}
+        icon={rightPanelVisible ? <MenuFoldOutlined style={{ transform: 'rotate(180deg)' }} /> : <MenuUnfoldOutlined style={{ transform: 'rotate(180deg)' }} />}
+        onClick={() => setRightPanelVisible(!rightPanelVisible)}
+      />
+
+      {/* 顶部工具栏 */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-4">
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/tasks')}>
+          返回
+        </Button>
+        <Divider type="vertical" />
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          loading={saving}
+          onClick={handleSave}
+        >
+          保存
+        </Button>
+        {isEdit && (
+          <Button
+            icon={<PlayCircleOutlined />}
+            onClick={handleExecute}
           >
-            <Select
-              options={scheduleTypeOptions}
-              onChange={(value) => setScheduleType(value)}
-            />
-          </Form.Item>
-          {scheduleType === 'cron' && (
-            <Form.Item
-              name="scheduleConfig"
-              label="Cron 表达式"
-              rules={[{ required: true, message: '请输入 Cron 表达式' }]}
-              extra="例如: 0 0 * * * (每天凌晨执行)"
-            >
-              <Input placeholder="0 0 * * *" />
-            </Form.Item>
-          )}
-          {scheduleType === 'interval' && (
-            <Form.Item
-              name="scheduleConfig"
-              label="间隔时间(分钟)"
-              rules={[{ required: true, message: '请输入间隔时间' }]}
-            >
-              <InputNumber min={1} className="w-full" placeholder="60" />
-            </Form.Item>
-          )}
-        </Form>
+            保存并执行
+          </Button>
+        )}
+      </div>
+
+      {/* 画布区域 */}
+      <div className="absolute inset-0" ref={reactFlowWrapper}>
+        <div
+          className="w-full h-full"
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            fitView
+          >
+            <Controls />
+            <MiniMap />
+            <Background />
+            <Panel position="bottom-center">
+              <Typography.Text type="secondary">
+                拖拽左侧节点到画布中创建流程
+              </Typography.Text>
+            </Panel>
+          </ReactFlow>
+        </div>
       </div>
     </div>
   )
