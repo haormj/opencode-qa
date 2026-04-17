@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react'
-import { Card, Select, Form } from 'antd'
+import { Card, Select } from 'antd'
 import { Handle, Position } from '@xyflow/react'
 
 export interface SkillInstallNodeData {
@@ -32,23 +32,22 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
   return (
     <Card
       size="small"
-      title="技能安装"
+      title="📦 技能安装"
       style={{
-        width: 200,
+        width: 180,
         border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
       }}
+      bodyStyle={{ padding: 8 }}
     >
       <Handle type="target" position={Position.Left} />
-      <Form layout="vertical" size="small">
-        <Form.Item label="选择技能" style={{ marginBottom: 0 }}>
-          <Select
-            placeholder="选择要安装的技能"
-            options={skills}
-            defaultValue={data.skillId}
-            onChange={handleChange}
-          />
-        </Form.Item>
-      </Form>
+      <Select
+        size="small"
+        placeholder="选择技能"
+        options={skills}
+        defaultValue={data.skillId}
+        onChange={handleChange}
+        style={{ width: '100%' }}
+      />
       <Handle type="source" position={Position.Right} />
     </Card>
   )

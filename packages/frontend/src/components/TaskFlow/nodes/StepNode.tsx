@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react'
-import { Card, Form, Input } from 'antd'
+import { Card, Input } from 'antd'
 import { Handle, Position } from '@xyflow/react'
 
 const { TextArea } = Input
@@ -22,30 +22,29 @@ function StepNode({ data, selected }: StepNodeProps) {
   return (
     <Card
       size="small"
-      title="步骤定义"
+      title="📝 步骤定义"
       style={{
-        width: 280,
+        width: 200,
         border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
       }}
+      bodyStyle={{ padding: 8 }}
     >
       <Handle type="target" position={Position.Left} />
-      <Form layout="vertical" size="small">
-        <Form.Item label="步骤名称" style={{ marginBottom: 8 }}>
-          <Input
-            placeholder="输入步骤名称"
-            defaultValue={data.name}
-            onChange={(e) => updateData('name', e.target.value)}
-          />
-        </Form.Item>
-        <Form.Item label="指令内容" style={{ marginBottom: 0 }}>
-          <TextArea
-            placeholder="输入详细指令..."
-            rows={4}
-            defaultValue={data.instruction}
-            onChange={(e) => updateData('instruction', e.target.value)}
-          />
-        </Form.Item>
-      </Form>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Input
+          size="small"
+          placeholder="步骤名称"
+          defaultValue={data.name}
+          onChange={(e) => updateData('name', e.target.value)}
+        />
+        <TextArea
+          size="small"
+          placeholder="指令内容..."
+          rows={2}
+          defaultValue={data.instruction}
+          onChange={(e) => updateData('instruction', e.target.value)}
+        />
+      </div>
       <Handle type="source" position={Position.Right} />
     </Card>
   )
