@@ -286,11 +286,11 @@ router.post('/:id/execute', async (req, res) => {
     
     const task = await getTaskById(id)
     if (!task) {
-      return res.status(404).json({ error: 'Task not found' })
+      return res.status(404).json({ error: '任务不存在' })
     }
     
     if (!task.isActive) {
-      return res.status(400).json({ error: 'Task is not active' })
+      return res.status(400).json({ error: '任务未启用' })
     }
     
     if (!task.botId) {
@@ -325,7 +325,7 @@ router.post('/:id/execute', async (req, res) => {
     res.json({ executionId })
   } catch (error) {
     logger.error('Execute task error:', error)
-    res.status(500).json({ error: 'Internal server error' })
+    res.status(500).json({ error: '服务器内部错误' })
   }
 })
 
