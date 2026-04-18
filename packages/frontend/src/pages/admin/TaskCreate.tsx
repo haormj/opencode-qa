@@ -537,7 +537,18 @@ function TaskEditorContent() {
               type="text"
               size="small"
               icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/admin/tasks')}
+              onClick={async () => {
+                if (hasUnsavedChanges && isEdit && id) {
+                  try {
+                    await handleSave(true)
+                    navigate('/admin/tasks')
+                  } catch {
+                    message.error('保存失败，请重试')
+                  }
+                } else {
+                  navigate('/admin/tasks')
+                }
+              }}
             />
             <span className="font-medium text-base">
               {isEdit ? '任务详情' : '新建任务'}
