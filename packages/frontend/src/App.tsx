@@ -20,7 +20,6 @@ import SkillVersions from './pages/admin/SkillVersions'
 import SkillVersionDetail from './pages/admin/SkillVersionDetail'
 import Tasks from './pages/admin/Tasks'
 import TaskCreate from './pages/admin/TaskCreate'
-import TaskDetail from './pages/admin/TaskDetail'
 import TaskExecutionsGlobal from './pages/admin/TaskExecutionsGlobal'
 import TaskExecutionDetail from './pages/admin/TaskExecutionDetail'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
@@ -167,8 +166,7 @@ function App() {
           <Route path="assistants" element={<AdminAssistants />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="tasks/create" element={<TaskCreate />} />
-          <Route path="tasks/:id" element={<TaskDetail />} />
-          <Route path="tasks/:id/edit" element={<TaskCreate />} />
+          <Route path="tasks/:id" element={<TaskCreate />} />
           <Route path="tasks/:id/executions" element={<TaskExecutionsRedirect />} />
           <Route path="task-executions" element={<TaskExecutionsGlobal />} />
           <Route path="executions/:id" element={<TaskExecutionDetail />} />
