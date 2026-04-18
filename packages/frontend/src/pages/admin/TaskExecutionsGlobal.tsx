@@ -94,11 +94,10 @@ function TaskExecutionsGlobal() {
       title: '执行ID',
       dataIndex: 'id',
       key: 'id',
-      width: 280,
-      ellipsis: true,
+      width: 100,
       render: (id: string) => (
         <Typography.Link onClick={() => navigate(`/admin/executions/${id}`)}>
-          {id}
+          {id.slice(0, 8)}
         </Typography.Link>
       )
     },
