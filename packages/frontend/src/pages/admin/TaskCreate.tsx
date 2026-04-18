@@ -539,7 +539,6 @@ function TaskEditorContent() {
           ) : null}
         </div>
         <Button
-          type="primary"
           icon={<SaveOutlined />}
           loading={saving}
           onClick={() => handleSave(false)}
@@ -553,6 +552,7 @@ function TaskEditorContent() {
           预览
         </Button>
         <Button
+          type="primary"
           icon={<PlayCircleOutlined />}
           onClick={handleExecute}
         >
