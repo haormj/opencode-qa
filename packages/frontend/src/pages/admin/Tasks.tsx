@@ -200,8 +200,12 @@ function Tasks() {
       await toggleTask(task.id)
       message.success(task.isActive ? '任务已禁用' : '任务已启用')
       fetchTasks()
-    } catch {
-      message.error('操作失败')
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      } else {
+        message.error('操作失败')
+      }
     }
   }
 

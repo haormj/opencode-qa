@@ -235,6 +235,26 @@ router.patch('/:id/toggle', async (req, res) => {
   try {
     const { id } = req.params
     
+    const existingTask = await getTaskById(id)
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' })
+    }
+    
+    if (!existingTask.isActive) {
+      if (!existingTask.botId) {
+        return res.status(400).json({ error: '请先配置执行机器人' })
+      }
+      
+      try {
+        const flowData = JSON.parse(existingTask.flowData)
+        if (!flowData.nodes || flowData.nodes.length === 0) {
+          return res.status(400).json({ error: '请先配置任务流程' })
+        }
+      } catch {
+        return res.status(400).json({ error: '任务流程数据异常' })
+      }
+    }
+    
     const task = await toggleTask(id)
     
     if (!task) {

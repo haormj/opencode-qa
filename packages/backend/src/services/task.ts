@@ -100,7 +100,7 @@ export async function createTask(data: {
     triggerType: data.triggerType,
     scheduleConfig: data.scheduleConfig ?? null,
     webhookToken: data.webhookToken ?? null,
-    isActive: true,
+    isActive: false,
     botId: data.botId ?? null,
     createdBy: data.createdBy,
     createdAt: now,
