@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Table, Card, Tag, Space, message, Typography, Select } from 'antd'
+import { Table, Card, Tag, Space, message, Typography, Select, Button } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAllExecutions, getTasks, type TaskExecution, type Task } from '../../services/api'
@@ -173,12 +173,9 @@ function TaskExecutionsGlobal() {
             }}
             options={tasks.map(t => ({ value: t.id, label: t.name }))}
           />
-          <Tag
-            className="cursor-pointer"
-            onClick={fetchExecutions}
-          >
-            <ReloadOutlined /> 刷新
-          </Tag>
+          <Button icon={<ReloadOutlined />} onClick={fetchExecutions}>
+            刷新
+          </Button>
         </Space>
       }
     >
