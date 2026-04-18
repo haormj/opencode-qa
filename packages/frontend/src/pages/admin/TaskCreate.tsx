@@ -3,13 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal, Select } from 'antd'
+import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal, Select, Switch } from 'antd'
 import type { MenuProps } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
-import { getTask, updateTask, executeTask, getBots, type Task, type Bot } from '../../services/api'
+import { getTask, updateTask, executeTask, toggleTask, getBots, type Task, type Bot } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
@@ -203,6 +203,7 @@ function TaskEditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isActive, setIsActive] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [previewModalVisible, setPreviewModalVisible] = useState(false)
   const [serverUrl, setServerUrl] = useState('')
@@ -401,6 +402,7 @@ function TaskEditorContent() {
           description: task.description,
           botId: task.botId
         })
+        setIsActive(task.isActive)
         if (task.flowData) {
           try {
             const flowData = JSON.parse(task.flowData)
@@ -459,6 +461,22 @@ function TaskEditorContent() {
         message.error(error.message)
       } else {
         message.error('执行失败')
+      }
+    }
+  }
+
+  const handleToggle = async () => {
+    if (!id) return
+    
+    try {
+      const result = await toggleTask(id)
+      setIsActive(result.isActive)
+      message.success(result.isActive ? '任务已启用' : '任务已禁用')
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      } else {
+        message.error('操作失败')
       }
     }
   }
@@ -603,6 +621,14 @@ function TaskEditorContent() {
                   value: bot.id,
                   label: bot.displayName || bot.name
                 }))}
+              />
+            </Form.Item>
+            <Form.Item label="启用状态">
+              <Switch
+                checked={isActive}
+                onChange={handleToggle}
+                checkedChildren="启用"
+                unCheckedChildren="禁用"
               />
             </Form.Item>
           </Form>
