@@ -5,7 +5,7 @@ import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Button, message, Typography, Divider, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -388,9 +388,17 @@ function TaskEditorContent() {
       <div className="absolute left-0 top-0 bottom-0 w-52 bg-white shadow-lg z-20 overflow-auto">
         <div className="p-2">
           {/* 任务信息 */}
-          <Typography.Title level={5} className="mb-2">
-            {isEdit ? '编辑任务' : '新建任务'}
-          </Typography.Title>
+          <div className="flex items-center gap-1 mb-2">
+            <Button
+              type="text"
+              size="small"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate('/admin/tasks')}
+            />
+            <Typography.Title level={5} className="mb-0">
+              {isEdit ? '编辑任务' : '新建任务'}
+            </Typography.Title>
+          </div>
           <Form form={form} layout="vertical">
             <Form.Item
               name="name"
