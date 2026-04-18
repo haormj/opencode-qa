@@ -1,9 +1,9 @@
-import { db, tasks, taskExecutions, taskExecutionMessages, skills } from '../db/index.js'
+import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, type BotConfig } from './opencode.js'
-import { decrypt } from './encryption.js'
 import { executionEventManager } from './execution-event-manager.js'
+import { generateTaskMarkdown } from './task-markdown.js'
 import logger from './logger.js'
 import type { FlowData, Node, NodeType, NodeData, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, OutputNodeData } from '../types/task.js'
 
@@ -47,7 +47,7 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
   
   try {
     const flowData: FlowData = JSON.parse(task.flowData)
-    const markdown = await convertFlowToMarkdown(flowData)
+    const markdown = await generateTaskMarkdown(flowData)
     
     await saveMessage(executionId, 'user', markdown)
     
@@ -109,7 +109,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   ;(async () => {
     try {
       const flowData: FlowData = JSON.parse(task.flowData)
-      const markdown = await convertFlowToMarkdown(flowData)
+      const markdown = await generateTaskMarkdown(flowData)
       
       const userMessageId = randomUUID()
       const userMessageTime = new Date()
@@ -235,129 +235,6 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   return executionId
 }
 
-async function convertFlowToMarkdown(flowData: FlowData): Promise<string> {
-  const { nodes, edges } = flowData
-  
-  const sortedNodes = topologicalSort(nodes, edges)
-  
-  const parts: string[] = []
-  parts.push('# Task Execution Plan\n')
-  
-  for (const node of sortedNodes) {
-    const nodeContent = await nodeToMarkdown(node)
-    if (nodeContent) {
-      parts.push(nodeContent)
-    }
-  }
-  
-  return parts.join('\n\n')
-}
-
-function topologicalSort(nodes: Node[], edges: import('../types/task.js').Edge[]): Node[] {
-  const nodeMap = new Map<string, Node>()
-  const inDegree = new Map<string, number>()
-  const adjacency = new Map<string, string[]>()
-  
-  for (const node of nodes) {
-    nodeMap.set(node.id, node)
-    inDegree.set(node.id, 0)
-    adjacency.set(node.id, [])
-  }
-  
-  for (const edge of edges) {
-    const current = inDegree.get(edge.target) ?? 0
-    inDegree.set(edge.target, current + 1)
-    adjacency.get(edge.source)?.push(edge.target)
-  }
-  
-  const queue: string[] = []
-  for (const [nodeId, degree] of inDegree) {
-    if (degree === 0) {
-      queue.push(nodeId)
-    }
-  }
-  
-  const result: Node[] = []
-  while (queue.length > 0) {
-    const nodeId = queue.shift()!
-    const node = nodeMap.get(nodeId)
-    if (node) {
-      result.push(node)
-    }
-    
-    for (const neighbor of adjacency.get(nodeId) ?? []) {
-      const newDegree = (inDegree.get(neighbor) ?? 1) - 1
-      inDegree.set(neighbor, newDegree)
-      if (newDegree === 0) {
-        queue.push(neighbor)
-      }
-    }
-  }
-  
-  return result
-}
-
-async function nodeToMarkdown(node: Node): Promise<string> {
-  switch (node.type) {
-    case 'skillInstall':
-      return skillInstallToMarkdown(node.data as SkillInstallNodeData)
-    case 'codeDownload':
-      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData)
-    case 'step':
-      return stepToMarkdown(node.data as StepNodeData)
-    case 'output':
-      return ''
-    default:
-      return ''
-  }
-}
-
-async function skillInstallToMarkdown(data: SkillInstallNodeData): Promise<string> {
-  const skill = await db.select().from(skills).where(eq(skills.id, data.skillId)).get()
-  
-  let content = `## Skill Installation: ${data.skillName}\n\n`
-  content += `- **Skill ID**: ${data.skillId}\n`
-  content += `- **Slug**: ${data.skillSlug}\n`
-  
-  if (skill?.description) {
-    content += `- **Description**: ${skill.description}\n`
-  }
-  
-  content += `\nPlease install this skill before proceeding.\n`
-  
-  return content
-}
-
-function codeDownloadToMarkdown(data: CodeDownloadNodeData): string {
-  let content = `## Code Download\n\n`
-  content += `- **Repository**: ${data.repoUrl}\n`
-  content += `- **Branch**: ${data.branch}\n`
-  content += `- **Target Path**: ${data.targetPath}\n`
-  
-  if (data.username) {
-    let password = data.password
-    if (password) {
-      try {
-        password = decrypt(password)
-      } catch {
-        logger.warn('[TaskExecutor] Failed to decrypt password, using as-is')
-      }
-    }
-    content += `- **Credentials**: Username: ${data.username}${password ? ', Password: ***' : ''}\n`
-  }
-  
-  content += `\nPlease clone the repository to the specified path.\n`
-  
-  return content
-}
-
-function stepToMarkdown(data: StepNodeData): string {
-  let content = `## 步骤\n\n`
-  content += `${data.instruction}\n`
-  
-  return content
-}
-
 async function saveMessage(executionId: string, role: 'user' | 'assistant', content: string): Promise<void> {
   await db.insert(taskExecutionMessages).values({
     id: randomUUID(),
@@ -404,4 +281,3 @@ async function handleWebhookOutput(config: Record<string, string>, result: strin
 }
 
 export type { ExecuteTaskOptions, ExecutionResult }
-export { convertFlowToMarkdown }

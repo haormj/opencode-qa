@@ -1500,6 +1500,10 @@ export async function executeTask(id: string): Promise<{ executionId: string }> 
   })
 }
 
+export async function getTaskPreview(id: string): Promise<{ markdown: string }> {
+  return request(`${API_BASE}/admin/tasks/${id}/preview`)
+}
+
 export async function getTaskExecutions(taskId: string, params: { page: number; pageSize: number }): Promise<TaskExecutionListResponse> {
   const searchParams = new URLSearchParams()
   searchParams.set('page', params.page.toString())

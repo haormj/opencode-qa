@@ -9,7 +9,7 @@ import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyO
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
-import { getTask, updateTask, executeTask, toggleTask, getBots, type Task, type Bot } from '../../services/api'
+import { getTask, updateTask, executeTask, toggleTask, getTaskPreview, getBots, type Task, type Bot } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
@@ -69,124 +69,6 @@ function getDefaultNodeData(type: string): Record<string, unknown> {
 const initialNodes: Node[] = []
 const initialEdges: Edge[] = []
 
-function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
-  const nodeMap = new Map<string, Node>()
-  const inDegree = new Map<string, number>()
-  const adjacency = new Map<string, string[]>()
-
-  for (const node of nodes) {
-    nodeMap.set(node.id, node)
-    inDegree.set(node.id, 0)
-    adjacency.set(node.id, [])
-  }
-
-  for (const edge of edges) {
-    const current = inDegree.get(edge.target) ?? 0
-    inDegree.set(edge.target, current + 1)
-    adjacency.get(edge.source)?.push(edge.target)
-  }
-
-  const queue: string[] = []
-  for (const [nodeId, degree] of inDegree) {
-    if (degree === 0) {
-      queue.push(nodeId)
-    }
-  }
-
-  const result: Node[] = []
-  while (queue.length > 0) {
-    const nodeId = queue.shift()!
-    const node = nodeMap.get(nodeId)
-    if (node) {
-      result.push(node)
-    }
-
-    for (const neighbor of adjacency.get(nodeId) ?? []) {
-      const newDegree = (inDegree.get(neighbor) ?? 1) - 1
-      inDegree.set(neighbor, newDegree)
-      if (newDegree === 0) {
-        queue.push(neighbor)
-      }
-    }
-  }
-
-  return result
-}
-
-function generatePreviewMarkdown(nodes: Node[], edges: Edge[], serverUrl: string): string {
-  const sortedNodes = topologicalSort(nodes, edges)
-  const parts: string[] = ['# 任务执行计划\n']
-
-  let stepIndex = 0
-
-  for (const node of sortedNodes) {
-    const content = nodeToMarkdown(node, () => ++stepIndex, serverUrl)
-    if (content) {
-      parts.push(content)
-    }
-  }
-
-  return parts.join('\n\n')
-}
-
-function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string): string {
-  switch (node.type) {
-    case 'skillInstall':
-      return skillInstallToMarkdown(node.data, serverUrl)
-    case 'codeDownload':
-      return codeDownloadToMarkdown(node.data)
-    case 'step':
-      return stepToMarkdown(node.data, getNextStepIndex())
-    case 'output':
-      return ''
-    default:
-      return ''
-  }
-}
-
-function skillInstallToMarkdown(data: Record<string, unknown>, serverUrl: string): string {
-  const slug = data.skillSlug || ''
-  if (!slug) {
-    return `## 技能安装\n\n请选择要安装的技能。`
-  }
-  
-  return `## 技能安装
-
-安装技能 "${slug}"。
-
-根据当前平台执行以下命令：
-
-Linux/macOS:
-\`\`\`bash
-curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y -s task ${slug}
-\`\`\`
-
-Windows PowerShell:
-\`\`\`powershell
-powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${slug}' -Force -Source 'task'"
-\`\`\`
-
-安装完成后，列出安装的文件确认安装成功。安装成功后请告知用户重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。`
-}
-
-function codeDownloadToMarkdown(data: Record<string, unknown>): string {
-  let content = `## 代码下载\n\n`
-  content += `- **仓库地址**: ${data.repoUrl || '-'}\n`
-  content += `- **分支**: ${data.branch || 'main'}\n`
-  content += `- **目标路径**: ${data.targetPath || '/tmp/repo'}\n`
-  if (data.username) {
-    content += `- **凭证**: 用户名: ${data.username}${data.password ? ', 密码: ***' : ''}\n`
-  }
-  content += `\n请将仓库克隆到指定路径。\n`
-  return content
-}
-
-function stepToMarkdown(data: Record<string, unknown>, stepNumber: number): string {
-  let content = `## 步骤 ${stepNumber}\n\n`
-  content += `${data.instruction || ''}\n`
-  return content
-}
-
 function TaskEditorContent() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -206,16 +88,9 @@ function TaskEditorContent() {
   const [isActive, setIsActive] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [previewModalVisible, setPreviewModalVisible] = useState(false)
-  const [serverUrl, setServerUrl] = useState('')
+  const [previewContent, setPreviewContent] = useState('')
   const [bots, setBots] = useState<Bot[]>([])
   const [botsLoading, setBotsLoading] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => setServerUrl(data['install.serverUrl'] || window.location.origin))
-      .catch(() => setServerUrl(window.location.origin))
-  }, [])
 
   useEffect(() => {
     setBotsLoading(true)
@@ -481,6 +356,23 @@ function TaskEditorContent() {
     }
   }
 
+  const handlePreview = async () => {
+    if (!id) return
+    
+    try {
+      await handleSave(true)
+      const result = await getTaskPreview(id)
+      setPreviewContent(result.markdown)
+      setPreviewModalVisible(true)
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      } else {
+        message.error('获取预览失败')
+      }
+    }
+  }
+
   // 自动保存
   useEffect(() => {
     if (initialLoadRef.current) return
@@ -656,7 +548,7 @@ function TaskEditorContent() {
         </Button>
         <Button
           icon={<EyeOutlined />}
-          onClick={() => setPreviewModalVisible(true)}
+          onClick={handlePreview}
         >
           预览
         </Button>
@@ -764,7 +656,7 @@ function TaskEditorContent() {
             key="copy"
             icon={<CopyOutlined />}
             onClick={() => {
-              copy(generatePreviewMarkdown(nodes, edges, serverUrl))
+              copy(previewContent)
               message.success('已复制到剪贴板')
             }}
           >
@@ -794,7 +686,7 @@ function TaskEditorContent() {
             }
           }}
         >
-          {generatePreviewMarkdown(nodes, edges, serverUrl)}
+          {previewContent}
         </SyntaxHighlighter>
       </Modal>
     </div>

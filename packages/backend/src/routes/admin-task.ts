@@ -13,7 +13,7 @@ import {
   getExecutionMessages
 } from '../services/task.js'
 import { executeTask, executeTaskStream } from '../services/task-executor.js'
-import { convertFlowToMarkdown } from '../services/task-executor.js'
+import { generateTaskMarkdown } from '../services/task-markdown.js'
 import {
   init as initScheduler,
   registerTask,
@@ -276,6 +276,28 @@ router.patch('/:id/toggle', async (req, res) => {
   } catch (error) {
     logger.error('Toggle task error:', error)
     res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/:id/preview', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const task = await getTaskById(id)
+    if (!task) {
+      return res.status(404).json({ error: '任务不存在' })
+    }
+    
+    const flowData: FlowData = JSON.parse(task.flowData)
+    const markdown = await generateTaskMarkdown(flowData)
+    
+    res.json({ markdown })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('服务器地址')) {
+      return res.status(400).json({ error: error.message })
+    }
+    logger.error('Preview task error:', error)
+    res.status(500).json({ error: '服务器内部错误' })
   }
 })
 

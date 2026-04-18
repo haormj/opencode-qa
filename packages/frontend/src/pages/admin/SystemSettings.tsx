@@ -96,6 +96,23 @@ function SystemSettings() {
           />
         </div>
       </Card>
+      <Card title="安装配置" style={{ marginBottom: 16 }}>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">服务器地址</div>
+            <div className="setting-desc">安装脚本服务器地址，用于生成技能安装命令（如 https://example.com）</div>
+          </div>
+          <Input
+            value={settings['install.serverUrl'] || ''}
+            onChange={(e) => setSettings(prev => ({ ...prev, 'install.serverUrl': e.target.value }))}
+            onBlur={(e) => handleInputChange('install.serverUrl', e.target.value)}
+            onPressEnter={(e) => handleInputChange('install.serverUrl', (e.target as HTMLInputElement).value)}
+            style={{ width: 300 }}
+            placeholder="请输入服务器地址"
+            disabled={updating === 'install.serverUrl'}
+          />
+        </div>
+      </Card>
       <Card title="登录配置">
         <div className="setting-item">
           <div className="setting-info">
