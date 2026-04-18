@@ -3,9 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Card, Form, Input, Button, message, Typography, Divider, Menu } from 'antd'
+import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
+import { Streamdown } from 'streamdown'
+import { code } from '@streamdown/code'
+import { mermaid } from '@streamdown/mermaid'
+import { math } from '@streamdown/math'
+import { cjk } from '@streamdown/cjk'
+import copy from 'copy-to-clipboard'
 import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -66,6 +72,107 @@ function getDefaultNodeData(type: string): Record<string, unknown> {
 const initialNodes: Node[] = []
 const initialEdges: Edge[] = []
 
+function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
+  const nodeMap = new Map<string, Node>()
+  const inDegree = new Map<string, number>()
+  const adjacency = new Map<string, string[]>()
+
+  for (const node of nodes) {
+    nodeMap.set(node.id, node)
+    inDegree.set(node.id, 0)
+    adjacency.set(node.id, [])
+  }
+
+  for (const edge of edges) {
+    const current = inDegree.get(edge.target) ?? 0
+    inDegree.set(edge.target, current + 1)
+    adjacency.get(edge.source)?.push(edge.target)
+  }
+
+  const queue: string[] = []
+  for (const [nodeId, degree] of inDegree) {
+    if (degree === 0) {
+      queue.push(nodeId)
+    }
+  }
+
+  const result: Node[] = []
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!
+    const node = nodeMap.get(nodeId)
+    if (node) {
+      result.push(node)
+    }
+
+    for (const neighbor of adjacency.get(nodeId) ?? []) {
+      const newDegree = (inDegree.get(neighbor) ?? 1) - 1
+      inDegree.set(neighbor, newDegree)
+      if (newDegree === 0) {
+        queue.push(neighbor)
+      }
+    }
+  }
+
+  return result
+}
+
+function generatePreviewMarkdown(nodes: Node[], edges: Edge[]): string {
+  const sortedNodes = topologicalSort(nodes, edges)
+  const parts: string[] = ['# 任务执行计划\n']
+
+  let stepIndex = 0
+
+  for (const node of sortedNodes) {
+    const content = nodeToMarkdown(node, () => ++stepIndex)
+    if (content) {
+      parts.push(content)
+    }
+  }
+
+  return parts.join('\n\n')
+}
+
+function nodeToMarkdown(node: Node, getNextStepIndex: () => number): string {
+  switch (node.type) {
+    case 'skillInstall':
+      return skillInstallToMarkdown(node.data)
+    case 'codeDownload':
+      return codeDownloadToMarkdown(node.data)
+    case 'step':
+      return stepToMarkdown(node.data, getNextStepIndex())
+    case 'output':
+      return ''
+    default:
+      return ''
+  }
+}
+
+function skillInstallToMarkdown(data: Record<string, unknown>): string {
+  let content = `## 技能安装\n\n`
+  content += `- **技能名称**: ${data.skillName || '-'}\n`
+  content += `- **Slug**: ${data.skillSlug || '-'}\n`
+  content += `\n请安装此技能后再继续。\n`
+  return content
+}
+
+function codeDownloadToMarkdown(data: Record<string, unknown>): string {
+  let content = `## 代码下载\n\n`
+  content += `- **仓库地址**: ${data.repoUrl || '-'}\n`
+  content += `- **分支**: ${data.branch || 'main'}\n`
+  content += `- **目标路径**: ${data.targetPath || '/tmp/repo'}\n`
+  if (data.username) {
+    content += `- **凭证**: 用户名: ${data.username}${data.password ? ', 密码: ***' : ''}\n`
+  }
+  content += `\n请将仓库克隆到指定路径。\n`
+  return content
+}
+
+function stepToMarkdown(data: Record<string, unknown>, stepNumber: number): string {
+  let content = `## 步骤 ${stepNumber}\n\n`
+  content += `${data.instruction || ''}\n`
+  return content
+}
+
 function TaskEditorContent() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -84,6 +191,7 @@ function TaskEditorContent() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
+  const [previewModalVisible, setPreviewModalVisible] = useState(false)
   
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -461,6 +569,12 @@ function TaskEditorContent() {
         >
           保存
         </Button>
+        <Button
+          icon={<EyeOutlined />}
+          onClick={() => setPreviewModalVisible(true)}
+        >
+          预览
+        </Button>
         {isEdit && (
           <Button
             icon={<PlayCircleOutlined />}
@@ -555,6 +669,35 @@ function TaskEditorContent() {
           )}
         </div>
       </div>
+
+      {/* 预览模态框 */}
+      <Modal
+        title="预览 Markdown"
+        open={previewModalVisible}
+        onCancel={() => setPreviewModalVisible(false)}
+        width={800}
+        footer={[
+          <Button
+            key="copy"
+            icon={<CopyOutlined />}
+            onClick={() => {
+              copy(generatePreviewMarkdown(nodes, edges))
+              message.success('已复制到剪贴板')
+            }}
+          >
+            复制
+          </Button>,
+          <Button key="close" onClick={() => setPreviewModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+      >
+        <div className="max-h-[60vh] overflow-auto">
+          <Streamdown plugins={{ code, mermaid, math, cjk }}>
+            {generatePreviewMarkdown(nodes, edges)}
+          </Streamdown>
+        </div>
+      </Modal>
     </div>
   )
 }
