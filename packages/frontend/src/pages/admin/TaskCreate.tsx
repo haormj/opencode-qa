@@ -388,17 +388,18 @@ function TaskEditorContent() {
       <div className="absolute left-0 top-0 bottom-0 w-52 bg-white shadow-lg z-20 overflow-auto">
         <div className="p-2">
           {/* 任务信息 */}
-          <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center gap-1">
             <Button
               type="text"
               size="small"
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate('/admin/tasks')}
             />
-            <Typography.Title level={5} className="mb-0">
+            <span className="font-medium text-base">
               {isEdit ? '编辑任务' : '新建任务'}
-            </Typography.Title>
+            </span>
           </div>
+          <Divider className="my-2" />
           <Form form={form} layout="vertical">
             <Form.Item
               name="name"
