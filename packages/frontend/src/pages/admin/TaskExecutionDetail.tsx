@@ -54,7 +54,6 @@ function TaskExecutionDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [connected, setConnected] = useState(false)
-  const [isTrigger, setIsTrigger] = useState(false)
   const [execution, setExecution] = useState<TaskExecution | null>(null)
   const [messages, setMessages] = useState<ExecutionMessage[]>([])
   const [streamingReasoning, setStreamingReasoning] = useState<string>('')
@@ -76,7 +75,6 @@ function TaskExecutionDetail() {
     onConnected: (data) => {
       console.log('[ExecutionSSE] Connected:', data)
       setConnected(true)
-      setIsTrigger(data.isTrigger)
       isTriggerRef.current = data.isTrigger
     },
     onStatus: (data) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Tag, Space, message, Typography, Select } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -39,13 +39,16 @@ function formatTriggerInfo(record: TaskExecution): string {
 
 function TaskExecutionsGlobal() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [executions, setExecutions] = useState<TaskExecution[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(15)
   const [tasks, setTasks] = useState<Task[]>([])
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(() => {
+    return searchParams.get('taskId') || undefined
+  })
 
   const fetchTasks = async () => {
     try {
