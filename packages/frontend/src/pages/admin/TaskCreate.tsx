@@ -387,7 +387,7 @@ function TaskEditorContent() {
       {/* 左侧悬浮面板 */}
       <div className="absolute left-0 top-0 bottom-0 w-52 bg-white shadow-lg z-20 overflow-auto">
         <div className="p-2">
-          {/* 任务信息 */}
+          {/* 标题栏 */}
           <div className="flex items-center gap-1">
             <Button
               type="text"
@@ -400,25 +400,9 @@ function TaskEditorContent() {
             </span>
           </div>
           <Divider className="my-2" />
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="name"
-              label="任务名称"
-              rules={[{ required: true, message: '请输入任务名称' }]}
-            >
-              <Input placeholder="请输入任务名称" />
-            </Form.Item>
-            <Form.Item name="description" label="描述">
-              <Input.TextArea rows={2} placeholder="请输入任务描述" />
-            </Form.Item>
-          </Form>
-
-          <Divider className="my-2" />
 
           {/* 节点库 */}
-          <Typography.Title level={5} className="mb-2">
-            节点库
-          </Typography.Title>
+          <div className="font-medium mb-2">节点库</div>
           {nodeLibrary.map((category) => (
             <div key={category.category} className="mb-2">
               <Typography.Text type="secondary" className="text-xs">
@@ -439,6 +423,22 @@ function TaskEditorContent() {
               </div>
             </div>
           ))}
+
+          <Divider className="my-2" />
+
+          {/* 任务信息 */}
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="name"
+              label="任务名称"
+              rules={[{ required: true, message: '请输入任务名称' }]}
+            >
+              <Input placeholder="请输入任务名称" />
+            </Form.Item>
+            <Form.Item name="description" label="描述">
+              <Input.TextArea rows={2} placeholder="请输入任务描述" />
+            </Form.Item>
+          </Form>
         </div>
       </div>
 
