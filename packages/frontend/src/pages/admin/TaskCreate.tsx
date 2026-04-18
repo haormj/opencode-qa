@@ -712,8 +712,20 @@ function TaskEditorContent() {
           </Button>
         ]}
       >
-        <div className="max-h-[60vh] overflow-auto">
-          <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded">
+        <div 
+          style={{ 
+            background: '#1e1e1e', 
+            color: '#d4d4d4', 
+            padding: 16, 
+            borderRadius: 8,
+            fontFamily: 'Monaco, Menlo, Consolas, monospace',
+            fontSize: 13,
+            lineHeight: 1.6,
+            maxHeight: '60vh',
+            overflow: 'auto'
+          }}
+        >
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {generatePreviewMarkdown(nodes, edges, serverUrl)}
           </pre>
         </div>
