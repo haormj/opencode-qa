@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input, Select, InputNumber, Checkbox, Divider } from 'antd'
-import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input, Select, InputNumber, Checkbox, Divider, Radio } from 'antd'
+import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined, ClockCircleOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import copy from 'copy-to-clipboard'
 import { getTasks, createTask, updateTask, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
 import './Admin.css'
 
-const scheduleTypeColors: Record<string, string> = {
-  none: 'default',
-  cron: 'blue'
+const triggerTypeColors: Record<string, string> = {
+  manual: 'default',
+  schedule: 'blue',
+  webhook: 'green'
 }
 
-const scheduleTypeLabels: Record<string, string> = {
-  none: '手动',
-  cron: '定时'
+const triggerTypeLabels: Record<string, string> = {
+  manual: '手动执行',
+  schedule: '定时触发',
+  webhook: 'Webhook'
 }
 
 const cycleOptions = [
@@ -141,6 +144,15 @@ function generatePreview(data: ScheduleConfigData): string {
   }
 }
 
+function generateWebhookToken(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let token = ''
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
+}
+
 function Tasks() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -154,6 +166,8 @@ function Tasks() {
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false)
   const [scheduleTask, setScheduleTask] = useState<Task | null>(null)
   const [savingSchedule, setSavingSchedule] = useState(false)
+  const [triggerTypeState, setTriggerTypeState] = useState<'manual' | 'schedule' | 'webhook'>('manual')
+  const [webhookTokenState, setWebhookTokenState] = useState('')
   const [scheduleData, setScheduleData] = useState<ScheduleConfigData>({
     cycle: 'daily',
     hour: 8,
@@ -218,7 +232,7 @@ function Tasks() {
         name: values.name,
         description: values.description || '',
         flowData: JSON.stringify({ nodes: [], edges: [] }),
-        scheduleType: 'none',
+        triggerType: 'manual',
         scheduleConfig: null
       })
       message.success('任务创建成功')
@@ -236,8 +250,10 @@ function Tasks() {
 
   const handleOpenSchedule = (task: Task) => {
     setScheduleTask(task)
+    setTriggerTypeState(task.triggerType || 'manual')
+    setWebhookTokenState(task.webhookToken || generateWebhookToken())
     
-    if (task.scheduleType === 'cron' && task.scheduleConfig) {
+    if (task.triggerType === 'schedule' && task.scheduleConfig) {
       const parsed = parseScheduleConfig(task.scheduleConfig)
       setScheduleData(parsed)
     } else {
@@ -260,19 +276,24 @@ function Tasks() {
     try {
       setSavingSchedule(true)
       
-      const scheduleTypeValue = scheduleTask.scheduleType === 'none' && scheduleData.cycle === 'daily' && scheduleData.hour === 8 && scheduleData.minute === 0 
-        ? 'none' 
-        : 'cron'
+      const updateData: {
+        triggerType: 'manual' | 'schedule' | 'webhook'
+        scheduleConfig?: string
+        webhookToken?: string
+      } = {
+        triggerType: triggerTypeState
+      }
       
-      const scheduleConfigValue = scheduleTypeValue === 'cron' 
-        ? generateScheduleConfig(scheduleData) 
-        : null
+      if (triggerTypeState === 'schedule') {
+        updateData.scheduleConfig = generateScheduleConfig(scheduleData)
+      }
       
-      await updateTask(scheduleTask.id, {
-        scheduleType: scheduleTypeValue,
-        scheduleConfig: scheduleConfigValue ?? undefined
-      })
-      message.success('调度配置保存成功')
+      if (triggerTypeState === 'webhook') {
+        updateData.webhookToken = webhookTokenState
+      }
+      
+      await updateTask(scheduleTask.id, updateData)
+      message.success('触发配置保存成功')
       setScheduleModalVisible(false)
       fetchTasks()
     } catch (error) {
@@ -305,13 +326,13 @@ function Tasks() {
       render: (text) => text || '-'
     },
     {
-      title: '调度类型',
-      dataIndex: 'scheduleType',
-      key: 'scheduleType',
-      width: 100,
+      title: '触发类型',
+      dataIndex: 'triggerType',
+      key: 'triggerType',
+      width: 120,
       render: (type: string) => (
-        <Tag color={scheduleTypeColors[type] || 'default'}>
-          {scheduleTypeLabels[type] || type}
+        <Tag color={triggerTypeColors[type] || 'default'}>
+          {triggerTypeLabels[type] || type}
         </Tag>
       )
     },
@@ -349,7 +370,7 @@ function Tasks() {
               onClick={() => navigate(`/admin/tasks/${record.id}/edit`)}
             />
           </Tooltip>
-          <Tooltip title="调度">
+          <Tooltip title="触发配置">
             <Button
               type="text"
               icon={<ClockCircleOutlined />}
@@ -444,7 +465,7 @@ function Tasks() {
       </Modal>
 
       <Modal
-        title="调度配置"
+        title="触发配置"
         open={scheduleModalVisible}
         onCancel={() => {
           setScheduleModalVisible(false)
@@ -454,113 +475,187 @@ function Tasks() {
         confirmLoading={savingSchedule}
         okText="保存"
         cancelText="取消"
+        width={520}
       >
         <div className="space-y-4">
           <div>
-            <Typography.Text type="secondary">执行周期</Typography.Text>
-            <Select
-              className="w-full mt-1"
-              value={scheduleData.cycle}
-              onChange={(value) => setScheduleData({ ...scheduleData, cycle: value })}
-              options={cycleOptions}
-            />
+            <Typography.Text type="secondary">触发方式</Typography.Text>
+            <Radio.Group
+              className="w-full mt-2"
+              value={triggerTypeState}
+              onChange={(e) => setTriggerTypeState(e.target.value)}
+            >
+              <Space direction="vertical" className="w-full">
+                <Radio value="manual">
+                  <div>
+                    <div className="font-medium">手动执行</div>
+                    <div className="text-gray-500 text-sm">通过界面手动触发任务执行</div>
+                  </div>
+                </Radio>
+                <Radio value="schedule">
+                  <div>
+                    <div className="font-medium">定时触发</div>
+                    <div className="text-gray-500 text-sm">按设定的时间周期自动执行</div>
+                  </div>
+                </Radio>
+                <Radio value="webhook">
+                  <div>
+                    <div className="font-medium">Webhook 触发</div>
+                    <div className="text-gray-500 text-sm">通过 HTTP 请求触发任务执行</div>
+                  </div>
+                </Radio>
+              </Space>
+            </Radio.Group>
           </div>
 
-          {scheduleData.cycle !== 'interval' && (
-            <div>
-              <Typography.Text type="secondary">执行时间</Typography.Text>
-              <div className="flex items-center gap-2 mt-1">
-                <InputNumber
-                  min={0}
-                  max={23}
-                  value={scheduleData.hour}
-                  onChange={(v) => setScheduleData({ ...scheduleData, hour: v ?? 8 })}
-                  className="w-20"
-                />
-                <span>时</span>
-                <InputNumber
-                  min={0}
-                  max={59}
-                  value={scheduleData.minute}
-                  onChange={(v) => setScheduleData({ ...scheduleData, minute: v ?? 0 })}
-                  className="w-20"
-                />
-                <span>分</span>
-              </div>
-            </div>
-          )}
-
-          {scheduleData.cycle === 'weekly' && (
-            <div>
-              <Typography.Text type="secondary">执行日期</Typography.Text>
-              <Checkbox.Group
-                className="mt-2"
-                value={scheduleData.weekDays}
-                onChange={(values) => setScheduleData({ ...scheduleData, weekDays: values as number[] })}
-              >
-                <Space wrap>
-                  {weekDayOptions.map((item) => (
-                    <Checkbox key={item.value} value={item.value}>
-                      {item.label}
-                    </Checkbox>
-                  ))}
-                </Space>
-              </Checkbox.Group>
-            </div>
-          )}
-
-          {scheduleData.cycle === 'monthly' && (
-            <div>
-              <Typography.Text type="secondary">执行日期</Typography.Text>
-              <div className="flex items-center gap-2 mt-1">
-                <span>每月</span>
-                <InputNumber
-                  min={1}
-                  max={31}
-                  value={scheduleData.monthDay}
-                  onChange={(v) => setScheduleData({ ...scheduleData, monthDay: v ?? 1 })}
-                  className="w-20"
-                />
-                <span>号</span>
-              </div>
-            </div>
-          )}
-
-          {scheduleData.cycle === 'interval' && (
-            <div>
-              <Typography.Text type="secondary">间隔时间</Typography.Text>
-              <div className="flex items-center gap-2 mt-1">
-                <span>每隔</span>
-                <InputNumber
-                  min={1}
-                  value={scheduleData.intervalValue}
-                  onChange={(v) => setScheduleData({ ...scheduleData, intervalValue: v ?? 30 })}
-                  className="w-20"
-                />
+          {triggerTypeState === 'schedule' && (
+            <>
+              <Divider className="my-3" />
+              <div>
+                <Typography.Text type="secondary">执行周期</Typography.Text>
                 <Select
-                  value={scheduleData.intervalUnit}
-                  onChange={(v) => setScheduleData({ ...scheduleData, intervalUnit: v })}
-                  options={[
-                    { value: 'minutes', label: '分钟' },
-                    { value: 'hours', label: '小时' }
-                  ]}
-                  className="w-24"
+                  className="w-full mt-1"
+                  value={scheduleData.cycle}
+                  onChange={(value) => setScheduleData({ ...scheduleData, cycle: value })}
+                  options={cycleOptions}
                 />
-                <span>执行一次</span>
               </div>
-            </div>
+
+              {scheduleData.cycle !== 'interval' && (
+                <div>
+                  <Typography.Text type="secondary">执行时间</Typography.Text>
+                  <div className="flex items-center gap-2 mt-1">
+                    <InputNumber
+                      min={0}
+                      max={23}
+                      value={scheduleData.hour}
+                      onChange={(v) => setScheduleData({ ...scheduleData, hour: v ?? 8 })}
+                      className="w-20"
+                    />
+                    <span>时</span>
+                    <InputNumber
+                      min={0}
+                      max={59}
+                      value={scheduleData.minute}
+                      onChange={(v) => setScheduleData({ ...scheduleData, minute: v ?? 0 })}
+                      className="w-20"
+                    />
+                    <span>分</span>
+                  </div>
+                </div>
+              )}
+
+              {scheduleData.cycle === 'weekly' && (
+                <div>
+                  <Typography.Text type="secondary">执行日期</Typography.Text>
+                  <Checkbox.Group
+                    className="mt-2"
+                    value={scheduleData.weekDays}
+                    onChange={(values) => setScheduleData({ ...scheduleData, weekDays: values as number[] })}
+                  >
+                    <Space wrap>
+                      {weekDayOptions.map((item) => (
+                        <Checkbox key={item.value} value={item.value}>
+                          {item.label}
+                        </Checkbox>
+                      ))}
+                    </Space>
+                  </Checkbox.Group>
+                </div>
+              )}
+
+              {scheduleData.cycle === 'monthly' && (
+                <div>
+                  <Typography.Text type="secondary">执行日期</Typography.Text>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span>每月</span>
+                    <InputNumber
+                      min={1}
+                      max={31}
+                      value={scheduleData.monthDay}
+                      onChange={(v) => setScheduleData({ ...scheduleData, monthDay: v ?? 1 })}
+                      className="w-20"
+                    />
+                    <span>号</span>
+                  </div>
+                </div>
+              )}
+
+              {scheduleData.cycle === 'interval' && (
+                <div>
+                  <Typography.Text type="secondary">间隔时间</Typography.Text>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span>每隔</span>
+                    <InputNumber
+                      min={1}
+                      value={scheduleData.intervalValue}
+                      onChange={(v) => setScheduleData({ ...scheduleData, intervalValue: v ?? 30 })}
+                      className="w-20"
+                    />
+                    <Select
+                      value={scheduleData.intervalUnit}
+                      onChange={(v) => setScheduleData({ ...scheduleData, intervalUnit: v })}
+                      options={[
+                        { value: 'minutes', label: '分钟' },
+                        { value: 'hours', label: '小时' }
+                      ]}
+                      className="w-24"
+                    />
+                    <span>执行一次</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex justify-between">
+                  <Typography.Text type="secondary">预览</Typography.Text>
+                  <Typography.Text>
+                    {generatePreview(scheduleData)}
+                  </Typography.Text>
+                </div>
+              </div>
+            </>
           )}
 
-          <Divider className="my-3" />
-
-          <div className="bg-gray-50 p-3 rounded">
-            <div className="flex justify-between">
-              <Typography.Text type="secondary">预览</Typography.Text>
-              <Typography.Text>
-                {generatePreview(scheduleData)}
-              </Typography.Text>
-            </div>
-          </div>
+          {triggerTypeState === 'webhook' && (
+            <>
+              <Divider className="my-3" />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Typography.Text type="secondary">Webhook Token</Typography.Text>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => setWebhookTokenState(generateWebhookToken())}
+                  >
+                    重新生成
+                  </Button>
+                </div>
+                <Input
+                  readOnly
+                  value={webhookTokenState}
+                  addonAfter={
+                    <Tooltip title="复制">
+                      <CopyOutlined
+                        className="cursor-pointer"
+                        onClick={() => {
+                          copy(webhookTokenState)
+                          message.success('已复制到剪贴板')
+                        }}
+                      />
+                    </Tooltip>
+                  }
+                />
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <Typography.Text type="secondary" className="block mb-1">调用方式</Typography.Text>
+                <Typography.Text code className="text-xs">
+                  POST /api/webhook/trigger/{'{token}'}
+                </Typography.Text>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </>

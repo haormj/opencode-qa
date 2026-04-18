@@ -78,6 +78,13 @@
       "when": 1776435891257,
       "tag": "0010_lush_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1776500000000,
+      "tag": "0011_add_trigger_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -7,10 +7,10 @@ import { Card, Descriptions, Button, Space, Tag, message, Spin, Typography } fro
 import { EditOutlined, PlayCircleOutlined, HistoryOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { getTask, executeTask, type Task } from '../../services/api'
 
-const scheduleTypeLabels: Record<string, string> = {
-  none: '手动执行',
-  cron: '定时任务 (Cron)',
-  interval: '间隔执行'
+const triggerTypeLabels: Record<string, string> = {
+  manual: '手动执行',
+  schedule: '定时触发',
+  webhook: 'Webhook 触发'
 }
 
 const statusColors = {
@@ -117,15 +117,13 @@ function TaskDetailContent() {
               {task.isActive ? '启用' : '禁用'}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="调度类型">
-            {scheduleTypeLabels[task.scheduleType] || task.scheduleType}
+          <Descriptions.Item label="触发类型">
+            {triggerTypeLabels[task.triggerType] || task.triggerType}
           </Descriptions.Item>
           <Descriptions.Item label="调度配置">
-            {task.scheduleType === 'cron' && task.scheduleConfig
+            {task.triggerType === 'schedule' && task.scheduleConfig
               ? task.scheduleConfig
-              : task.scheduleType === 'interval' && task.scheduleConfig
-                ? `每 ${task.scheduleConfig} 分钟`
-                : '-'}
+              : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="描述" span={2}>
             {task.description || '-'}

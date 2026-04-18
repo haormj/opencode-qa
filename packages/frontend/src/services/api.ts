@@ -1389,8 +1389,9 @@ export interface Task {
   name: string
   description?: string | null
   flowData: string
-  scheduleType: 'none' | 'cron' | 'interval'
+  triggerType: 'manual' | 'schedule' | 'webhook'
   scheduleConfig?: string | null
+  webhookToken?: string | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -1442,8 +1443,9 @@ export async function createTask(data: {
   name: string
   description?: string
   flowData: string
-  scheduleType?: string
+  triggerType?: string
   scheduleConfig?: string | null
+  webhookToken?: string
 }): Promise<Task> {
   return request(`${API_BASE}/admin/tasks`, {
     method: 'POST',
@@ -1455,8 +1457,9 @@ export async function updateTask(id: string, data: Partial<{
   name: string
   description: string
   flowData: string
-  scheduleType: string
+  triggerType: string
   scheduleConfig: string
+  webhookToken: string
   isActive: boolean
 }>): Promise<Task> {
   return request(`${API_BASE}/admin/tasks/${id}`, {

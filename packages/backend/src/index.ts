@@ -25,6 +25,7 @@ import skillRoutes from './routes/skill.js'
 import adminSkillRoutes from './routes/admin-skill.js'
 import adminSkillVersionRoutes from './routes/admin-skill-version.js'
 import adminTaskRoutes, { initScheduler } from './routes/admin-task.js'
+import webhookRoutes from './routes/webhook.js'
 import publicSkillRoutes from './routes/public-skill.js'
 import { startScheduler } from './services/scheduler.js'
 import { eventSubscriptionManager } from './services/event-subscription-manager.js'
@@ -66,6 +67,7 @@ app.use('/api/skills', skillRoutes)
 app.use('/api/admin/skills', adminSkillRoutes)
 app.use('/api/admin/skill-versions', adminSkillVersionRoutes)
 app.use('/api/admin/tasks', adminTaskRoutes)
+app.use('/api/webhook', webhookRoutes)
 app.use('/api/public', publicSkillRoutes)
 
 app.use(errorLogger)

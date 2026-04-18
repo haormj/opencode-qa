@@ -81,7 +81,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, flowData, scheduleType, scheduleConfig } = req.body
+    const { name, description, flowData, triggerType, scheduleConfig, webhookToken } = req.body
     const userId = req.user!.id
     
     if (!name || !flowData) {
@@ -94,12 +94,13 @@ router.post('/', async (req, res) => {
       name,
       description,
       flowData: encryptedFlowData,
-      scheduleType: scheduleType || 'none',
+      triggerType: triggerType || 'manual',
       scheduleConfig,
+      webhookToken,
       createdBy: userId
     })
     
-    if (scheduleType !== 'none' && scheduleConfig) {
+    if (triggerType === 'schedule' && scheduleConfig) {
       try {
         const config: ScheduleConfig = JSON.parse(scheduleConfig)
         await registerTask(task.id, task.name, config)
@@ -118,7 +119,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, flowData, scheduleType, scheduleConfig, isActive } = req.body
+    const { name, description, flowData, triggerType, scheduleConfig, webhookToken, isActive } = req.body
     
     const existingTask = await getTaskById(id)
     if (!existingTask) {
@@ -129,8 +130,9 @@ router.put('/:id', async (req, res) => {
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
     if (flowData !== undefined) updateData.flowData = encryptPasswordsInFlow(flowData)
-    if (scheduleType !== undefined) updateData.scheduleType = scheduleType
+    if (triggerType !== undefined) updateData.triggerType = triggerType
     if (scheduleConfig !== undefined) updateData.scheduleConfig = scheduleConfig
+    if (webhookToken !== undefined) updateData.webhookToken = webhookToken
     if (isActive !== undefined) updateData.isActive = isActive
     
     const task = await updateTask(id, updateData)
@@ -139,7 +141,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Task not found' })
     }
     
-    if (task.isActive && task.scheduleType !== 'none' && task.scheduleConfig) {
+    if (task.isActive && task.triggerType === 'schedule' && task.scheduleConfig) {
       try {
         const config: ScheduleConfig = JSON.parse(task.scheduleConfig)
         await registerTask(task.id, task.name, config)
@@ -186,7 +188,7 @@ router.patch('/:id/toggle', async (req, res) => {
       return res.status(404).json({ error: 'Task not found' })
     }
     
-    if (task.isActive && task.scheduleType !== 'none' && task.scheduleConfig) {
+    if (task.isActive && task.triggerType === 'schedule' && task.scheduleConfig) {
       try {
         const config: ScheduleConfig = JSON.parse(task.scheduleConfig)
         await registerTask(task.id, task.name, config)

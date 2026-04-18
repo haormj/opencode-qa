@@ -8,9 +8,10 @@ import type { FlowData, Node, NodeType, NodeData, SkillInstallNodeData, CodeDown
 
 interface ExecuteTaskOptions {
   taskId: string
-  triggerType: 'manual' | 'schedule'
-  triggeredBy?: string
+  triggerType: 'manual' | 'schedule' | 'webhook'
+  triggeredBy?: string | null
   botConfig: BotConfig
+  webhookPayload?: Record<string, unknown>
 }
 
 interface ExecutionResult {
@@ -21,7 +22,7 @@ interface ExecutionResult {
 }
 
 export async function executeTask(options: ExecuteTaskOptions): Promise<ExecutionResult> {
-  const { taskId, triggerType, triggeredBy, botConfig } = options
+  const { taskId, triggerType, triggeredBy, botConfig, webhookPayload } = options
   
   const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get()
   if (!task) {

@@ -129,7 +129,7 @@ export async function init(): Promise<void> {
     .where(eq(tasks.isActive, true))
 
   for (const task of activeTasks) {
-    if (task.scheduleType === 'none' || !task.scheduleConfig) {
+    if (task.triggerType !== 'schedule' || !task.scheduleConfig) {
       continue
     }
 

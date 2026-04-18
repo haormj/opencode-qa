@@ -27,8 +27,9 @@ export async function createTask(data: {
   name: string
   description?: string
   flowData: string
-  scheduleType: string
+  triggerType: string
   scheduleConfig?: string
+  webhookToken?: string
   createdBy: string
 }) {
   const now = new Date()
@@ -37,8 +38,9 @@ export async function createTask(data: {
     name: data.name,
     description: data.description ?? null,
     flowData: data.flowData,
-    scheduleType: data.scheduleType,
+    triggerType: data.triggerType,
     scheduleConfig: data.scheduleConfig ?? null,
+    webhookToken: data.webhookToken ?? null,
     isActive: true,
     createdBy: data.createdBy,
     createdAt: now,
@@ -52,8 +54,9 @@ export async function updateTask(id: string, data: Partial<{
   name: string
   description: string
   flowData: string
-  scheduleType: string
+  triggerType: string
   scheduleConfig: string
+  webhookToken: string
   isActive: boolean
 }>) {
   const [task] = await db.update(tasks)
