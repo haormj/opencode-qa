@@ -278,6 +278,25 @@ function Tasks() {
 
   const handleSaveSchedule = async () => {
     if (!scheduleTask) return
+    
+    if (triggerTypeState === 'schedule' || triggerTypeState === 'webhook') {
+      if (!scheduleTask.botId) {
+        message.error('请先配置执行机器人')
+        return
+      }
+      
+      try {
+        const flowData = JSON.parse(scheduleTask.flowData)
+        if (!flowData.nodes || flowData.nodes.length === 0) {
+          message.error('请先配置任务流程')
+          return
+        }
+      } catch {
+        message.error('任务流程数据异常')
+        return
+      }
+    }
+    
     try {
       setSavingSchedule(true)
       
