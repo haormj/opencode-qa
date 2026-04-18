@@ -528,7 +528,7 @@ function TaskEditorContent() {
       </div>
 
       {/* 顶部工具栏 */}
-      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
+      <div className="absolute top-2 right-4 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
         <div className="text-sm text-gray-500">
           {saving ? (
             <span className="text-blue-500">保存中...</span>
