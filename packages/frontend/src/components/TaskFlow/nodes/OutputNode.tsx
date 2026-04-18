@@ -69,13 +69,13 @@ function OutputNode({ data, selected }: OutputNodeProps) {
         borderRadius: 8,
         overflow: 'visible',
         boxShadow: selected 
-          ? '0 0 0 2px #8B5CF6, 0 4px 12px rgba(0,0,0,0.1)'
+          ? 'inset 0 0 0 2px #8B5CF6, 0 4px 12px rgba(0,0,0,0.1)'
           : '0 2px 8px rgba(0,0,0,0.08)',
         backgroundColor: '#fff',
         width: 240,
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Left} />
       
       {/* 左侧彩色条 */}
       <div
@@ -84,8 +84,10 @@ function OutputNode({ data, selected }: OutputNodeProps) {
           left: 0,
           top: 0,
           bottom: 0,
-          width: 4,
+          width: 8,
           backgroundColor: NODE_COLOR,
+          borderTopLeftRadius: 8,
+          borderBottomLeftRadius: 8,
         }}
       />
       
@@ -118,7 +120,7 @@ function OutputNode({ data, selected }: OutputNodeProps) {
         {renderConfigField()}
       </div>
 
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Right} />
     </div>
   )
 }
