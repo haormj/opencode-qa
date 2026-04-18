@@ -95,7 +95,12 @@ function TaskExecutionsGlobal() {
       dataIndex: 'id',
       key: 'id',
       width: 280,
-      ellipsis: true
+      ellipsis: true,
+      render: (id: string) => (
+        <Typography.Link onClick={() => navigate(`/admin/executions/${id}`)}>
+          {id}
+        </Typography.Link>
+      )
     },
     {
       title: '任务名称',
@@ -103,7 +108,7 @@ function TaskExecutionsGlobal() {
       key: 'taskId',
       width: 200,
       render: (taskId: string) => (
-        <Typography.Link onClick={() => setSelectedTaskId(taskId)}>
+        <Typography.Link onClick={() => navigate(`/admin/tasks/${taskId}`)}>
           {getTaskName(taskId)}
         </Typography.Link>
       )
