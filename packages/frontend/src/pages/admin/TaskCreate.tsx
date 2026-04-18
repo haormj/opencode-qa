@@ -9,7 +9,7 @@ import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyO
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
-import { getTask, createTask, updateTask, executeTask, getBots, type Task, type Bot } from '../../services/api'
+import { getTask, updateTask, executeTask, getBots, type Task, type Bot } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
@@ -190,7 +190,6 @@ function stepToMarkdown(data: Record<string, unknown>, stepNumber: number): stri
 function TaskEditorContent() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const isEdit = !!id
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition } = useReactFlow()
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -392,37 +391,37 @@ function TaskEditorContent() {
   )
 
   useEffect(() => {
-    if (isEdit && id) {
-      setLoading(true)
-      getTask(id)
-        .then((task: Task) => {
-          form.setFieldsValue({
-            name: task.name,
-            description: task.description,
-            botId: task.botId
-          })
-          if (task.flowData) {
-            try {
-              const flowData = JSON.parse(task.flowData)
-              if (flowData.nodes) setNodes(flowData.nodes)
-              if (flowData.edges) setEdges(flowData.edges)
-            } catch {
-              console.error('Failed to parse flow data')
-            }
+    if (!id) return
+    
+    setLoading(true)
+    getTask(id)
+      .then((task: Task) => {
+        form.setFieldsValue({
+          name: task.name,
+          description: task.description,
+          botId: task.botId
+        })
+        if (task.flowData) {
+          try {
+            const flowData = JSON.parse(task.flowData)
+            if (flowData.nodes) setNodes(flowData.nodes)
+            if (flowData.edges) setEdges(flowData.edges)
+          } catch {
+            console.error('Failed to parse flow data')
           }
-          initialLoadRef.current = false
-        })
-        .catch(() => {
-          message.error('加载任务失败')
-          navigate('/admin/tasks')
-        })
-        .finally(() => setLoading(false))
-    } else {
-      initialLoadRef.current = false
-    }
-  }, [id, isEdit, form, navigate, setNodes, setEdges])
+        }
+        initialLoadRef.current = false
+      })
+      .catch(() => {
+        message.error('加载任务失败')
+        navigate('/admin/tasks')
+      })
+      .finally(() => setLoading(false))
+  }, [id, form, navigate, setNodes, setEdges])
 
   const handleSave = async (silent = false) => {
+    if (!id) return
+    
     try {
       const values = await form.validateFields()
       setSaving(true)
@@ -434,17 +433,8 @@ function TaskEditorContent() {
         botId: values.botId || null
       }
 
-      if (isEdit && id) {
-        await updateTask(id, data)
-        if (!silent) message.success('保存成功')
-      } else {
-        await createTask(data)
-        if (!silent) message.success('创建成功')
-        setLastSavedAt(new Date())
-        setHasUnsavedChanges(false)
-        navigate('/admin/tasks')
-        return
-      }
+      await updateTask(id, data)
+      if (!silent) message.success('保存成功')
       setLastSavedAt(new Date())
       setHasUnsavedChanges(false)
     } catch (error) {
@@ -457,20 +447,20 @@ function TaskEditorContent() {
   }
 
   const handleExecute = async () => {
-    if (isEdit && id) {
-      try {
-        await handleSave()
-        const result = await executeTask(id)
-        message.info('任务开始执行')
-        navigate(`/admin/executions/${result.executionId}`)
-      } catch {
-      }
+    if (!id) return
+    
+    try {
+      await handleSave()
+      const result = await executeTask(id)
+      message.info('任务开始执行')
+      navigate(`/admin/executions/${result.executionId}`)
+    } catch {
     }
   }
 
   // 自动保存
   useEffect(() => {
-    if (!isEdit || initialLoadRef.current) return
+    if (initialLoadRef.current) return
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
@@ -538,7 +528,7 @@ function TaskEditorContent() {
               size="small"
               icon={<ArrowLeftOutlined />}
               onClick={async () => {
-                if (hasUnsavedChanges && isEdit && id) {
+                if (hasUnsavedChanges) {
                   try {
                     await handleSave(true)
                     navigate('/admin/tasks')
@@ -551,7 +541,7 @@ function TaskEditorContent() {
               }}
             />
             <span className="font-medium text-base">
-              {isEdit ? '任务详情' : '新建任务'}
+              任务详情
             </span>
           </div>
           <Divider className="my-2" />
@@ -639,14 +629,12 @@ function TaskEditorContent() {
         >
           预览
         </Button>
-        {isEdit && (
-          <Button
-            icon={<PlayCircleOutlined />}
-            onClick={handleExecute}
-          >
-            运行
-          </Button>
-        )}
+        <Button
+          icon={<PlayCircleOutlined />}
+          onClick={handleExecute}
+        >
+          运行
+        </Button>
       </div>
 
       {/* 画布区域 */}

@@ -243,7 +243,7 @@ function Tasks() {
       message.success('任务创建成功')
       setCreateModalVisible(false)
       createForm.resetFields()
-      navigate(`/admin/tasks/${task.id}/edit`)
+      navigate(`/admin/tasks/${task.id}`)
     } catch (error) {
       if (error instanceof Error) {
         message.error(error.message)

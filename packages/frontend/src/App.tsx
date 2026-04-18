@@ -165,7 +165,6 @@ function App() {
           <Route path="bots" element={<AdminBots />} />
           <Route path="assistants" element={<AdminAssistants />} />
           <Route path="tasks" element={<Tasks />} />
-          <Route path="tasks/create" element={<TaskCreate />} />
           <Route path="tasks/:id" element={<TaskCreate />} />
           <Route path="tasks/:id/executions" element={<TaskExecutionsRedirect />} />
           <Route path="task-executions" element={<TaskExecutionsGlobal />} />
