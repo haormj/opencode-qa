@@ -1442,7 +1442,7 @@ export async function createTask(data: {
   name: string
   description?: string
   flowData: string
-  scheduleType: string
+  scheduleType?: string
   scheduleConfig?: string | null
 }): Promise<Task> {
   return request(`${API_BASE}/admin/tasks`, {

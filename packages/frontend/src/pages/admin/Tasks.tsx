@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input } from 'antd'
-import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input, Select, InputNumber } from 'antd'
+import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getTasks, createTask, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
+import { getTasks, createTask, updateTask, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
 import './Admin.css'
 
 const scheduleTypeColors: Record<string, string> = {
@@ -18,6 +18,12 @@ const scheduleTypeLabels: Record<string, string> = {
   interval: '间隔'
 }
 
+const scheduleTypeOptions = [
+  { value: 'none', label: '手动执行' },
+  { value: 'cron', label: '定时任务 (Cron)' },
+  { value: 'interval', label: '间隔执行' }
+]
+
 function Tasks() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -28,6 +34,11 @@ function Tasks() {
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [createForm] = Form.useForm()
   const [creating, setCreating] = useState(false)
+  const [scheduleModalVisible, setScheduleModalVisible] = useState(false)
+  const [scheduleForm] = Form.useForm()
+  const [scheduleTask, setScheduleTask] = useState<Task | null>(null)
+  const [scheduleType, setScheduleType] = useState<string>('none')
+  const [savingSchedule, setSavingSchedule] = useState(false)
 
   const fetchTasks = async () => {
     setLoading(true)
@@ -99,6 +110,37 @@ function Tasks() {
     }
   }
 
+  const handleOpenSchedule = (task: Task) => {
+    setScheduleTask(task)
+    setScheduleType(task.scheduleType || 'none')
+    scheduleForm.setFieldsValue({
+      scheduleType: task.scheduleType || 'none',
+      scheduleConfig: task.scheduleConfig
+    })
+    setScheduleModalVisible(true)
+  }
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleTask) return
+    try {
+      const values = await scheduleForm.validateFields()
+      setSavingSchedule(true)
+      await updateTask(scheduleTask.id, {
+        scheduleType: values.scheduleType,
+        scheduleConfig: values.scheduleType !== 'none' ? values.scheduleConfig : null
+      })
+      message.success('调度配置保存成功')
+      setScheduleModalVisible(false)
+      fetchTasks()
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      }
+    } finally {
+      setSavingSchedule(false)
+    }
+  }
+
   const columns: ColumnsType<Task> = [
     {
       title: '任务名称',
@@ -154,7 +196,7 @@ function Tasks() {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 200,
       render: (_, record) => (
         <Space size={4}>
           <Tooltip title="编辑">
@@ -162,6 +204,13 @@ function Tasks() {
               type="text"
               icon={<EditOutlined />}
               onClick={() => navigate(`/admin/tasks/${record.id}/edit`)}
+            />
+          </Tooltip>
+          <Tooltip title="调度">
+            <Button
+              type="text"
+              icon={<ClockCircleOutlined />}
+              onClick={() => handleOpenSchedule(record)}
             />
           </Tooltip>
           <Tooltip title="执行">
@@ -248,6 +297,51 @@ function Tasks() {
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={3} placeholder="请输入任务描述（选填）" />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="调度配置"
+        open={scheduleModalVisible}
+        onCancel={() => {
+          setScheduleModalVisible(false)
+          setScheduleTask(null)
+        }}
+        onOk={handleSaveSchedule}
+        confirmLoading={savingSchedule}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={scheduleForm} layout="vertical">
+          <Form.Item
+            name="scheduleType"
+            label="调度类型"
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={scheduleTypeOptions}
+              onChange={(value) => setScheduleType(value)}
+            />
+          </Form.Item>
+          {scheduleType === 'cron' && (
+            <Form.Item
+              name="scheduleConfig"
+              label="Cron 表达式"
+              rules={[{ required: true, message: '请输入 Cron 表达式' }]}
+              extra="例如: 0 0 * * * (每天凌晨执行)"
+            >
+              <Input placeholder="0 0 * * *" />
+            </Form.Item>
+          )}
+          {scheduleType === 'interval' && (
+            <Form.Item
+              name="scheduleConfig"
+              label="间隔时间(分钟)"
+              rules={[{ required: true, message: '请输入间隔时间' }]}
+            >
+              <InputNumber min={1} className="w-full" placeholder="60" />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </>
