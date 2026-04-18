@@ -91,6 +91,13 @@ function TaskExecutionsGlobal() {
 
   const columns: ColumnsType<TaskExecution> = [
     {
+      title: '执行ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 120,
+      render: (id: string) => `${id.slice(0, 8)}...`
+    },
+    {
       title: '任务名称',
       dataIndex: 'taskId',
       key: 'taskId',
