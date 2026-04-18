@@ -35,8 +35,8 @@ export interface CodeDownloadNodeData {
 }
 
 export interface StepNodeData {
-  name: string;
-  instruction: string;
+  name?: string
+  instruction: string
 }
 
 export interface OutputNodeData {

@@ -1,24 +1,31 @@
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { Input } from 'antd'
-import { Handle, Position } from '@xyflow/react'
+import { Handle, Position, useNodes } from '@xyflow/react'
 
 const { TextArea } = Input
 
 export interface StepNodeData {
-  name?: string
   instruction?: string
 }
 
 interface StepNodeProps {
   data: StepNodeData
   selected?: boolean
+  id: string
 }
 
 const NODE_COLOR = '#F59E0B'
 
-function StepNode({ data, selected }: StepNodeProps) {
-  const updateData = useCallback((field: keyof StepNodeData, value: string) => {
-    data[field] = value as never
+function StepNode({ data, selected, id }: StepNodeProps) {
+  const nodes = useNodes()
+  
+  const stepNumber = useMemo(() => {
+    const stepNodes = nodes.filter(n => n.type === 'step')
+    return stepNodes.findIndex(n => n.id === id) + 1
+  }, [nodes, id])
+
+  const updateData = useCallback((value: string) => {
+    data.instruction = value
   }, [data])
 
   return (
@@ -64,24 +71,18 @@ function StepNode({ data, selected }: StepNodeProps) {
       >
         <span style={{ fontSize: 16 }}>📝</span>
         <span style={{ fontWeight: 500, fontSize: 14, color: '#1f2937' }}>
-          步骤定义
+          步骤 {stepNumber}
         </span>
       </div>
       
       {/* 内容区域 */}
-      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Input
-          size="small"
-          placeholder="步骤名称"
-          defaultValue={data.name}
-          onChange={(e) => updateData('name', e.target.value)}
-        />
+      <div style={{ padding: 12 }}>
         <TextArea
           size="small"
-          placeholder="指令内容..."
-          rows={2}
+          placeholder="请输入指令内容..."
+          rows={3}
           defaultValue={data.instruction}
-          onChange={(e) => updateData('instruction', e.target.value)}
+          onChange={(e) => updateData(e.target.value)}
         />
       </div>
 

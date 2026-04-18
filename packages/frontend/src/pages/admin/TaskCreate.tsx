@@ -55,7 +55,7 @@ function getDefaultNodeData(type: string): Record<string, unknown> {
     case 'codeDownload':
       return { repoUrl: '', username: '', password: '', branch: 'main', targetPath: '/tmp/repo' }
     case 'step':
-      return { name: '', instruction: '' }
+      return { instruction: '' }
     case 'output':
       return { type: 'email', config: { to: '', subject: '' } }
     default:

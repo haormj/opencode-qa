@@ -196,7 +196,7 @@ function codeDownloadToMarkdown(data: CodeDownloadNodeData): string {
 }
 
 function stepToMarkdown(data: StepNodeData): string {
-  let content = `## Step: ${data.name}\n\n`
+  let content = `## 步骤\n\n`
   content += `${data.instruction}\n`
   
   return content
