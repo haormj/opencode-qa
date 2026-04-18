@@ -1490,6 +1490,16 @@ export async function getTaskExecutions(taskId: string, params: { page: number; 
   return request(`${API_BASE}/admin/tasks/${taskId}/executions?${searchParams.toString()}`)
 }
 
+export async function getAllExecutions(params: { page: number; pageSize: number; taskId?: string }): Promise<TaskExecutionListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  if (params.taskId) {
+    searchParams.set('taskId', params.taskId)
+  }
+  return request(`${API_BASE}/admin/executions?${searchParams.toString()}`)
+}
+
 export async function getExecution(id: string): Promise<TaskExecution> {
   return request(`${API_BASE}/admin/executions/${id}`)
 }

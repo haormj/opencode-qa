@@ -22,6 +22,7 @@ import Tasks from './pages/admin/Tasks'
 import TaskCreate from './pages/admin/TaskCreate'
 import TaskDetail from './pages/admin/TaskDetail'
 import TaskExecutions from './pages/admin/TaskExecutions'
+import TaskExecutionsGlobal from './pages/admin/TaskExecutionsGlobal'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
 
@@ -164,6 +165,7 @@ function App() {
           <Route path="tasks/:id" element={<TaskDetail />} />
           <Route path="tasks/:id/edit" element={<TaskCreate />} />
           <Route path="tasks/:id/executions" element={<TaskExecutions />} />
+          <Route path="task-executions" element={<TaskExecutionsGlobal />} />
           <Route path="skills" element={<AdminSkills />} />
           <Route path="skills/:id" element={<SkillDetail />} />
           <Route path="skills/categories" element={<SkillCategories />} />

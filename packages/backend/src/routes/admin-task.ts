@@ -8,6 +8,7 @@ import {
   deleteTask,
   toggleTask,
   getExecutionsByTaskId,
+  getAllExecutions,
   getExecutionById,
   getExecutionMessages
 } from '../services/task.js'
@@ -55,7 +56,7 @@ router.get('/', async (req, res) => {
     
     const { list, total } = await getTasks({ page, pageSize })
     
-    res.json({ list, total, page, pageSize })
+    res.json({ items: list, total, page, pageSize })
   } catch (error) {
     logger.error('Get tasks error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -240,6 +241,21 @@ router.post('/:id/execute', async (req, res) => {
     res.json(result)
   } catch (error) {
     logger.error('Execute task error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/executions', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1
+    const pageSize = parseInt(req.query.pageSize as string) || 10
+    const taskId = req.query.taskId as string | undefined
+    
+    const executions = await getAllExecutions({ page, pageSize, taskId })
+    
+    res.json(executions)
+  } catch (error) {
+    logger.error('Get all executions error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

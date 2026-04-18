@@ -5,8 +5,8 @@ import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons'
-import { getTask, createTask, updateTask, type Task } from '../../services/api'
+import { SaveOutlined, PlayCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
@@ -77,8 +77,11 @@ function TaskEditorContent() {
   const isEdit = !!id
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition } = useReactFlow()
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const initialLoadRef = useRef(true)
 
   const [form] = Form.useForm()
+  const formValues = Form.useWatch([], form)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
@@ -88,51 +91,6 @@ function TaskEditorContent() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
-  
-  // 撤销/重做历史
-  const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
-  const [isUndoRedo, setIsUndoRedo] = useState(false)
-  
-  const canUndo = historyIndex > 0
-  const canRedo = historyIndex < history.length - 1
-  
-  const handleUndo = useCallback(() => {
-    if (canUndo) {
-      setIsUndoRedo(true)
-      const prevState = history[historyIndex - 1]
-      setNodes(prevState.nodes)
-      setEdges(prevState.edges)
-      setHistoryIndex(historyIndex - 1)
-      setHasUnsavedChanges(true)
-      setTimeout(() => setIsUndoRedo(false), 0)
-    }
-  }, [canUndo, history, historyIndex, setNodes, setEdges])
-  
-  const handleRedo = useCallback(() => {
-    if (canRedo) {
-      setIsUndoRedo(true)
-      const nextState = history[historyIndex + 1]
-      setNodes(nextState.nodes)
-      setEdges(nextState.edges)
-      setHistoryIndex(historyIndex + 1)
-      setHasUnsavedChanges(true)
-      setTimeout(() => setIsUndoRedo(false), 0)
-    }
-  }, [canRedo, history, historyIndex, setNodes, setEdges])
-  
-  // 记录历史（用于撤销/重做）
-  useEffect(() => {
-    if (!isUndoRedo && nodes.length > 0) {
-      setHistory(prev => {
-        const newHistory = prev.slice(0, historyIndex + 1)
-        newHistory.push({ nodes: [...nodes], edges: [...edges] })
-        return newHistory
-      })
-      setHistoryIndex(prev => prev + 1)
-      setHasUnsavedChanges(true)
-    }
-  }, [nodes, edges, isUndoRedo, historyIndex])
   
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -256,7 +214,7 @@ function TaskEditorContent() {
     setEdgeContextMenu(null)
   }, [])
 
-  const onNodeMouseEnter = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeMouseEnter = useCallback((_event: React.MouseEvent, node: Node) => {
     setHoveredNode(node.id)
   }, [])
 
@@ -318,16 +276,19 @@ function TaskEditorContent() {
               console.error('Failed to parse flow data')
             }
           }
+          initialLoadRef.current = false
         })
         .catch(() => {
           message.error('加载任务失败')
           navigate('/admin/tasks')
         })
         .finally(() => setLoading(false))
+    } else {
+      initialLoadRef.current = false
     }
   }, [id, isEdit, form, navigate, setNodes, setEdges])
 
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     try {
       const values = await form.validateFields()
       setSaving(true)
@@ -340,10 +301,10 @@ function TaskEditorContent() {
 
       if (isEdit && id) {
         await updateTask(id, data)
-        message.success('更新成功')
+        if (!silent) message.success('保存成功')
       } else {
         await createTask(data)
-        message.success('创建成功')
+        if (!silent) message.success('创建成功')
         setLastSavedAt(new Date())
         setHasUnsavedChanges(false)
         navigate('/admin/tasks')
@@ -352,7 +313,7 @@ function TaskEditorContent() {
       setLastSavedAt(new Date())
       setHasUnsavedChanges(false)
     } catch (error) {
-      if (error instanceof Error) {
+      if (!silent && error instanceof Error) {
         message.error(error.message)
       }
     } finally {
@@ -364,12 +325,34 @@ function TaskEditorContent() {
     if (isEdit && id) {
       try {
         await handleSave()
+        const result = await executeTask(id)
+        message.success(`任务已开始执行，执行ID: ${result.executionId}`)
         navigate(`/admin/tasks/${id}/executions`)
       } catch {
-        // Error already handled in handleSave
+        // Error already handled
       }
     }
   }
+
+  // 自动保存
+  useEffect(() => {
+    if (!isEdit || initialLoadRef.current) return
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    setHasUnsavedChanges(true)
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSave(true)
+    }, 3000)
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [nodes, edges, formValues])
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -506,26 +489,11 @@ function TaskEditorContent() {
       />
 
       {/* 顶部工具栏 */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
-        <Button 
-          icon={<UndoOutlined />} 
-          onClick={handleUndo}
-          disabled={!canUndo}
-          title="撤销 (Ctrl+Z)"
-        />
-        <Button 
-          icon={<RedoOutlined />} 
-          onClick={handleRedo}
-          disabled={!canRedo}
-          title="重做 (Ctrl+Y)"
-        />
-        <Divider type="vertical" />
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/tasks')}>
-          返回
-        </Button>
-        <Divider type="vertical" />
+      <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
         <div className="text-sm text-gray-500">
-          {hasUnsavedChanges ? (
+          {saving ? (
+            <span className="text-blue-500">保存中...</span>
+          ) : hasUnsavedChanges ? (
             <span className="text-orange-500">未保存</span>
           ) : lastSavedAt ? (
             <span>已保存 {lastSavedAt.toLocaleTimeString()}</span>
@@ -535,7 +503,7 @@ function TaskEditorContent() {
           type="primary"
           icon={<SaveOutlined />}
           loading={saving}
-          onClick={handleSave}
+          onClick={() => handleSave(false)}
         >
           保存
         </Button>
@@ -544,7 +512,7 @@ function TaskEditorContent() {
             icon={<PlayCircleOutlined />}
             onClick={handleExecute}
           >
-            执行
+            运行
           </Button>
         )}
       </div>
@@ -577,6 +545,9 @@ function TaskEditorContent() {
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.3}
               maxZoom={2}
+              selectNodesOnDrag={false}
+              panOnDrag={[1]}
+              selectionOnDrag={false}
             >
             <MiniMap />
             <Background />

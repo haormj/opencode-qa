@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography } from 'antd'
+import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input } from 'antd'
 import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getTasks, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
+import { getTasks, createTask, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
 import './Admin.css'
 
 const scheduleTypeColors: Record<string, string> = {
@@ -25,6 +25,9 @@ function Tasks() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(15)
+  const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [createForm] = Form.useForm()
+  const [creating, setCreating] = useState(false)
 
   const fetchTasks = async () => {
     setLoading(true)
@@ -69,6 +72,30 @@ function Tasks() {
       message.success(`任务已开始执行，执行ID: ${result.executionId}`)
     } catch {
       message.error('执行失败')
+    }
+  }
+
+  const handleCreateTask = async () => {
+    try {
+      const values = await createForm.validateFields()
+      setCreating(true)
+      const task = await createTask({
+        name: values.name,
+        description: values.description || '',
+        flowData: JSON.stringify({ nodes: [], edges: [] }),
+        scheduleType: 'none',
+        scheduleConfig: null
+      })
+      message.success('任务创建成功')
+      setCreateModalVisible(false)
+      createForm.resetFields()
+      navigate(`/admin/tasks/${task.id}/edit`)
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      }
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -168,34 +195,62 @@ function Tasks() {
   ]
 
   return (
-    <Card
-      title="任务管理"
-      extra={
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/admin/tasks/create')}>
-            新建任务
-          </Button>
-        </Space>
-      }
-    >
-      <Table
-        columns={columns}
-        dataSource={tasks}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (p, ps) => {
-            setPage(p)
-            setPageSize(ps)
-          }
+    <>
+      <Card
+        title="任务列表"
+        extra={
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
+              新建任务
+            </Button>
+          </Space>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={tasks}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (p, ps) => {
+              setPage(p)
+              setPageSize(ps)
+            }
+          }}
+        />
+      </Card>
+
+      <Modal
+        title="新建任务"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false)
+          createForm.resetFields()
         }}
-      />
-    </Card>
+        onOk={handleCreateTask}
+        confirmLoading={creating}
+        okText="创建"
+        cancelText="取消"
+      >
+        <Form form={createForm} layout="vertical">
+          <Form.Item
+            name="name"
+            label="任务名称"
+            rules={[{ required: true, message: '请输入任务名称' }]}
+          >
+            <Input placeholder="请输入任务名称" />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={3} placeholder="请输入任务描述（选填）" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   )
 }
 

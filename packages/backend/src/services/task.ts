@@ -89,6 +89,42 @@ export async function getExecutionsByTaskId(taskId: string, options: { page: num
   return list
 }
 
+export async function getAllExecutions(options: { page: number; pageSize: number; taskId?: string }) {
+  const { page, pageSize, taskId } = options
+  const offset = (page - 1) * pageSize
+  
+  let list
+  let countResult
+  
+  if (taskId) {
+    list = await db.select()
+      .from(taskExecutions)
+      .where(eq(taskExecutions.taskId, taskId))
+      .orderBy(desc(taskExecutions.createdAt))
+      .limit(pageSize)
+      .offset(offset)
+    
+    countResult = await db.select({ count: sql<number>`count(*)` })
+      .from(taskExecutions)
+      .where(eq(taskExecutions.taskId, taskId))
+      .get()
+  } else {
+    list = await db.select()
+      .from(taskExecutions)
+      .orderBy(desc(taskExecutions.createdAt))
+      .limit(pageSize)
+      .offset(offset)
+    
+    countResult = await db.select({ count: sql<number>`count(*)` })
+      .from(taskExecutions)
+      .get()
+  }
+  
+  const count = countResult?.count || 0
+  
+  return { items: list, total: count }
+}
+
 export async function getExecutionById(id: string) {
   const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, id)).get()
   return execution

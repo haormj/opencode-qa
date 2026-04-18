@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { Select } from 'antd'
 import { Handle, Position } from '@xyflow/react'
 
@@ -11,6 +11,7 @@ export interface SkillInstallNodeData {
 interface SkillInstallNodeProps {
   data: SkillInstallNodeData
   selected?: boolean
+  id: string
 }
 
 const skills = [
@@ -22,6 +23,8 @@ const skills = [
 const NODE_COLOR = '#3B82F6'
 
 function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
+  const [open, setOpen] = useState(false)
+
   const handleChange = useCallback((value: string) => {
     const skill = skills.find(s => s.value === value)
     if (skill) {
@@ -29,10 +32,12 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
       data.skillName = skill.label
       data.skillSlug = value
     }
+    setOpen(false)
   }, [data])
 
   return (
     <div
+      className="nodrag nowheel"
       style={{
         position: 'relative',
         borderRadius: 8,
@@ -79,14 +84,18 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
       </div>
       
       {/* 内容区域 */}
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: 12 }} className="nodrag">
         <Select
           size="small"
           placeholder="选择要安装的技能"
           options={skills}
-          defaultValue={data.skillId}
+          value={data.skillId}
           onChange={handleChange}
           style={{ width: '100%' }}
+          getPopupContainer={() => document.body}
+          open={open}
+          onDropdownVisibleChange={setOpen}
+          className="nodrag"
         />
       </div>
 
