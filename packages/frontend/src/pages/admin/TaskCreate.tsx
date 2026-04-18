@@ -13,6 +13,7 @@ import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
 import StepNode from '../../components/TaskFlow/nodes/StepNode'
 import OutputNode from '../../components/TaskFlow/nodes/OutputNode'
 import CustomEdge from '../../components/TaskFlow/edges/CustomEdge'
+import { SkillProvider } from '../../contexts/SkillContext'
 
 const nodeTypes: NodeTypes = {
   skillInstall: SkillInstallNode,
@@ -610,7 +611,9 @@ function TaskEditorContent() {
 function TaskCreate() {
   return (
     <ReactFlowProvider>
-      <TaskEditorContent />
+      <SkillProvider>
+        <TaskEditorContent />
+      </SkillProvider>
     </ReactFlowProvider>
   )
 }

@@ -1,6 +1,7 @@
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useState, useMemo } from 'react'
 import { Select } from 'antd'
 import { Handle, Position } from '@xyflow/react'
+import { useSkills } from '../../../contexts/SkillContext'
 
 export interface SkillInstallNodeData {
   skillId?: string
@@ -14,26 +15,29 @@ interface SkillInstallNodeProps {
   id: string
 }
 
-const skills = [
-  { value: 'skill-1', label: '代码审查助手' },
-  { value: 'skill-2', label: '文档生成器' },
-  { value: 'skill-3', label: '测试用例生成' },
-]
-
 const NODE_COLOR = '#3B82F6'
 
 function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
+  const { skills, loading } = useSkills()
   const [open, setOpen] = useState(false)
 
+  const options = useMemo(() => 
+    skills.map(s => ({
+      value: s.id,
+      label: s.displayName
+    })),
+    [skills]
+  )
+
   const handleChange = useCallback((value: string) => {
-    const skill = skills.find(s => s.value === value)
+    const skill = skills.find(s => s.id === value)
     if (skill) {
-      data.skillId = value
-      data.skillName = skill.label
-      data.skillSlug = value
+      data.skillId = skill.id
+      data.skillName = skill.displayName
+      data.skillSlug = skill.slug
     }
     setOpen(false)
-  }, [data])
+  }, [data, skills])
 
   return (
     <div
@@ -87,8 +91,16 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
       <div style={{ padding: 12 }} className="nodrag">
         <Select
           size="small"
-          placeholder="选择要安装的技能"
-          options={skills}
+          showSearch
+          filterOption={(input, option) => {
+            const label = option?.label
+            if (typeof label === 'string') {
+              return label.toLowerCase().includes(input.toLowerCase())
+            }
+            return false
+          }}
+          placeholder={loading ? "加载中..." : "搜索并选择技能"}
+          options={options}
           value={data.skillId}
           onChange={handleChange}
           style={{ width: '100%' }}
@@ -96,6 +108,7 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
           open={open}
           onDropdownVisibleChange={setOpen}
           className="nodrag"
+          loading={loading}
         />
       </div>
 
