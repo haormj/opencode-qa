@@ -41,7 +41,6 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
 
   return (
     <div
-      className="nodrag nowheel"
       style={{
         position: 'relative',
         borderRadius: 8,
