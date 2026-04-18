@@ -5,7 +5,7 @@ import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Button, message, Typography, Divider, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { SaveOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
@@ -81,7 +81,6 @@ function TaskEditorContent() {
   const [saving, setSaving] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
-  const [leftPanelVisible, setLeftPanelVisible] = useState(true)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
@@ -386,12 +385,8 @@ function TaskEditorContent() {
   return (
     <div className="relative w-full h-[calc(100vh-120px)]">
       {/* 左侧悬浮面板 */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-72 bg-white shadow-lg z-20 transition-transform duration-300 overflow-auto ${
-          leftPanelVisible ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="p-4">
+      <div className="absolute left-0 top-0 bottom-0 w-52 bg-white shadow-lg z-20 overflow-auto">
+        <div className="p-3">
           {/* 节点库 */}
           <Typography.Title level={5} className="mb-3">
             节点库
@@ -437,14 +432,6 @@ function TaskEditorContent() {
           </Form>
         </div>
       </div>
-
-      {/* 左侧面板收起/展开按钮 */}
-      <Button
-        className="absolute top-4 z-30 shadow"
-        style={{ left: leftPanelVisible ? 280 : 16 }}
-        icon={leftPanelVisible ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-        onClick={() => setLeftPanelVisible(!leftPanelVisible)}
-      />
 
       {/* 顶部工具栏 */}
       <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow px-4 py-2 flex items-center gap-3">
