@@ -386,36 +386,9 @@ function TaskEditorContent() {
     <div className="relative w-full h-[calc(100vh-120px)]">
       {/* 左侧悬浮面板 */}
       <div className="absolute left-0 top-0 bottom-0 w-52 bg-white shadow-lg z-20 overflow-auto">
-        <div className="p-3">
-          {/* 节点库 */}
-          <Typography.Title level={5} className="mb-3">
-            节点库
-          </Typography.Title>
-          {nodeLibrary.map((category) => (
-            <div key={category.category} className="mb-3">
-              <Typography.Text type="secondary" className="text-xs">
-                {category.category}
-              </Typography.Text>
-              <div className="space-y-1 mt-1">
-                {category.items.map((item) => (
-                  <div
-                    key={item.type}
-                    className="px-3 py-2 cursor-move hover:bg-gray-100 flex items-center gap-2 transition-colors rounded"
-                    draggable
-                    onDragStart={(e) => onDragStart(e, item.type)}
-                  >
-                    <span>{item.icon}</span>
-                    <span className="text-sm">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <Divider className="my-3" />
-
+        <div className="p-2">
           {/* 任务信息 */}
-          <Typography.Title level={5} className="mb-4">
+          <Typography.Title level={5} className="mb-2">
             {isEdit ? '编辑任务' : '新建任务'}
           </Typography.Title>
           <Form form={form} layout="vertical">
@@ -430,6 +403,33 @@ function TaskEditorContent() {
               <Input.TextArea rows={2} placeholder="请输入任务描述" />
             </Form.Item>
           </Form>
+
+          <Divider className="my-2" />
+
+          {/* 节点库 */}
+          <Typography.Title level={5} className="mb-2">
+            节点库
+          </Typography.Title>
+          {nodeLibrary.map((category) => (
+            <div key={category.category} className="mb-2">
+              <Typography.Text type="secondary" className="text-xs">
+                {category.category}
+              </Typography.Text>
+              <div className="space-y-1 mt-1">
+                {category.items.map((item) => (
+                  <div
+                    key={item.type}
+                    className="px-2 py-1.5 cursor-move hover:bg-gray-100 flex items-center gap-2 transition-colors rounded"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, item.type)}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="text-sm">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
