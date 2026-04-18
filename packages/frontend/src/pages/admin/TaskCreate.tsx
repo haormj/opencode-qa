@@ -712,23 +712,37 @@ function TaskEditorContent() {
           </Button>
         ]}
       >
-        <div 
-          style={{ 
-            background: '#1e1e1e', 
-            color: '#d4d4d4', 
-            padding: 16, 
-            borderRadius: 8,
-            fontFamily: 'Monaco, Menlo, Consolas, monospace',
-            fontSize: 13,
-            lineHeight: 1.6,
-            maxHeight: '60vh',
-            overflow: 'auto'
-          }}
-        >
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {generatePreviewMarkdown(nodes, edges, serverUrl)}
-          </pre>
-        </div>
+        {(() => {
+          const markdown = generatePreviewMarkdown(nodes, edges, serverUrl)
+          const lines = markdown.split('\n')
+          const lineNumberWidth = String(lines.length).length
+          return (
+            <div 
+              style={{ 
+                background: '#1e1e1e', 
+                color: '#d4d4d4', 
+                padding: 16, 
+                borderRadius: 8,
+                fontFamily: 'Monaco, Menlo, Consolas, monospace',
+                fontSize: 13,
+                lineHeight: 1.6,
+                maxHeight: '60vh',
+                overflow: 'auto'
+              }}
+            >
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {lines.map((line, index) => (
+                  <div key={index}>
+                    <span style={{ color: '#858585', minWidth: `${lineNumberWidth + 2}ch`, display: 'inline-block', textAlign: 'right', marginRight: 16 }}>
+                      {index + 1}
+                    </span>
+                    <span>{line}</span>
+                  </div>
+                ))}
+              </pre>
+            </div>
+          )
+        })()}
       </Modal>
     </div>
   )
