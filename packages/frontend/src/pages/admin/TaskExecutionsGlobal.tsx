@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Tag, Space, message, Typography, Select, Button } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { ReloadOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getAllExecutions, getTasks, type TaskExecution, type Task } from '../../services/api'
 
@@ -160,11 +160,13 @@ function TaskExecutionsGlobal() {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 60,
       render: (_, record) => (
-        <Typography.Link onClick={() => handleViewDetail(record.id)}>
-          查看详情
-        </Typography.Link>
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewDetail(record.id)}
+        />
       )
     }
   ]
