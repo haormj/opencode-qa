@@ -353,6 +353,12 @@ function Tasks() {
       )
     },
     {
+      title: '创建人',
+      key: 'createdBy',
+      width: 100,
+      render: (_, record) => record.createdByUser?.displayName || record.createdByUser?.username || '-'
+    },
+    {
       title: '启用状态',
       dataIndex: 'isActive',
       key: 'isActive',

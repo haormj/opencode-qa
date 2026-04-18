@@ -19,10 +19,14 @@ export async function getTasks(options: { page: number; pageSize: number }) {
     createdBy: tasks.createdBy,
     createdAt: tasks.createdAt,
     updatedAt: tasks.updatedAt,
-    botName: bots.displayName
+    botName: bots.displayName,
+    createdById: users.id,
+    createdByUsername: users.username,
+    createdByDisplayName: users.displayName
   })
     .from(tasks)
     .leftJoin(bots, eq(tasks.botId, bots.id))
+    .leftJoin(users, eq(tasks.createdBy, users.id))
     .orderBy(desc(tasks.createdAt))
     .limit(pageSize)
     .offset(offset)
@@ -30,7 +34,28 @@ export async function getTasks(options: { page: number; pageSize: number }) {
   const countResult = await db.select({ count: sql<number>`count(*)` }).from(tasks).get()
   const count = countResult?.count || 0
   
-  return { list, total: count }
+  const formattedList = list.map(item => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    flowData: item.flowData,
+    triggerType: item.triggerType,
+    scheduleConfig: item.scheduleConfig,
+    webhookToken: item.webhookToken,
+    isActive: item.isActive,
+    botId: item.botId,
+    botName: item.botName,
+    createdBy: item.createdBy,
+    createdByUser: item.createdById ? {
+      id: item.createdById,
+      username: item.createdByUsername,
+      displayName: item.createdByDisplayName
+    } : null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  }))
+  
+  return { list: formattedList, total: count }
 }
 
 export async function getTaskById(id: string) {

@@ -1395,6 +1395,11 @@ export interface Task {
   isActive: boolean
   botId?: string | null
   botName?: string | null
+  createdByUser?: {
+    id: string
+    username: string
+    displayName: string
+  } | null
   createdAt: string
   updatedAt: string
 }
