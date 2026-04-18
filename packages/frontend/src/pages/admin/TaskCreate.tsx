@@ -6,6 +6,8 @@ import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
 import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
@@ -712,37 +714,27 @@ function TaskEditorContent() {
           </Button>
         ]}
       >
-        {(() => {
-          const markdown = generatePreviewMarkdown(nodes, edges, serverUrl)
-          const lines = markdown.split('\n')
-          const lineNumberWidth = String(lines.length).length
-          return (
-            <div 
-              style={{ 
-                background: '#1e1e1e', 
-                color: '#d4d4d4', 
-                padding: 16, 
-                borderRadius: 8,
-                fontFamily: 'Monaco, Menlo, Consolas, monospace',
-                fontSize: 13,
-                lineHeight: 1.6,
-                maxHeight: '60vh',
-                overflow: 'auto'
-              }}
-            >
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {lines.map((line, index) => (
-                  <div key={index}>
-                    <span style={{ color: '#858585', minWidth: `${lineNumberWidth + 2}ch`, display: 'inline-block', textAlign: 'right', marginRight: 16 }}>
-                      {index + 1}
-                    </span>
-                    <span>{line}</span>
-                  </div>
-                ))}
-              </pre>
-            </div>
-          )
-        })()}
+        <SyntaxHighlighter
+          language="markdown"
+          style={vscDarkPlus}
+          showLineNumbers
+          lineNumberStyle={{ color: '#858585', minWidth: '3em', paddingRight: '1em' }}
+          customStyle={{
+            margin: 0,
+            borderRadius: 8,
+            maxHeight: '60vh',
+            overflow: 'auto'
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: 'Monaco, Menlo, Consolas, monospace',
+              fontSize: 13,
+              lineHeight: 1.6
+            }
+          }}
+        >
+          {generatePreviewMarkdown(nodes, edges, serverUrl)}
+        </SyntaxHighlighter>
       </Modal>
     </div>
   )
