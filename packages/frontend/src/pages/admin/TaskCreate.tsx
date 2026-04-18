@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
-import type { Connection, Node, Edge, NodeTypes } from '@xyflow/react'
+import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Select, Button, message, Typography, Divider, InputNumber, Menu } from 'antd'
 import type { MenuProps } from 'antd'
@@ -12,12 +12,17 @@ import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
 import StepNode from '../../components/TaskFlow/nodes/StepNode'
 import OutputNode from '../../components/TaskFlow/nodes/OutputNode'
+import CustomEdge from '../../components/TaskFlow/edges/CustomEdge'
 
 const nodeTypes: NodeTypes = {
   skillInstall: SkillInstallNode,
   codeDownload: CodeDownloadNode,
   step: StepNode,
   output: OutputNode,
+}
+
+const edgeTypes: EdgeTypes = {
+  default: CustomEdge,
 }
 
 const nodeLibrary = [
@@ -563,6 +568,7 @@ function TaskEditorContent() {
               onNodeMouseLeave={onNodeMouseLeave}
               onPaneClick={onPaneClick}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               defaultEdgeOptions={{
                 type: 'default',
                 animated: false,
