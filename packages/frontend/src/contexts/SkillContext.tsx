@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getMyPublishedSkills, type Skill } from '../services/api'
+import { getSkills, type Skill } from '../services/api'
 
 interface SkillContextType {
   skills: Skill[]
@@ -13,7 +13,7 @@ export function SkillProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getMyPublishedSkills({ pageSize: 1000 })
+    getSkills({ pageSize: 1000 })
       .then(res => setSkills(res.items))
       .catch(() => {})
       .finally(() => setLoading(false))
