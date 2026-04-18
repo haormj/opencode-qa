@@ -14,7 +14,17 @@ interface DailySchedule {
   time: string
 }
 
-type ScheduleConfig = IntervalSchedule | DailySchedule
+interface WeeklySchedule {
+  days: number[]
+  time: string
+}
+
+interface MonthlySchedule {
+  day: number
+  time: string
+}
+
+type ScheduleConfig = IntervalSchedule | DailySchedule | WeeklySchedule | MonthlySchedule
 
 interface ScheduledTask {
   id: string
@@ -32,10 +42,24 @@ function getCronExpression(config: ScheduleConfig): string {
     } else {
       return `0 */${config.value} * * *`
     }
-  } else {
+  }
+  
+  if ('days' in config && 'time' in config) {
+    const [hours, minutes] = config.time.split(':').map(Number)
+    return `${minutes} ${hours} * * ${config.days.join(',')}`
+  }
+  
+  if ('day' in config && 'time' in config) {
+    const [hours, minutes] = config.time.split(':').map(Number)
+    return `${minutes} ${hours} ${config.day} * *`
+  }
+  
+  if ('time' in config) {
     const [hours, minutes] = config.time.split(':').map(Number)
     return `${minutes} ${hours} * * *`
   }
+  
+  return '0 8 * * *'
 }
 
 async function runTask(taskId: string): Promise<{ executionId: string; status: string; result?: string; error?: string } | null> {
@@ -183,4 +207,4 @@ export function shutdown(): void {
   logger.info('[TaskScheduler] Scheduler shutdown complete')
 }
 
-export type { ScheduleConfig, IntervalSchedule, DailySchedule }
+export type { ScheduleConfig, IntervalSchedule, DailySchedule, WeeklySchedule, MonthlySchedule }
