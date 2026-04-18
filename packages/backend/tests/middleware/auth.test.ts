@@ -86,7 +86,7 @@ describe('Auth Middleware', () => {
       await authMiddleware(req, res, next)
 
       expect(res.status).toHaveBeenCalledWith(401)
-      expect(res.json).toHaveBeenCalledWith({ error: 'Unauthorized' })
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid token' })
       expect(next).not.toHaveBeenCalled()
     })
 
@@ -96,7 +96,7 @@ describe('Auth Middleware', () => {
       await authMiddleware(req, res, next)
 
       expect(res.status).toHaveBeenCalledWith(401)
-      expect(res.json).toHaveBeenCalledWith({ error: 'Unauthorized' })
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid token' })
     })
 
     it('should return 401 if token not found in database', async () => {

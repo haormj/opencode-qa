@@ -1,4 +1,4 @@
-import { db, tasks, taskExecutions, taskExecutionMessages, bots } from '../db/index.js'
+import { db, tasks, taskExecutions, taskExecutionMessages, bots, users } from '../db/index.js'
 import { eq, desc, lt, sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 
@@ -132,12 +132,27 @@ export async function getAllExecutions(options: { page: number; pageSize: number
   const { page, pageSize, taskId } = options
   const offset = (page - 1) * pageSize
   
+  const selectFields = {
+    id: taskExecutions.id,
+    taskId: taskExecutions.taskId,
+    status: taskExecutions.status,
+    triggerType: taskExecutions.triggerType,
+    triggeredBy: taskExecutions.triggeredBy,
+    startedAt: taskExecutions.startedAt,
+    completedAt: taskExecutions.completedAt,
+    createdAt: taskExecutions.createdAt,
+    triggeredByUserId: users.id,
+    triggeredByUsername: users.username,
+    triggeredByDisplayName: users.displayName
+  }
+  
   let list
   let countResult
   
   if (taskId) {
-    list = await db.select()
+    list = await db.select(selectFields)
       .from(taskExecutions)
+      .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
       .where(eq(taskExecutions.taskId, taskId))
       .orderBy(desc(taskExecutions.createdAt))
       .limit(pageSize)
@@ -148,8 +163,9 @@ export async function getAllExecutions(options: { page: number; pageSize: number
       .where(eq(taskExecutions.taskId, taskId))
       .get()
   } else {
-    list = await db.select()
+    list = await db.select(selectFields)
       .from(taskExecutions)
+      .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
       .orderBy(desc(taskExecutions.createdAt))
       .limit(pageSize)
       .offset(offset)
@@ -161,12 +177,67 @@ export async function getAllExecutions(options: { page: number; pageSize: number
   
   const count = countResult?.count || 0
   
-  return { items: list, total: count }
+  const formattedList = list.map(item => ({
+    id: item.id,
+    taskId: item.taskId,
+    status: item.status,
+    triggerType: item.triggerType,
+    triggeredBy: item.triggeredBy,
+    triggeredByUser: item.triggeredByUserId ? {
+      id: item.triggeredByUserId,
+      username: item.triggeredByUsername,
+      displayName: item.triggeredByDisplayName
+    } : null,
+    startedAt: item.startedAt,
+    completedAt: item.completedAt,
+    createdAt: item.createdAt
+  }))
+  
+  return { items: formattedList, total: count }
 }
 
 export async function getExecutionById(id: string) {
-  const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, id)).get()
-  return execution
+  const result = await db.select({
+    id: taskExecutions.id,
+    taskId: taskExecutions.taskId,
+    status: taskExecutions.status,
+    triggerType: taskExecutions.triggerType,
+    triggeredBy: taskExecutions.triggeredBy,
+    startedAt: taskExecutions.startedAt,
+    completedAt: taskExecutions.completedAt,
+    result: taskExecutions.result,
+    logs: taskExecutions.logs,
+    botId: taskExecutions.botId,
+    createdAt: taskExecutions.createdAt,
+    triggeredByUserId: users.id,
+    triggeredByUsername: users.username,
+    triggeredByDisplayName: users.displayName
+  })
+    .from(taskExecutions)
+    .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
+    .where(eq(taskExecutions.id, id))
+    .get()
+  
+  if (!result) return null
+  
+  return {
+    id: result.id,
+    taskId: result.taskId,
+    status: result.status,
+    triggerType: result.triggerType,
+    triggeredBy: result.triggeredBy,
+    triggeredByUser: result.triggeredByUserId ? {
+      id: result.triggeredByUserId,
+      username: result.triggeredByUsername,
+      displayName: result.triggeredByDisplayName
+    } : null,
+    startedAt: result.startedAt,
+    completedAt: result.completedAt,
+    result: result.result,
+    logs: result.logs,
+    botId: result.botId,
+    createdAt: result.createdAt
+  }
 }
 
 export async function getExecutionMessages(executionId: string) {

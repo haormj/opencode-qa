@@ -8,20 +8,33 @@ import { getAllExecutions, getTasks, type TaskExecution, type Task } from '../..
 const statusColors: Record<string, string> = {
   pending: 'default',
   running: 'processing',
-  success: 'success',
+  completed: 'success',
   failed: 'error'
 }
 
 const statusLabels: Record<string, string> = {
   pending: '待执行',
   running: '执行中',
-  success: '成功',
+  completed: '已完成',
   failed: '失败'
 }
 
 const triggerTypeLabels: Record<string, string> = {
   manual: '手动',
-  schedule: '定时'
+  schedule: '定时',
+  webhook: 'Webhook'
+}
+
+function formatTriggerInfo(record: TaskExecution): string {
+  if (record.triggerType === 'manual' && record.triggeredByUser) {
+    return record.triggeredByUser.displayName || record.triggeredByUser.username
+  }
+  
+  if (record.triggerType === 'schedule' && record.startedAt) {
+    return new Date(record.startedAt).toLocaleString()
+  }
+  
+  return triggerTypeLabels[record.triggerType] || record.triggerType || '-'
 }
 
 function TaskExecutionsGlobal() {
@@ -102,6 +115,12 @@ function TaskExecutionsGlobal() {
       key: 'triggerType',
       width: 100,
       render: (type: string) => triggerTypeLabels[type] || type || '-'
+    },
+    {
+      title: '触发者',
+      key: 'triggeredBy',
+      width: 150,
+      render: (_, record) => formatTriggerInfo(record)
     },
     {
       title: '开始时间',

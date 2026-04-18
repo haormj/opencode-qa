@@ -218,7 +218,8 @@ function Tasks() {
   const handleExecute = async (id: string) => {
     try {
       const result = await executeTask(id)
-      message.success(`任务已开始执行，执行ID: ${result.executionId}`)
+      message.success(`任务已开始执行`)
+      navigate(`/admin/executions/${result.executionId}`)
     } catch (error) {
       if (error instanceof Error) {
         message.error(error.message)

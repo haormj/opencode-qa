@@ -1409,7 +1409,14 @@ export interface TaskListResponse {
 export interface TaskExecution {
   id: string
   taskId: string
-  status: 'pending' | 'running' | 'success' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  triggerType: 'manual' | 'schedule' | 'webhook'
+  triggeredBy: string | null
+  triggeredByUser: {
+    id: string
+    username: string
+    displayName: string
+  } | null
   startedAt?: string | null
   completedAt?: string | null
   createdAt: string

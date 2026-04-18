@@ -12,18 +12,20 @@ import {
   getExecutionById,
   getExecutionMessages
 } from '../services/task.js'
-import { executeTask } from '../services/task-executor.js'
+import { executeTask, executeTaskStream } from '../services/task-executor.js'
+import { convertFlowToMarkdown } from '../services/task-executor.js'
 import {
   init as initScheduler,
   registerTask,
   cancelTask,
   type ScheduleConfig
 } from '../services/task-scheduler.js'
-import { db, bots } from '../db/index.js'
+import { db, bots, taskExecutions, taskExecutionMessages } from '../db/index.js'
 import { eq } from 'drizzle-orm'
-import { encrypt } from '../services/encryption.js'
+import { encrypt, decrypt } from '../services/encryption.js'
 import logger from '../services/logger.js'
 import type { FlowData, Node } from '../types/task.js'
+import { randomUUID } from 'crypto'
 
 const router = Router()
 
@@ -292,7 +294,7 @@ router.post('/:id/execute', async (req, res) => {
       apiKey: bot.apiKey ?? undefined
     }
     
-    const result = await executeTask({
+    const executionId = await executeTaskStream({
       taskId: id,
       triggerType: 'manual',
       triggeredBy: userId,
@@ -300,7 +302,7 @@ router.post('/:id/execute', async (req, res) => {
       botId: bot.id
     })
     
-    res.json(result)
+    res.json({ executionId })
   } catch (error) {
     logger.error('Execute task error:', error)
     res.status(500).json({ error: 'Internal server error' })

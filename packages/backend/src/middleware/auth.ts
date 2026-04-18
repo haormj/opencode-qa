@@ -24,12 +24,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default-secret'
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
+    let token: string | undefined
     const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (req.query.token) {
+      token = req.query.token as string
+    }
+    
+    if (!token) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
-
-    const token = authHeader.substring(7)
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
 
     const tokenRecord = await db.select().from(userTokens).where(eq(userTokens.token, token)).get()
