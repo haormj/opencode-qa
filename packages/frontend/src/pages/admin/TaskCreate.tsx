@@ -6,11 +6,6 @@ import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal } from 'antd'
 import type { MenuProps } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
-import { Streamdown } from 'streamdown'
-import { code } from '@streamdown/code'
-import { mermaid } from '@streamdown/mermaid'
-import { math } from '@streamdown/math'
-import { cjk } from '@streamdown/cjk'
 import copy from 'copy-to-clipboard'
 import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
 
@@ -718,9 +713,9 @@ function TaskEditorContent() {
         ]}
       >
         <div className="max-h-[60vh] overflow-auto">
-          <Streamdown plugins={{ code, mermaid, math, cjk }}>
+          <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded">
             {generatePreviewMarkdown(nodes, edges, serverUrl)}
-          </Streamdown>
+          </pre>
         </div>
       </Modal>
     </div>
