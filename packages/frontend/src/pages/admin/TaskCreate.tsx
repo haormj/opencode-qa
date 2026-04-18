@@ -504,8 +504,6 @@ function TaskEditorContent() {
               minZoom={0.3}
               maxZoom={2}
               selectNodesOnDrag={false}
-              panOnDrag={[1]}
-              selectionOnDrag={false}
             >
             <MiniMap />
             <Background />
