@@ -11,6 +11,7 @@ interface ExecuteTaskOptions {
   triggerType: 'manual' | 'schedule' | 'webhook'
   triggeredBy?: string | null
   botConfig: BotConfig
+  botId?: string | null
   webhookPayload?: Record<string, unknown>
 }
 
@@ -22,7 +23,7 @@ interface ExecutionResult {
 }
 
 export async function executeTask(options: ExecuteTaskOptions): Promise<ExecutionResult> {
-  const { taskId, triggerType, triggeredBy, botConfig, webhookPayload } = options
+  const { taskId, triggerType, triggeredBy, botConfig, botId, webhookPayload } = options
   
   const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get()
   if (!task) {
@@ -39,6 +40,7 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
     startedAt: now,
     triggerType,
     triggeredBy: triggeredBy ?? null,
+    botId: botId ?? null,
     createdAt: now
   })
   

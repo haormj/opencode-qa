@@ -219,8 +219,12 @@ function Tasks() {
     try {
       const result = await executeTask(id)
       message.success(`任务已开始执行，执行ID: ${result.executionId}`)
-    } catch {
-      message.error('执行失败')
+    } catch (error) {
+      if (error instanceof Error) {
+        message.error(error.message)
+      } else {
+        message.error('执行失败')
+      }
     }
   }
 
@@ -334,6 +338,17 @@ function Tasks() {
         <Tag color={triggerTypeColors[type] || 'default'}>
           {triggerTypeLabels[type] || type}
         </Tag>
+      )
+    },
+    {
+      title: '执行机器人',
+      dataIndex: 'botName',
+      key: 'botName',
+      width: 120,
+      render: (botName: string | null) => botName ? (
+        <Tag color="blue">{botName}</Tag>
+      ) : (
+        <Tag color="default">未配置</Tag>
       )
     },
     {

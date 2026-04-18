@@ -1393,6 +1393,8 @@ export interface Task {
   scheduleConfig?: string | null
   webhookToken?: string | null
   isActive: boolean
+  botId?: string | null
+  botName?: string | null
   createdAt: string
   updatedAt: string
 }

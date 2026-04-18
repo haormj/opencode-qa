@@ -219,6 +219,7 @@ export const tasks = sqliteTable('tasks', {
   scheduleConfig: text('schedule_config'),
   webhookToken: text('webhook_token'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  botId: text('bot_id').references(() => bots.id, { onDelete: 'set null' }),
   createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
@@ -234,6 +235,7 @@ export const taskExecutions = sqliteTable('task_executions', {
   logs: text('logs'),
   triggerType: text('trigger_type').notNull(),
   triggeredBy: text('triggered_by').references(() => users.id, { onDelete: 'set null' }),
+  botId: text('bot_id').references(() => bots.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (table) => ({
   taskIdIdx: index('task_executions_task_id_idx').on(table.taskId)
@@ -278,7 +280,9 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 export const botsRelations = relations(bots, ({ many }) => ({
   messages: many(messages),
   assistants: many(assistants),
-  userAssistantBots: many(userAssistantBots)
+  userAssistantBots: many(userAssistantBots),
+  tasks: many(tasks),
+  taskExecutions: many(taskExecutions)
 }))
 
 export const assistantsRelations = relations(assistants, ({ one, many }) => ({
@@ -399,6 +403,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.createdBy],
     references: [users.id]
   }),
+  bot: one(bots, {
+    fields: [tasks.botId],
+    references: [bots.id]
+  }),
   executions: many(taskExecutions)
 }))
 
@@ -410,6 +418,10 @@ export const taskExecutionsRelations = relations(taskExecutions, ({ one, many })
   triggerUser: one(users, {
     fields: [taskExecutions.triggeredBy],
     references: [users.id]
+  }),
+  bot: one(bots, {
+    fields: [taskExecutions.botId],
+    references: [bots.id]
   }),
   messages: many(taskExecutionMessages)
 }))

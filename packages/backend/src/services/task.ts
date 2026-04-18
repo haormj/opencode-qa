@@ -1,4 +1,4 @@
-import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
+import { db, tasks, taskExecutions, taskExecutionMessages, bots } from '../db/index.js'
 import { eq, desc, lt, sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 
@@ -6,8 +6,23 @@ export async function getTasks(options: { page: number; pageSize: number }) {
   const { page, pageSize } = options
   const offset = (page - 1) * pageSize
   
-  const list = await db.select()
+  const list = await db.select({
+    id: tasks.id,
+    name: tasks.name,
+    description: tasks.description,
+    flowData: tasks.flowData,
+    triggerType: tasks.triggerType,
+    scheduleConfig: tasks.scheduleConfig,
+    webhookToken: tasks.webhookToken,
+    isActive: tasks.isActive,
+    botId: tasks.botId,
+    createdBy: tasks.createdBy,
+    createdAt: tasks.createdAt,
+    updatedAt: tasks.updatedAt,
+    botName: bots.displayName
+  })
     .from(tasks)
+    .leftJoin(bots, eq(tasks.botId, bots.id))
     .orderBy(desc(tasks.createdAt))
     .limit(pageSize)
     .offset(offset)
@@ -19,8 +34,26 @@ export async function getTasks(options: { page: number; pageSize: number }) {
 }
 
 export async function getTaskById(id: string) {
-  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get()
-  return task
+  const result = await db.select({
+    id: tasks.id,
+    name: tasks.name,
+    description: tasks.description,
+    flowData: tasks.flowData,
+    triggerType: tasks.triggerType,
+    scheduleConfig: tasks.scheduleConfig,
+    webhookToken: tasks.webhookToken,
+    isActive: tasks.isActive,
+    botId: tasks.botId,
+    createdBy: tasks.createdBy,
+    createdAt: tasks.createdAt,
+    updatedAt: tasks.updatedAt,
+    botName: bots.displayName
+  })
+    .from(tasks)
+    .leftJoin(bots, eq(tasks.botId, bots.id))
+    .where(eq(tasks.id, id))
+    .get()
+  return result
 }
 
 export async function createTask(data: {
@@ -30,6 +63,7 @@ export async function createTask(data: {
   triggerType: string
   scheduleConfig?: string
   webhookToken?: string
+  botId?: string
   createdBy: string
 }) {
   const now = new Date()
@@ -42,6 +76,7 @@ export async function createTask(data: {
     scheduleConfig: data.scheduleConfig ?? null,
     webhookToken: data.webhookToken ?? null,
     isActive: true,
+    botId: data.botId ?? null,
     createdBy: data.createdBy,
     createdAt: now,
     updatedAt: now
@@ -58,6 +93,7 @@ export async function updateTask(id: string, data: Partial<{
   scheduleConfig: string
   webhookToken: string
   isActive: boolean
+  botId: string
 }>) {
   const [task] = await db.update(tasks)
     .set({ ...data, updatedAt: new Date() })

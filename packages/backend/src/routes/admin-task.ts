@@ -81,7 +81,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, flowData, triggerType, scheduleConfig, webhookToken } = req.body
+    const { name, description, flowData, triggerType, scheduleConfig, webhookToken, botId } = req.body
     const userId = req.user!.id
     
     if (!name || !flowData) {
@@ -97,6 +97,7 @@ router.post('/', async (req, res) => {
       triggerType: triggerType || 'manual',
       scheduleConfig,
       webhookToken,
+      botId,
       createdBy: userId
     })
     
@@ -119,7 +120,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, flowData, triggerType, scheduleConfig, webhookToken, isActive } = req.body
+    const { name, description, flowData, triggerType, scheduleConfig, webhookToken, isActive, botId } = req.body
     
     const existingTask = await getTaskById(id)
     if (!existingTask) {
@@ -134,6 +135,7 @@ router.put('/:id', async (req, res) => {
     if (scheduleConfig !== undefined) updateData.scheduleConfig = scheduleConfig
     if (webhookToken !== undefined) updateData.webhookToken = webhookToken
     if (isActive !== undefined) updateData.isActive = isActive
+    if (botId !== undefined) updateData.botId = botId
     
     const task = await updateTask(id, updateData)
     
@@ -220,9 +222,17 @@ router.post('/:id/execute', async (req, res) => {
       return res.status(400).json({ error: 'Task is not active' })
     }
     
-    const bot = await db.select().from(bots).where(eq(bots.isActive, true)).get()
+    if (!task.botId) {
+      return res.status(400).json({ error: '任务未配置机器人，请先在任务设置中选择机器人' })
+    }
+    
+    const bot = await db.select().from(bots).where(eq(bots.id, task.botId)).get()
     if (!bot) {
-      return res.status(400).json({ error: 'No active bot configured' })
+      return res.status(400).json({ error: '配置的机器人不存在' })
+    }
+    
+    if (!bot.isActive) {
+      return res.status(400).json({ error: '配置的机器人未激活' })
     }
     
     const botConfig = {
@@ -237,7 +247,8 @@ router.post('/:id/execute', async (req, res) => {
       taskId: id,
       triggerType: 'manual',
       triggeredBy: userId,
-      botConfig
+      botConfig,
+      botId: bot.id
     })
     
     res.json(result)

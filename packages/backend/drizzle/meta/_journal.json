@@ -85,6 +85,13 @@
       "when": 1776500000000,
       "tag": "0011_add_trigger_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1776501515568,
+      "tag": "0012_slimy_centennial",
+      "breakpoints": true
     }
   ]
 }

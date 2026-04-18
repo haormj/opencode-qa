@@ -3,13 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, addEdge, Background, MiniMap, Panel, useReactFlow } from '@xyflow/react'
 import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal } from 'antd'
+import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal, Select } from 'antd'
 import type { MenuProps } from 'antd'
 import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
-import { getTask, createTask, updateTask, executeTask, type Task } from '../../services/api'
+import { getTask, createTask, updateTask, executeTask, getBots, type Task, type Bot } from '../../services/api'
 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
@@ -207,12 +207,25 @@ function TaskEditorContent() {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [previewModalVisible, setPreviewModalVisible] = useState(false)
   const [serverUrl, setServerUrl] = useState('')
+  const [bots, setBots] = useState<Bot[]>([])
+  const [botsLoading, setBotsLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => setServerUrl(data['install.serverUrl'] || window.location.origin))
       .catch(() => setServerUrl(window.location.origin))
+  }, [])
+
+  useEffect(() => {
+    setBotsLoading(true)
+    getBots()
+      .then(data => {
+        const activeBots = data.filter(bot => bot.isActive)
+        setBots(activeBots)
+      })
+      .catch(() => message.error('获取机器人列表失败'))
+      .finally(() => setBotsLoading(false))
   }, [])
   
   const [contextMenu, setContextMenu] = useState<{
@@ -385,7 +398,8 @@ function TaskEditorContent() {
         .then((task: Task) => {
           form.setFieldsValue({
             name: task.name,
-            description: task.description
+            description: task.description,
+            botId: task.botId
           })
           if (task.flowData) {
             try {
@@ -416,7 +430,8 @@ function TaskEditorContent() {
       const data = {
         name: values.name,
         description: values.description,
-        flowData
+        flowData,
+        botId: values.botId || null
       }
 
       if (isEdit && id) {
@@ -567,6 +582,23 @@ function TaskEditorContent() {
             </Form.Item>
             <Form.Item name="description" label="描述">
               <Input.TextArea rows={2} placeholder="请输入任务描述" />
+            </Form.Item>
+            <Form.Item 
+              name="botId" 
+              label="执行机器人"
+              tooltip="运行任务时使用的机器人"
+            >
+              <Select
+                placeholder="请选择机器人"
+                loading={botsLoading}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={bots.map(bot => ({
+                  value: bot.id,
+                  label: bot.displayName || bot.name
+                }))}
+              />
             </Form.Item>
           </Form>
         </div>
