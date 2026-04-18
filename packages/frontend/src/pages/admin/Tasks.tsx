@@ -317,7 +317,7 @@ function Tasks() {
       key: 'name',
       width: 200,
       render: (text, record) => (
-        <Typography.Link onClick={() => navigate(`/admin/tasks/${record.id}/edit`)}>
+        <Typography.Link onClick={() => navigate(`/admin/tasks/${record.id}`)}>
           {text}
         </Typography.Link>
       )
@@ -383,7 +383,7 @@ function Tasks() {
             <Button
               type="text"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/tasks/${record.id}/edit`)}
+              onClick={() => navigate(`/admin/tasks/${record.id}`)}
             />
           </Tooltip>
           <Tooltip title="触发配置">

@@ -540,7 +540,7 @@ function TaskEditorContent() {
               onClick={() => navigate('/admin/tasks')}
             />
             <span className="font-medium text-base">
-              {isEdit ? '编辑任务' : '新建任务'}
+              {isEdit ? '任务详情' : '新建任务'}
             </span>
           </div>
           <Divider className="my-2" />
