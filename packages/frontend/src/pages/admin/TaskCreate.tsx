@@ -116,14 +116,14 @@ function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
   return result
 }
 
-function generatePreviewMarkdown(nodes: Node[], edges: Edge[]): string {
+function generatePreviewMarkdown(nodes: Node[], edges: Edge[], serverUrl: string): string {
   const sortedNodes = topologicalSort(nodes, edges)
   const parts: string[] = ['# 任务执行计划\n']
 
   let stepIndex = 0
 
   for (const node of sortedNodes) {
-    const content = nodeToMarkdown(node, () => ++stepIndex)
+    const content = nodeToMarkdown(node, () => ++stepIndex, serverUrl)
     if (content) {
       parts.push(content)
     }
@@ -132,10 +132,10 @@ function generatePreviewMarkdown(nodes: Node[], edges: Edge[]): string {
   return parts.join('\n\n')
 }
 
-function nodeToMarkdown(node: Node, getNextStepIndex: () => number): string {
+function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string): string {
   switch (node.type) {
     case 'skillInstall':
-      return skillInstallToMarkdown(node.data)
+      return skillInstallToMarkdown(node.data, serverUrl)
     case 'codeDownload':
       return codeDownloadToMarkdown(node.data)
     case 'step':
@@ -147,12 +147,29 @@ function nodeToMarkdown(node: Node, getNextStepIndex: () => number): string {
   }
 }
 
-function skillInstallToMarkdown(data: Record<string, unknown>): string {
-  let content = `## 技能安装\n\n`
-  content += `- **技能名称**: ${data.skillName || '-'}\n`
-  content += `- **Slug**: ${data.skillSlug || '-'}\n`
-  content += `\n请安装此技能后再继续。\n`
-  return content
+function skillInstallToMarkdown(data: Record<string, unknown>, serverUrl: string): string {
+  const slug = data.skillSlug || ''
+  if (!slug) {
+    return `## 技能安装\n\n请选择要安装的技能。`
+  }
+  
+  return `## 技能安装
+
+安装技能 "${slug}"。
+
+根据当前平台执行以下命令：
+
+Linux/macOS:
+\`\`\`bash
+curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y ${slug}
+\`\`\`
+
+Windows PowerShell:
+\`\`\`powershell
+powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${slug}' -Force"
+\`\`\`
+
+安装完成后，列出安装的文件确认安装成功。安装成功后请告知用户重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。`
 }
 
 function codeDownloadToMarkdown(data: Record<string, unknown>): string {
@@ -192,6 +209,14 @@ function TaskEditorContent() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [previewModalVisible, setPreviewModalVisible] = useState(false)
+  const [serverUrl, setServerUrl] = useState('')
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => setServerUrl(data['install.serverUrl'] || window.location.origin))
+      .catch(() => setServerUrl(window.location.origin))
+  }, [])
   
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -681,7 +706,7 @@ function TaskEditorContent() {
             key="copy"
             icon={<CopyOutlined />}
             onClick={() => {
-              copy(generatePreviewMarkdown(nodes, edges))
+              copy(generatePreviewMarkdown(nodes, edges, serverUrl))
               message.success('已复制到剪贴板')
             }}
           >
@@ -694,7 +719,7 @@ function TaskEditorContent() {
       >
         <div className="max-h-[60vh] overflow-auto">
           <Streamdown plugins={{ code, mermaid, math, cjk }}>
-            {generatePreviewMarkdown(nodes, edges)}
+            {generatePreviewMarkdown(nodes, edges, serverUrl)}
           </Streamdown>
         </div>
       </Modal>
