@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Table, Card, Button, Tag, Space, message, Typography, Modal, List, Empty, Spin } from 'antd'
+import { Table, Card, Button, Tag, Space, message } from 'antd'
 import { ArrowLeftOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getTaskExecutions, getExecutionMessages, type TaskExecution, type ExecutionMessage } from '../../services/api'
+import { getTaskExecutions, type TaskExecution } from '../../services/api'
 
 const statusColors: Record<string, string> = {
   pending: 'default',
@@ -32,10 +32,6 @@ function TaskExecutions() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(15)
-  const [modalVisible, setModalVisible] = useState(false)
-  const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null)
-  const [messagesLoading, setMessagesLoading] = useState(false)
-  const [messages, setMessages] = useState<ExecutionMessage[]>([])
 
   const fetchExecutions = async () => {
     if (!id) return
@@ -56,20 +52,8 @@ function TaskExecutions() {
     fetchExecutions()
   }, [id, page, pageSize])
 
-  const handleViewMessages = async (execution: TaskExecution) => {
-    setSelectedExecution(execution)
-    setModalVisible(true)
-    setMessagesLoading(true)
-    setMessages([])
-
-    try {
-      const result = await getExecutionMessages(execution.id)
-      setMessages(result)
-    } catch {
-      message.error('加载执行消息失败')
-    } finally {
-      setMessagesLoading(false)
-    }
+  const handleViewDetail = (executionId: string) => {
+    navigate(`/admin/executions/${executionId}`)
   }
 
   const columns: ColumnsType<TaskExecution> = [
@@ -120,20 +104,13 @@ function TaskExecutions() {
         <Button
           type="link"
           icon={<EyeOutlined />}
-          onClick={() => handleViewMessages(record)}
+          onClick={() => handleViewDetail(record.id)}
         >
           查看详情
         </Button>
       )
     }
   ]
-
-  const roleColors: Record<string, string> = {
-    user: 'blue',
-    assistant: 'green',
-    system: 'orange'
-  }
-
   return (
     <Card
       title="执行记录"
@@ -165,63 +142,6 @@ function TaskExecutions() {
           }
         }}
       />
-
-      <Modal
-        title={`执行详情 - ${selectedExecution?.id || ''}`}
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        {selectedExecution && (
-          <div className="mb-4">
-            <Space>
-              <Tag color={statusColors[selectedExecution.status]}>
-                {statusLabels[selectedExecution.status]}
-              </Tag>
-              {selectedExecution.startedAt && (
-                <Typography.Text type="secondary">
-                  开始: {new Date(selectedExecution.startedAt).toLocaleString()}
-                </Typography.Text>
-              )}
-              {selectedExecution.completedAt && (
-                <Typography.Text type="secondary">
-                  完成: {new Date(selectedExecution.completedAt).toLocaleString()}
-                </Typography.Text>
-              )}
-            </Space>
-          </div>
-        )}
-
-        {messagesLoading ? (
-          <div className="flex justify-center py-8">
-            <Spin />
-          </div>
-        ) : messages.length > 0 ? (
-          <List
-            dataSource={messages}
-            renderItem={(item) => (
-              <List.Item>
-                <div className="w-full">
-                  <div className="mb-2">
-                    <Tag color={roleColors[item.role] || 'default'}>
-                      {item.role}
-                    </Tag>
-                    <Typography.Text type="secondary" className="ml-2 text-xs">
-                      {new Date(item.createdAt).toLocaleString()}
-                    </Typography.Text>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded whitespace-pre-wrap break-words">
-                    {item.content}
-                  </div>
-                </div>
-              </List.Item>
-            )}
-          />
-        ) : (
-          <Empty description="暂无执行消息" />
-        )}
-      </Modal>
     </Card>
   )
 }

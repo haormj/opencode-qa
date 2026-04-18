@@ -63,6 +63,55 @@ router.get('/', async (req, res) => {
   }
 })
 
+router.get('/executions', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1
+    const pageSize = parseInt(req.query.pageSize as string) || 10
+    const taskId = req.query.taskId as string | undefined
+    
+    const executions = await getAllExecutions({ page, pageSize, taskId })
+    
+    res.json(executions)
+  } catch (error) {
+    logger.error('Get all executions error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/executions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const execution = await getExecutionById(id)
+    
+    if (!execution) {
+      return res.status(404).json({ error: 'Execution not found' })
+    }
+    
+    res.json(execution)
+  } catch (error) {
+    logger.error('Get execution error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/executions/:id/messages', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const execution = await getExecutionById(id)
+    if (!execution) {
+      return res.status(404).json({ error: 'Execution not found' })
+    }
+    
+    const messages = await getExecutionMessages(id)
+    
+    res.json(messages)
+  } catch (error) {
+    logger.error('Get execution messages error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -258,21 +307,6 @@ router.post('/:id/execute', async (req, res) => {
   }
 })
 
-router.get('/executions', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1
-    const pageSize = parseInt(req.query.pageSize as string) || 10
-    const taskId = req.query.taskId as string | undefined
-    
-    const executions = await getAllExecutions({ page, pageSize, taskId })
-    
-    res.json(executions)
-  } catch (error) {
-    logger.error('Get all executions error:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
 router.get('/:id/executions', async (req, res) => {
   try {
     const { id } = req.params
@@ -289,40 +323,6 @@ router.get('/:id/executions', async (req, res) => {
     res.json(executions)
   } catch (error) {
     logger.error('Get task executions error:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
-router.get('/executions/:id', async (req, res) => {
-  try {
-    const { id } = req.params
-    const execution = await getExecutionById(id)
-    
-    if (!execution) {
-      return res.status(404).json({ error: 'Execution not found' })
-    }
-    
-    res.json(execution)
-  } catch (error) {
-    logger.error('Get execution error:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
-router.get('/executions/:id/messages', async (req, res) => {
-  try {
-    const { id } = req.params
-    
-    const execution = await getExecutionById(id)
-    if (!execution) {
-      return res.status(404).json({ error: 'Execution not found' })
-    }
-    
-    const messages = await getExecutionMessages(id)
-    
-    res.json(messages)
-  } catch (error) {
-    logger.error('Get execution messages error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

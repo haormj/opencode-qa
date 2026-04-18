@@ -461,8 +461,8 @@ function TaskEditorContent() {
       try {
         await handleSave()
         const result = await executeTask(id)
-        message.success(`任务已开始执行，执行ID: ${result.executionId}`)
-        navigate(`/admin/tasks/${id}/executions`)
+        message.success(`任务已开始执行`)
+        navigate(`/admin/executions/${result.executionId}`)
       } catch {
         // Error already handled
       }

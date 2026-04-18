@@ -1502,13 +1502,13 @@ export async function getAllExecutions(params: { page: number; pageSize: number;
   if (params.taskId) {
     searchParams.set('taskId', params.taskId)
   }
-  return request(`${API_BASE}/admin/executions?${searchParams.toString()}`)
+  return request(`${API_BASE}/admin/tasks/executions?${searchParams.toString()}`)
 }
 
 export async function getExecution(id: string): Promise<TaskExecution> {
-  return request(`${API_BASE}/admin/executions/${id}`)
+  return request(`${API_BASE}/admin/tasks/executions/${id}`)
 }
 
 export async function getExecutionMessages(executionId: string): Promise<ExecutionMessage[]> {
-  return request(`${API_BASE}/admin/executions/${executionId}/messages`)
+  return request(`${API_BASE}/admin/tasks/executions/${executionId}/messages`)
 }
