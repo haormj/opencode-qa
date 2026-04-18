@@ -4,7 +4,8 @@
 param(
     [Parameter(Mandatory=$true, Position=0)]
     [string]$Slug,
-    [switch]$Force
+    [switch]$Force,
+    [string]$Source
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +39,9 @@ New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
 try {
     $ZipFile = Join-Path $TempDir "$Slug.zip"
     $DownloadUrl = "$ServerUrl/api/public/skills/$Slug/download"
+    if ($Source) {
+        $DownloadUrl = "$DownloadUrl`?source=$Source"
+    }
     
     Write-Host "Downloading: $DownloadUrl"
     

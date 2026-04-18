@@ -158,12 +158,12 @@ function skillInstallToMarkdown(data: Record<string, unknown>, serverUrl: string
 
 Linux/macOS:
 \`\`\`bash
-curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y ${slug}
+curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y -s task ${slug}
 \`\`\`
 
 Windows PowerShell:
 \`\`\`powershell
-powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${slug}' -Force"
+powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${slug}' -Force -Source 'task'"
 \`\`\`
 
 安装完成后，列出安装的文件确认安装成功。安装成功后请告知用户重新打开 OpenCode，可通过 /skills 命令查看技能是否安装成功。`

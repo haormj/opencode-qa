@@ -7,11 +7,13 @@ set -e
 SERVER_URL="{{SERVER_URL}}"
 
 FORCE_YES=false
+SOURCE=""
 
-while getopts "y" opt; do
+while getopts "ys:" opt; do
   case $opt in
     y) FORCE_YES=true ;;
-    *) echo "Usage: $0 [-y] <skill-slug>"; exit 1 ;;
+    s) SOURCE="$OPTARG" ;;
+    *) echo "Usage: $0 [-y] [-s source] <skill-slug>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
@@ -65,6 +67,9 @@ trap "rm -rf $TEMP_DIR" EXIT
 
 ZIP_FILE="$TEMP_DIR/$SLUG.zip"
 DOWNLOAD_URL="$SERVER_URL/api/public/skills/$SLUG/download"
+if [ -n "$SOURCE" ]; then
+    DOWNLOAD_URL="$DOWNLOAD_URL?source=$SOURCE"
+fi
 
 echo "Downloading: $DOWNLOAD_URL"
 
