@@ -281,14 +281,14 @@ body {
 .react-flow__handle-left::after {
   width: 2px;
   height: 8px;
-  left: 6px;
+  left: 7px;
   top: 4px;
 }
 
 .react-flow__handle-right::after {
   width: 2px;
   height: 8px;
-  right: 9px;
+  right: 7px;
   left: auto;
   top: 4px;
 }

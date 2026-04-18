@@ -69,8 +69,10 @@ function OutputNode({ data, selected }: OutputNodeProps) {
         borderRadius: 8,
         overflow: 'visible',
         boxShadow: selected 
-          ? 'inset 0 0 0 2px #8B5CF6, 0 4px 12px rgba(0,0,0,0.1)'
+          ? '0 4px 12px rgba(0,0,0,0.1)'
           : '0 2px 8px rgba(0,0,0,0.08)',
+        outline: selected ? '2px solid #8B5CF6' : 'none',
+        outlineOffset: -2,
         backgroundColor: '#fff',
         width: 240,
       }}
