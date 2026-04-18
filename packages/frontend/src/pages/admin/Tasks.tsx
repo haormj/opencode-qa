@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input, Select, InputNumber } from 'antd'
+import { Table, Card, Button, Space, Tag, Switch, Popconfirm, Tooltip, message, Typography, Modal, Form, Input, Select, InputNumber, Checkbox, Divider } from 'antd'
 import { PlusOutlined, EditOutlined, PlayCircleOutlined, HistoryOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { getTasks, createTask, updateTask, deleteTask, toggleTask, executeTask, type Task } from '../../services/api'
@@ -18,11 +18,88 @@ const scheduleTypeLabels: Record<string, string> = {
   interval: '间隔'
 }
 
-const scheduleTypeOptions = [
-  { value: 'none', label: '手动执行' },
-  { value: 'cron', label: '定时任务 (Cron)' },
-  { value: 'interval', label: '间隔执行' }
+const cycleOptions = [
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周' },
+  { value: 'monthly', label: '每月' }
 ]
+
+const weekDayOptions = [
+  { value: 1, label: '周一' },
+  { value: 2, label: '周二' },
+  { value: 3, label: '周三' },
+  { value: 4, label: '周四' },
+  { value: 5, label: '周五' },
+  { value: 6, label: '周六' },
+  { value: 0, label: '周日' }
+]
+
+function generateCron(cycle: string, hour: number, minute: number, weekDays: number[], monthDay: number): string {
+  switch (cycle) {
+    case 'daily':
+      return `${minute} ${hour} * * *`
+    case 'weekly':
+      return `${minute} ${hour} * * ${weekDays.join(',')}`
+    case 'monthly':
+      return `${minute} ${hour} ${monthDay} * *`
+    default:
+      return `${minute} ${hour} * * *`
+  }
+}
+
+function generatePreview(cycle: string, hour: number, minute: number, weekDays: number[], monthDay: number): string {
+  const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+  switch (cycle) {
+    case 'daily':
+      return `每天 ${timeStr} 执行`
+    case 'weekly':
+      const days = weekDays.map(d => weekDayOptions.find(o => o.value === d)?.label).join('、')
+      return `每${days} ${timeStr} 执行`
+    case 'monthly':
+      return `每月 ${monthDay} 号 ${timeStr} 执行`
+    default:
+      return `每天 ${timeStr} 执行`
+  }
+}
+
+function parseCron(cron: string): { cycle: string; hour: number; minute: number; weekDays: number[]; monthDay: number } | null {
+  if (!cron) return null
+  const parts = cron.split(' ')
+  if (parts.length !== 5) return null
+  
+  const [minute, hour, dayOfMonth, , dayOfWeek] = parts
+  
+  const minuteNum = parseInt(minute) || 0
+  const hourNum = parseInt(hour) || 8
+  
+  if (dayOfMonth !== '*') {
+    return {
+      cycle: 'monthly',
+      hour: hourNum,
+      minute: minuteNum,
+      weekDays: [1],
+      monthDay: parseInt(dayOfMonth) || 1
+    }
+  }
+  
+  if (dayOfWeek !== '*') {
+    return {
+      cycle: 'weekly',
+      hour: hourNum,
+      minute: minuteNum,
+      weekDays: dayOfWeek.split(',').map(Number),
+      monthDay: 1
+    }
+  }
+  
+  return {
+    cycle: 'daily',
+    hour: hourNum,
+    minute: minuteNum,
+    weekDays: [1],
+    monthDay: 1
+  }
+}
 
 function Tasks() {
   const navigate = useNavigate()
@@ -35,10 +112,15 @@ function Tasks() {
   const [createForm] = Form.useForm()
   const [creating, setCreating] = useState(false)
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false)
-  const [scheduleForm] = Form.useForm()
   const [scheduleTask, setScheduleTask] = useState<Task | null>(null)
   const [scheduleType, setScheduleType] = useState<string>('none')
   const [savingSchedule, setSavingSchedule] = useState(false)
+  const [scheduleCycle, setScheduleCycle] = useState<string>('daily')
+  const [scheduleHour, setScheduleHour] = useState(8)
+  const [scheduleMinute, setScheduleMinute] = useState(0)
+  const [scheduleWeekDays, setScheduleWeekDays] = useState<number[]>([1])
+  const [scheduleMonthDay, setScheduleMonthDay] = useState(1)
+  const [scheduleIntervalMinutes, setScheduleIntervalMinutes] = useState(60)
 
   const fetchTasks = async () => {
     setLoading(true)
@@ -112,22 +194,42 @@ function Tasks() {
 
   const handleOpenSchedule = (task: Task) => {
     setScheduleTask(task)
-    setScheduleType(task.scheduleType || 'none')
-    scheduleForm.setFieldsValue({
-      scheduleType: task.scheduleType || 'none',
-      scheduleConfig: task.scheduleConfig
-    })
+    const scheduleTypeValue = task.scheduleType || 'none'
+    setScheduleType(scheduleTypeValue)
+    
+    if (scheduleTypeValue === 'cron' && task.scheduleConfig) {
+      const parsed = parseCron(task.scheduleConfig)
+      if (parsed) {
+        setScheduleCycle(parsed.cycle)
+        setScheduleHour(parsed.hour)
+        setScheduleMinute(parsed.minute)
+        setScheduleWeekDays(parsed.weekDays)
+        setScheduleMonthDay(parsed.monthDay)
+      }
+    }
+    
+    if (scheduleTypeValue === 'interval' && task.scheduleConfig) {
+      setScheduleIntervalMinutes(parseInt(task.scheduleConfig) || 60)
+    }
+    
     setScheduleModalVisible(true)
   }
 
   const handleSaveSchedule = async () => {
     if (!scheduleTask) return
     try {
-      const values = await scheduleForm.validateFields()
       setSavingSchedule(true)
+      
+      let scheduleConfigValue: string | null = null
+      if (scheduleType === 'cron') {
+        scheduleConfigValue = generateCron(scheduleCycle, scheduleHour, scheduleMinute, scheduleWeekDays, scheduleMonthDay)
+      } else if (scheduleType === 'interval') {
+        scheduleConfigValue = scheduleIntervalMinutes.toString()
+      }
+      
       await updateTask(scheduleTask.id, {
-        scheduleType: values.scheduleType,
-        scheduleConfig: values.scheduleType !== 'none' ? values.scheduleConfig : null
+        scheduleType: scheduleType,
+        scheduleConfig: scheduleConfigValue ?? undefined
       })
       message.success('调度配置保存成功')
       setScheduleModalVisible(false)
@@ -312,37 +414,126 @@ function Tasks() {
         okText="保存"
         cancelText="取消"
       >
-        <Form form={scheduleForm} layout="vertical">
-          <Form.Item
-            name="scheduleType"
-            label="调度类型"
-            rules={[{ required: true }]}
-          >
+        <div className="space-y-4">
+          <div>
+            <Typography.Text type="secondary">调度类型</Typography.Text>
             <Select
-              options={scheduleTypeOptions}
+              className="w-full mt-1"
+              value={scheduleType}
               onChange={(value) => setScheduleType(value)}
+              options={[
+                { value: 'none', label: '手动执行' },
+                { value: 'cron', label: '定时任务' },
+                { value: 'interval', label: '间隔执行' }
+              ]}
             />
-          </Form.Item>
+          </div>
+
           {scheduleType === 'cron' && (
-            <Form.Item
-              name="scheduleConfig"
-              label="Cron 表达式"
-              rules={[{ required: true, message: '请输入 Cron 表达式' }]}
-              extra="例如: 0 0 * * * (每天凌晨执行)"
-            >
-              <Input placeholder="0 0 * * *" />
-            </Form.Item>
+            <>
+              <div>
+                <Typography.Text type="secondary">执行周期</Typography.Text>
+                <Select
+                  className="w-full mt-1"
+                  value={scheduleCycle}
+                  onChange={(value) => setScheduleCycle(value)}
+                  options={cycleOptions}
+                />
+              </div>
+
+              <div>
+                <Typography.Text type="secondary">执行时间</Typography.Text>
+                <div className="flex items-center gap-2 mt-1">
+                  <InputNumber
+                    min={0}
+                    max={23}
+                    value={scheduleHour}
+                    onChange={(v) => setScheduleHour(v ?? 8)}
+                    className="w-20"
+                  />
+                  <span>时</span>
+                  <InputNumber
+                    min={0}
+                    max={59}
+                    value={scheduleMinute}
+                    onChange={(v) => setScheduleMinute(v ?? 0)}
+                    className="w-20"
+                  />
+                  <span>分</span>
+                </div>
+              </div>
+
+              {scheduleCycle === 'weekly' && (
+                <div>
+                  <Typography.Text type="secondary">执行日期</Typography.Text>
+                  <Checkbox.Group
+                    className="mt-2"
+                    value={scheduleWeekDays}
+                    onChange={(values) => setScheduleWeekDays(values as number[])}
+                  >
+                    <Space wrap>
+                      {weekDayOptions.map((item) => (
+                        <Checkbox key={item.value} value={item.value}>
+                          {item.label}
+                        </Checkbox>
+                      ))}
+                    </Space>
+                  </Checkbox.Group>
+                </div>
+              )}
+
+              {scheduleCycle === 'monthly' && (
+                <div>
+                  <Typography.Text type="secondary">执行日期</Typography.Text>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span>每月</span>
+                    <InputNumber
+                      min={1}
+                      max={31}
+                      value={scheduleMonthDay}
+                      onChange={(v) => setScheduleMonthDay(v ?? 1)}
+                      className="w-20"
+                    />
+                    <span>号</span>
+                  </div>
+                </div>
+              )}
+
+              <Divider className="my-3" />
+
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex justify-between">
+                  <Typography.Text type="secondary">预览</Typography.Text>
+                  <Typography.Text>
+                    {generatePreview(scheduleCycle, scheduleHour, scheduleMinute, scheduleWeekDays, scheduleMonthDay)}
+                  </Typography.Text>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <Typography.Text type="secondary">Cron</Typography.Text>
+                  <Typography.Text code>
+                    {generateCron(scheduleCycle, scheduleHour, scheduleMinute, scheduleWeekDays, scheduleMonthDay)}
+                  </Typography.Text>
+                </div>
+              </div>
+            </>
           )}
+
           {scheduleType === 'interval' && (
-            <Form.Item
-              name="scheduleConfig"
-              label="间隔时间(分钟)"
-              rules={[{ required: true, message: '请输入间隔时间' }]}
-            >
-              <InputNumber min={1} className="w-full" placeholder="60" />
-            </Form.Item>
+            <div>
+              <Typography.Text type="secondary">间隔时间</Typography.Text>
+              <div className="flex items-center gap-2 mt-1">
+                <span>每隔</span>
+                <InputNumber
+                  min={1}
+                  value={scheduleIntervalMinutes}
+                  onChange={(v) => setScheduleIntervalMinutes(v ?? 60)}
+                  className="w-24"
+                />
+                <span>分钟执行一次</span>
+              </div>
+            </div>
           )}
-        </Form>
+        </div>
       </Modal>
     </>
   )
