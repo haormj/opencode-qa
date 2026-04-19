@@ -140,14 +140,12 @@ class ExecutionEventManager {
     }
 
     const url = `${API_BASE}/executions/${executionId}/events?token=${encodeURIComponent(token)}`
-    console.log('[ExecutionEventManager] Creating connection to:', url)
 
     try {
       const eventSource = new EventSource(url)
       this.connections.set(executionId, eventSource)
 
       eventSource.addEventListener('connected', (event) => {
-        console.log('[ExecutionEventManager] Connected:', event.data)
         try {
           const data = JSON.parse(event.data)
           this.updateState(executionId, { connected: true, isTrigger: data.isTrigger })
@@ -158,7 +156,6 @@ class ExecutionEventManager {
       })
 
       eventSource.addEventListener('message', (event) => {
-        console.log('[ExecutionEventManager] Message:', event.data)
         try {
           const data = JSON.parse(event.data)
           this.addMessage(executionId, data)
@@ -257,9 +254,7 @@ class ExecutionEventManager {
         this.notifyCallbacks(executionId, 'onError', error)
       }
 
-      eventSource.onopen = () => {
-        console.log('[ExecutionEventManager] Connection opened')
-      }
+      eventSource.onopen = () => {}
     } catch (error) {
       console.error('[ExecutionEventManager] Failed to create connection:', error)
     }
@@ -270,7 +265,6 @@ class ExecutionEventManager {
     if (eventSource) {
       eventSource.close()
       this.connections.delete(executionId)
-      console.log('[ExecutionEventManager] Connection closed for:', executionId)
     }
   }
 

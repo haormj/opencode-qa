@@ -73,7 +73,6 @@ function TaskExecutionDetail() {
   useExecutionEvents({
     executionId: id || null,
     onConnected: (data) => {
-      console.log('[ExecutionSSE] Connected:', data)
       setConnected(true)
       isTriggerRef.current = data.isTrigger
       streamingMessageIdRef.current = null
