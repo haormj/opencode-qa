@@ -32,8 +32,8 @@ function formatTriggerInfo(record: TaskExecution): string {
     return record.triggeredByUser.displayName || record.triggeredByUser.username
   }
   
-  if (record.triggerType === 'schedule' && record.startedAt) {
-    return new Date(record.startedAt).toLocaleString()
+  if (record.triggerType === 'schedule') {
+    return '-'
   }
   
   return triggerTypeLabels[record.triggerType] || record.triggerType || '-'
@@ -161,13 +161,6 @@ function TaskExecutionsGlobal() {
       key: 'completedAt',
       width: 180,
       render: (date: string | null) => date ? new Date(date).toLocaleString() : '-'
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 180,
-      render: (date: string) => new Date(date).toLocaleString()
     },
     {
       title: '操作',
