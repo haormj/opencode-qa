@@ -1,9 +1,10 @@
 import { join } from 'path'
+import { writeFile, mkdir } from 'fs/promises'
 import { db, systemSettings, skills } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { decrypt } from './encryption.js'
 import { normalizeServerUrl } from '../utils/url.js'
-import type { FlowData, Node, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData } from '../types/task.js'
+import type { FlowData, Node, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, CloneScriptInfo } from '../types/task.js'
 
 async function getServerUrl(): Promise<string> {
   const setting = await db.select().from(systemSettings)
@@ -61,6 +62,37 @@ function topologicalSort(nodes: Node[], edges: { source: string; target: string 
   return result
 }
 
+function extractRepoName(repoUrl: string): string {
+  if (!repoUrl) return 'repo'
+  
+  // https://github.com/org/repo-name.git → repo-name
+  // https://github.com/org/repo-name → repo-name
+  // git@github.com:org/repo-name.git → repo-name
+  const match = repoUrl.match(/\/([^\/]+?)(\.git)?$/)
+  return match ? match[1] : 'repo'
+}
+
+function injectCredentials(repoUrl: string, username: string, password: string): string {
+  // SSH 格式: git@github.com:org/repo.git → 转换为 HTTPS
+  if (repoUrl.startsWith('git@')) {
+    const match = repoUrl.match(/^git@([^:]+):(.+)$/)
+    if (match) {
+      const [, host, path] = match
+      repoUrl = `https://${host}/${path}`
+    }
+  }
+  
+  // HTTPS 格式注入凭据
+  try {
+    const url = new URL(repoUrl)
+    url.username = username
+    url.password = password
+    return url.toString()
+  } catch {
+    return repoUrl
+  }
+}
+
 function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, stepNumber: number, workspacePath?: string): string {
   const slug = data.skillSlug || ''
   if (!slug) {
@@ -110,36 +142,34 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
 安装完成后，列出安装的文件确认安装成功。`
 }
 
-function codeDownloadToMarkdown(data: CodeDownloadNodeData, stepNumber: number, workspacePath?: string): string {
-  let content = `## 步骤 ${stepNumber}: 代码下载\n\n`
-  
-  let targetPath = data.targetPath || '/tmp/repo'
-  if (workspacePath && data.targetPath) {
-    if (!data.targetPath.startsWith('/') && !data.targetPath.match(/^[A-Z]:\\/i)) {
-      targetPath = `${workspacePath}/${data.targetPath}`
-    }
-  } else if (workspacePath) {
-    targetPath = `${workspacePath}/repo`
+function codeDownloadToMarkdown(data: CodeDownloadNodeData, stepNumber: number, scriptInfo?: CloneScriptInfo): string {
+  if (!scriptInfo) {
+    return `## 步骤 ${stepNumber}: 代码下载
+
+- **仓库地址**: ${data.repoUrl || '-'}
+- **分支**: ${data.branch || 'main'}
+
+请将仓库克隆到合适的位置。`
   }
   
-  content += `- **仓库地址**: ${data.repoUrl || '-'}\n`
-  content += `- **分支**: ${data.branch || 'main'}\n`
-  content += `- **目标路径**: ${targetPath}\n`
-  
-  if (data.username) {
-    let password = data.password
-    if (password) {
-      try {
-        password = decrypt(password)
-      } catch {
-        // 解密失败，使用原始值
-      }
-    }
-    content += `- **凭证**: 用户名: ${data.username}${password ? ', 密码: ***' : ''}\n`
-  }
-  
-  content += `\n请将仓库克隆到指定路径。\n`
-  return content
+  return `## 步骤 ${stepNumber}: 代码下载
+
+- **仓库地址**: ${data.repoUrl}
+- **分支**: ${data.branch || 'main'}
+- **目标路径**: ${scriptInfo.targetPath}
+
+根据当前平台执行克隆脚本：
+
+Linux/macOS:
+\`\`\`bash
+bash ${scriptInfo.shPath}
+\`\`\`
+
+Windows PowerShell:
+\`\`\`powershell
+& ${scriptInfo.ps1Path}
+\`\`\`
+`
 }
 
 function stepToMarkdown(data: StepNodeData, stepNumber: number): string {
@@ -148,12 +178,22 @@ function stepToMarkdown(data: StepNodeData, stepNumber: number): string {
   return content
 }
 
-async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string, workspacePath?: string): Promise<string> {
+async function nodeToMarkdown(
+  node: Node, 
+  getNextStepIndex: () => number, 
+  serverUrl: string, 
+  workspacePath?: string,
+  scriptsMap?: Map<string, CloneScriptInfo>
+): Promise<string> {
   switch (node.type) {
     case 'skillInstall':
       return skillInstallToMarkdown(node.data as SkillInstallNodeData, serverUrl, getNextStepIndex(), workspacePath)
     case 'codeDownload':
-      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData, getNextStepIndex(), workspacePath)
+      return codeDownloadToMarkdown(
+        node.data as CodeDownloadNodeData, 
+        getNextStepIndex(), 
+        scriptsMap?.get(node.id)
+      )
     case 'step':
       return stepToMarkdown(node.data as StepNodeData, getNextStepIndex())
     case 'output':
@@ -163,14 +203,81 @@ async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, server
   }
 }
 
-export async function generateTaskMarkdown(flowData: FlowData, workspacePath?: string): Promise<string> {
+export async function prepareWorkspaceScripts(
+  flowData: FlowData, 
+  workspacePath: string
+): Promise<Map<string, CloneScriptInfo>> {
+  const scriptsMap = new Map<string, CloneScriptInfo>()
+  const sortedNodes = topologicalSort(flowData.nodes, flowData.edges)
+  
+  const scriptsDir = join(workspacePath, 'scripts')
+  await mkdir(scriptsDir, { recursive: true })
+  
+  const repoNameCount = new Map<string, number>()
+  
+  for (const node of sortedNodes) {
+    if (node.type !== 'codeDownload') continue
+    
+    const data = node.data as CodeDownloadNodeData
+    if (!data.repoUrl) continue
+    
+    let repoName = extractRepoName(data.repoUrl)
+    
+    // 处理重名
+    const count = repoNameCount.get(repoName) || 0
+    repoNameCount.set(repoName, count + 1)
+    if (count > 0) {
+      repoName = `${repoName}-${count + 1}`
+    }
+    
+    const targetPath = `./repos/${repoName}`
+    const shPath = `./scripts/clone-${repoName}.sh`
+    const ps1Path = `./scripts/clone-${repoName}.ps1`
+    
+    // 构建带认证的 URL
+    let authUrl = data.repoUrl
+    if (data.username && data.password) {
+      try {
+        const decryptedPassword = decrypt(data.password)
+        authUrl = injectCredentials(data.repoUrl, data.username, decryptedPassword)
+      } catch {
+        // 解密失败，使用原 URL
+      }
+    }
+    
+    const branch = data.branch || 'main'
+    
+    // 生成 .sh 脚本
+    const shContent = `#!/bin/bash
+set -e
+git clone -b ${branch} "${authUrl}" "${targetPath}"
+`
+    await writeFile(join(workspacePath, `scripts/clone-${repoName}.sh`), shContent)
+    
+    // 生成 .ps1 脚本
+    const ps1Content = `$ErrorActionPreference = "Stop"
+git clone -b ${branch} "${authUrl}" "${targetPath}"
+`
+    await writeFile(join(workspacePath, `scripts/clone-${repoName}.ps1`), ps1Content)
+    
+    scriptsMap.set(node.id, { repoName, shPath, ps1Path, targetPath })
+  }
+  
+  return scriptsMap
+}
+
+export async function generateTaskMarkdown(
+  flowData: FlowData, 
+  workspacePath?: string,
+  scriptsMap?: Map<string, CloneScriptInfo>
+): Promise<string> {
   const serverUrl = await getServerUrl()
   const sortedNodes = topologicalSort(flowData.nodes, flowData.edges)
   
   let stepIndex = 0
   const steps: string[] = []
   for (const node of sortedNodes) {
-    const content = await nodeToMarkdown(node, () => ++stepIndex, serverUrl, workspacePath)
+    const content = await nodeToMarkdown(node, () => ++stepIndex, serverUrl, workspacePath, scriptsMap)
     if (content) {
       steps.push(content)
     }

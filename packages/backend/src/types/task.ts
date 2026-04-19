@@ -43,3 +43,10 @@ export interface OutputNodeData {
   type: 'email' | 'file' | 'webhook';
   config: Record<string, string>;
 }
+
+export interface CloneScriptInfo {
+  repoName: string
+  shPath: string
+  ps1Path: string
+  targetPath: string
+}

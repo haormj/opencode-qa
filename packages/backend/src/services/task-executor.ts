@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
-import { generateTaskMarkdown } from './task-markdown.js'
+import { generateTaskMarkdown, prepareWorkspaceScripts } from './task-markdown.js'
 import { createWorkspace, getWorkspacePath } from './workspace-manager.js'
 import logger from './logger.js'
 import type { FlowData, Node, NodeType, NodeData, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, OutputNodeData } from '../types/task.js'
@@ -51,7 +51,8 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
   
   try {
     const flowData: FlowData = JSON.parse(task.flowData)
-    const markdown = await generateTaskMarkdown(flowData, workspacePath)
+    const scriptsMap = await prepareWorkspaceScripts(flowData, workspacePath)
+    const markdown = await generateTaskMarkdown(flowData, workspacePath, scriptsMap)
     
     await saveMessage(executionId, 'user', markdown)
     
@@ -120,7 +121,8 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   ;(async () => {
     try {
       const flowData: FlowData = JSON.parse(task.flowData)
-      const markdown = await generateTaskMarkdown(flowData, workspacePath)
+      const scriptsMap = await prepareWorkspaceScripts(flowData, workspacePath)
+      const markdown = await generateTaskMarkdown(flowData, workspacePath, scriptsMap)
       
       const userMessageId = randomUUID()
       const userMessageTime = new Date()
