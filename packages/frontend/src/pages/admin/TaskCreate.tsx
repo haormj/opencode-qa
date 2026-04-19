@@ -38,7 +38,7 @@ function getDefaultNodeData(type: string): Record<string, unknown> {
     case 'skillInstall':
       return { skillId: '', skillName: '', skillSlug: '' }
     case 'codeDownload':
-      return { repoUrl: '', username: '', password: '', branch: 'main', targetPath: '/tmp/repo' }
+      return { repoUrl: '', username: '', password: '', branch: 'main' }
     case 'step':
       return { instruction: '' }
     default:

@@ -31,7 +31,6 @@ export interface CodeDownloadNodeData {
   username: string;
   password?: string;
   branch: string;
-  targetPath: string;
 }
 
 export interface StepNodeData {

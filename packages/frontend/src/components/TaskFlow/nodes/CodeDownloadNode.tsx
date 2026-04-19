@@ -9,7 +9,6 @@ export interface CodeDownloadNodeData {
   username?: string
   password?: string
   branch?: string
-  targetPath?: string
 }
 
 interface CodeDownloadNodeProps {
