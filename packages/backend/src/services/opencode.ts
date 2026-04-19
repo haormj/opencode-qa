@@ -340,48 +340,57 @@ export async function sendOpenCodeMessageWithWorkspace(
     workspacePath
   })
   
-  logger.info('[OpenCode] Creating isolated session in workspace:', workspacePath)
-  const sessionResult = await client.session.create({
-    title: 'Isolated Task Execution'
-  })
-  
-  if (!sessionResult.data?.id) {
-    const errorDetail = sessionResult.error 
-      ? JSON.stringify(sessionResult.error) 
-      : 'No session ID returned'
-    logger.error(`[OpenCode] Isolated session creation failed: ${errorDetail}`)
-    throw new Error(`Failed to create isolated OpenCode session: ${errorDetail}`)
-  }
-  
-  const sessionId = sessionResult.data.id
-  logger.info('[OpenCode] Isolated session created:', sessionId)
-  
-  const result = await client.session.prompt({
-    sessionID: sessionId,
-    model: {
-      providerID: botConfig.provider,
-      modelID: botConfig.model
-    },
-    agent: botConfig.agent,
-    parts: [{ type: 'text', text: message }]
-  })
-  
-  let answer = ''
-  if (result.data?.parts) {
-    for (const part of result.data.parts) {
-      if (part.type === 'text' && 'text' in part && part.text) {
-        answer += part.text
+  try {
+    logger.info('[OpenCode] Creating isolated session in workspace:', workspacePath)
+    const sessionResult = await client.session.create({
+      title: 'Isolated Task Execution'
+    })
+    
+    if (!sessionResult.data?.id) {
+      const errorDetail = sessionResult.error 
+        ? JSON.stringify(sessionResult.error) 
+        : 'No session ID returned'
+      logger.error(`[OpenCode] Isolated session creation failed: ${errorDetail}`)
+      throw new Error(`Failed to create isolated OpenCode session: ${errorDetail}`)
+    }
+    
+    const sessionId = sessionResult.data.id
+    logger.info('[OpenCode] Isolated session created:', sessionId)
+    
+    const result = await client.session.prompt({
+      sessionID: sessionId,
+      model: {
+        providerID: botConfig.provider,
+        modelID: botConfig.model
+      },
+      agent: botConfig.agent,
+      parts: [{ type: 'text', text: message }]
+    })
+    
+    let answer = ''
+    if (result.data?.parts) {
+      for (const part of result.data.parts) {
+        if (part.type === 'text' && 'text' in part && part.text) {
+          answer += part.text
+        }
       }
     }
-  }
-  
-  if (!answer) {
-    logger.warn(`[OpenCode] Empty answer for isolated session: ${sessionId}`)
-  }
-  
-  return {
-    sessionId,
-    answer: answer || '抱歉，我无法回答这个问题。'
+    
+    if (!answer) {
+      logger.warn(`[OpenCode] Empty answer for isolated session: ${sessionId}`)
+    }
+    
+    return {
+      sessionId,
+      answer: answer || '抱歉，我无法回答这个问题。'
+    }
+  } finally {
+    try {
+      await client.global.dispose()
+      logger.info('[OpenCode] Isolated client disposed')
+    } catch (error) {
+      logger.error('[OpenCode] Failed to dispose client:', error)
+    }
   }
 }
 
@@ -510,6 +519,14 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
       intervalId = null
     }
     eventSubscriptionManager.unregisterWithWorkspace(botConfig.apiUrl, sessionId, workspacePath)
+    
+    try {
+      await client.global.dispose()
+      logger.info('[OpenCode] Isolated client disposed')
+    } catch (error) {
+      logger.error('[OpenCode] Failed to dispose client:', error)
+    }
+    
     logger.info(`[OpenCode] Isolated stream completed for session: ${sessionId}, answer length: ${answer.length}`)
     
     if (!answer) {
