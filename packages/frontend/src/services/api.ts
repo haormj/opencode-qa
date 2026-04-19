@@ -1439,6 +1439,7 @@ export interface ExecutionMessage {
   executionId: string
   role: 'user' | 'assistant' | 'system'
   content: string
+  reasoning?: string | null
   createdAt: string
 }
 

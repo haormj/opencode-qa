@@ -246,6 +246,7 @@ export const taskExecutionMessages = sqliteTable('task_execution_messages', {
   executionId: text('execution_id').notNull().references(() => taskExecutions.id, { onDelete: 'cascade' }),
   role: text('role').notNull(),
   content: text('content').notNull(),
+  reasoning: text('reasoning'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (table) => ({
   executionIdIdx: index('task_execution_messages_execution_id_idx').on(table.executionId)

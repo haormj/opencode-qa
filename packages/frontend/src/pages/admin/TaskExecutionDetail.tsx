@@ -107,13 +107,14 @@ function TaskExecutionDetail() {
             setIsStreaming(false)
             streamingMessageIdRef.current = null
           }
-          return prev.map(m => m.id === data.id ? { ...m, content: data.content } : m)
+          return prev.map(m => m.id === data.id ? { ...m, content: data.content, reasoning: data.reasoning } : m)
         }
         return [...prev, {
           id: data.id,
           executionId: data.executionId,
           role: data.role as 'user' | 'assistant' | 'system',
           content: data.content,
+          reasoning: data.reasoning,
           createdAt: data.createdAt
         }]
       })
@@ -259,6 +260,12 @@ function TaskExecutionDetail() {
                               </span>
                             </summary>
                             <div className="reasoning-content">{streamingReasoning}</div>
+                          </details>
+                        )}
+                        {!isStreamingMsg && msg.reasoning && (
+                          <details className="reasoning-block">
+                            <summary className="reasoning-summary">💭 思考过程</summary>
+                            <div className="reasoning-content">{msg.reasoning}</div>
                           </details>
                         )}
                         <Streamdown

@@ -16,6 +16,7 @@ export interface MessageEvent {
     executionId: string
     role: 'user' | 'assistant'
     content: string
+    reasoning?: string | null
     createdAt: Date
   }
 }

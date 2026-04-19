@@ -157,6 +157,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         executionId,
         role: 'assistant',
         content: '',
+        reasoning: null,
         createdAt: assistantMessageTime
       })
       
@@ -166,10 +167,10 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
       let reasoningContent = ''
       
       const saveInterval = setInterval(async () => {
-        if (accumulatedContent) {
+        if (accumulatedContent || reasoningContent) {
           try {
             await db.update(taskExecutionMessages)
-              .set({ content: accumulatedContent })
+              .set({ content: accumulatedContent, reasoning: reasoningContent || null })
               .where(eq(taskExecutionMessages.id, assistantMessageId))
           } catch (e) {
             logger.error('[TaskExecutor] Failed to save intermediate content:', e)
@@ -199,7 +200,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         executionEventManager.emitStreamEnd(executionId)
         
         await db.update(taskExecutionMessages)
-          .set({ content: answer })
+          .set({ content: answer, reasoning: reasoningContent || null })
           .where(eq(taskExecutionMessages.id, assistantMessageId))
         
         executionEventManager.emitMessage(executionId, {
@@ -207,6 +208,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
           executionId,
           role: 'assistant',
           content: answer,
+          reasoning: reasoningContent || null,
           createdAt: assistantMessageTime
         })
         

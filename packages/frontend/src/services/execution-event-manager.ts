@@ -7,6 +7,7 @@ export interface ExecutionMessageEventData {
   executionId: string
   role: string
   content: string
+  reasoning?: string | null
   createdAt: string
 }
 
