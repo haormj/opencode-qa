@@ -13,7 +13,6 @@ const nodeCategories: NodeCategory[] = [
   { type: 'skillInstall', label: '技能安装', icon: '🔧' },
   { type: 'codeDownload', label: '代码下载', icon: '📦' },
   { type: 'step', label: '步骤定义', icon: '📝' },
-  { type: 'output', label: '输出配置', icon: '📤' },
 ]
 
 function Sidebar() {

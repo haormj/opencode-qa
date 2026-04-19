@@ -16,13 +16,11 @@ import {
 import SkillInstallNode from './nodes/SkillInstallNode'
 import CodeDownloadNode from './nodes/CodeDownloadNode'
 import StepNode from './nodes/StepNode'
-import OutputNode from './nodes/OutputNode'
 
 const nodeTypes: NodeTypes = {
   skillInstall: SkillInstallNode,
   codeDownload: CodeDownloadNode,
   step: StepNode,
-  output: OutputNode,
 }
 
 export interface FlowEditorProps {

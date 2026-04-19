@@ -14,7 +14,6 @@ import { getTask, updateTask, executeTask, toggleTask, getTaskPreview, getBots, 
 import SkillInstallNode from '../../components/TaskFlow/nodes/SkillInstallNode'
 import CodeDownloadNode from '../../components/TaskFlow/nodes/CodeDownloadNode'
 import StepNode from '../../components/TaskFlow/nodes/StepNode'
-import OutputNode from '../../components/TaskFlow/nodes/OutputNode'
 import CustomEdge from '../../components/TaskFlow/edges/CustomEdge'
 import { SkillProvider } from '../../contexts/SkillContext'
 
@@ -22,7 +21,6 @@ const nodeTypes: NodeTypes = {
   skillInstall: SkillInstallNode,
   codeDownload: CodeDownloadNode,
   step: StepNode,
-  output: OutputNode,
 }
 
 const edgeTypes: EdgeTypes = {
@@ -30,25 +28,9 @@ const edgeTypes: EdgeTypes = {
 }
 
 const nodeLibrary = [
-  { 
-    category: '基础节点',
-    items: [
-      { type: 'skillInstall', label: '技能安装', icon: '📦' },
-      { type: 'codeDownload', label: '代码下载', icon: '📥' },
-    ]
-  },
-  { 
-    category: '流程控制',
-    items: [
-      { type: 'step', label: '步骤定义', icon: '📝' },
-    ]
-  },
-  { 
-    category: '输出',
-    items: [
-      { type: 'output', label: '输出配置', icon: '📤' },
-    ]
-  },
+  { type: 'skillInstall', label: '技能安装', icon: '📦' },
+  { type: 'codeDownload', label: '代码下载', icon: '📥' },
+  { type: 'step', label: '步骤定义', icon: '📝' },
 ]
 
 function getDefaultNodeData(type: string): Record<string, unknown> {
@@ -59,8 +41,6 @@ function getDefaultNodeData(type: string): Record<string, unknown> {
       return { repoUrl: '', username: '', password: '', branch: 'main', targetPath: '/tmp/repo' }
     case 'step':
       return { instruction: '' }
-    case 'output':
-      return { type: 'email', config: { to: '', subject: '' } }
     default:
       return {}
   }
@@ -463,26 +443,19 @@ function TaskEditorContent() {
 
           {/* 节点库 */}
           <div className="font-medium mb-2">节点库</div>
-          {nodeLibrary.map((category) => (
-            <div key={category.category} className="mb-2">
-              <Typography.Text type="secondary" className="text-xs">
-                {category.category}
-              </Typography.Text>
-              <div className="space-y-1 mt-1">
-                {category.items.map((item) => (
-                  <div
-                    key={item.type}
-                    className="px-2 py-1.5 cursor-move hover:bg-gray-100 flex items-center gap-2 transition-colors rounded"
-                    draggable
-                    onDragStart={(e) => onDragStart(e, item.type)}
-                  >
-                    <span>{item.icon}</span>
-                    <span className="text-sm">{item.label}</span>
-                  </div>
-                ))}
+          <div className="space-y-1">
+            {nodeLibrary.map((item) => (
+              <div
+                key={item.type}
+                className="px-2 py-1.5 cursor-move hover:bg-gray-100 flex items-center gap-2 transition-colors rounded"
+                draggable
+                onDragStart={(e) => onDragStart(e, item.type)}
+              >
+                <span>{item.icon}</span>
+                <span className="text-sm">{item.label}</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           <Divider className="my-2" />
 
