@@ -1,3 +1,5 @@
+process.env.TZ = 'Asia/Shanghai'
+
 import { config } from 'dotenv'
 config()
 
