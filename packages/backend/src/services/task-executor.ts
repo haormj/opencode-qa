@@ -119,6 +119,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   executionEventManager.emitStatus(executionId, 'running')
   
   ;(async () => {
+    let currentSessionId: string | null = null
     try {
       const flowData: FlowData = JSON.parse(task.flowData)
       const scriptsMap = await prepareWorkspaceScripts(flowData, workspacePath)
@@ -196,6 +197,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
           },
           async (sessionId: string) => {
             logger.info('[TaskExecutor] OpenCode session created:', sessionId)
+            currentSessionId = sessionId
             try {
               await db.update(taskExecutions)
                 .set({ opencodeSessionId: sessionId })
@@ -235,6 +237,14 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
           .returning()
         
         if (updateResult.length > 0) {
+          if (currentSessionId) {
+            try {
+              await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
+              logger.info('[TaskExecutor] Deleted OpenCode session:', currentSessionId)
+            } catch (error) {
+              logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
+            }
+          }
           executionEventManager.emitStatus(executionId, 'completed')
         }
       } catch (streamError) {
@@ -256,6 +266,14 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         .returning()
       
       if (updateResult.length > 0) {
+        if (currentSessionId) {
+          try {
+            await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
+            logger.info('[TaskExecutor] Deleted OpenCode session:', currentSessionId)
+          } catch (error) {
+            logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
+          }
+        }
         executionEventManager.emitStatus(executionId, 'failed')
       }
     }
