@@ -15,7 +15,11 @@ const breadcrumbMap: Record<string, { title: string; parent?: string }> = {
   '/admin/settings': { title: '系统设置' },
   '/admin/settings/system': { title: '系统配置', parent: '/admin/settings' },
   '/admin/settings/sso': { title: '统一登录', parent: '/admin/settings' },
+  '/admin/tasks': { title: '任务列表', parent: '/admin/tasks-menu' },
+  '/admin/task-executions': { title: '执行记录', parent: '/admin/tasks-menu' },
 }
+
+const taskManagementTitle = '任务管理'
 
 function AdminBreadcrumb() {
   const location = useLocation()
@@ -44,6 +48,29 @@ function AdminBreadcrumb() {
       return items
     }
 
+    if (pathname.startsWith('/admin/executions/') && pathname !== '/admin/executions') {
+      items.push({ title: taskManagementTitle })
+      items.push({ title: '执行记录', path: '/admin/task-executions' })
+      items.push({ title: '执行详情' })
+      return items
+    }
+
+    if (pathname.startsWith('/admin/tasks/') && pathname !== '/admin/tasks') {
+      items.push({ title: taskManagementTitle })
+      items.push({ title: '任务列表', path: '/admin/tasks' })
+      
+      if (pathname.endsWith('/edit')) {
+        items.push({ title: '任务编辑' })
+      } else if (pathname.endsWith('/executions')) {
+        items.push({ title: '执行记录', path: '/admin/task-executions' })
+      } else if (pathname.endsWith('/create')) {
+        items.push({ title: '新建任务' })
+      } else {
+        items.push({ title: '任务详情' })
+      }
+      return items
+    }
+
     const config = breadcrumbMap[pathname]
     if (!config) return items
 
@@ -51,6 +78,8 @@ function AdminBreadcrumb() {
       const parentConfig = breadcrumbMap[config.parent]
       if (parentConfig) {
         items.push({ title: parentConfig.title, path: config.parent })
+      } else if (config.parent === '/admin/tasks-menu') {
+        items.push({ title: taskManagementTitle })
       }
     }
     items.push({ title: config.title })

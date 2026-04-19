@@ -1,0 +1,1 @@
+ALTER TABLE `task_execution_messages` ADD `reasoning` text;

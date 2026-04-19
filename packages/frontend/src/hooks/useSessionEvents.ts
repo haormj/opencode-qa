@@ -73,25 +73,20 @@ export function useSessionEvents({
 
     // EventSource 不支持自定义 headers，使用 URL 参数传递 token
     const url = `${API_BASE}/sessions/${sessionId}/events?token=${encodeURIComponent(token)}`
-    
-    console.log('[SSE] Connecting to:', url)
-    
+
     try {
       const eventSource = new EventSource(url)
 
       eventSourceRef.current = eventSource
 
-      eventSource.addEventListener('connected', (event) => {
-        console.log('[SSE] Connected event received:', event.data)
+      eventSource.addEventListener('connected', () => {
         reconnectAttemptsRef.current = 0
         onConnected?.()
       })
 
       eventSource.addEventListener('message', (event) => {
-        console.log('[SSE] Message event received:', event.data)
         try {
           const data = JSON.parse(event.data)
-          console.log('[SSE] Parsed message data:', data)
           onMessage?.(data)
         } catch (error) {
           console.error('[SSE] Failed to parse message:', error)
@@ -118,7 +113,6 @@ export function useSessionEvents({
         // 自动重连逻辑
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current)
-          console.log(`[SSE] Reconnecting in ${delay}ms... (attempt ${reconnectAttemptsRef.current + 1})`)
           
           reconnectTimerRef.current = window.setTimeout(() => {
             reconnectAttemptsRef.current++
@@ -130,9 +124,7 @@ export function useSessionEvents({
         }
       }
 
-      eventSource.onopen = () => {
-        console.log('[SSE] Connection opened')
-      }
+      eventSource.onopen = () => {}
     } catch (error) {
       console.error('[SSE] Failed to create connection:', error)
       onError?.(error as Event)

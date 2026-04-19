@@ -15,6 +15,7 @@ interface CallbackInfo {
 
 interface Subscription {
   apiUrl: string
+  workspacePath?: string
   client: OpencodeClient
   eventStream: Awaited<ReturnType<OpencodeClient['event']['subscribe']>> | null
   callbacks: Map<string, CallbackInfo>
@@ -43,23 +44,33 @@ class EventSubscriptionManager {
     logger.info('[EventSubscriptionManager] Initialized')
   }
 
+  private getSubscriptionKey(apiUrl: string, workspacePath?: string): string {
+    return workspacePath ? `${apiUrl}:${workspacePath}` : apiUrl
+  }
+
   register(apiUrl: string, sessionId: string, onChunk: (chunk: string, type: ChunkType) => void, onComplete: () => void = () => {}): void {
-    logger.info('[EventSubscriptionManager] Registering callback for session:', sessionId)
+    this.registerWithWorkspace(apiUrl, sessionId, undefined, onChunk, onComplete)
+  }
+
+  registerWithWorkspace(apiUrl: string, sessionId: string, workspacePath: string | undefined, onChunk: (chunk: string, type: ChunkType) => void, onComplete: () => void = () => {}): void {
+    const subscriptionKey = this.getSubscriptionKey(apiUrl, workspacePath)
+    logger.info(`[EventSubscriptionManager] Registering callback for session: ${sessionId}, workspace: ${workspacePath || 'default'}`)
     
-    let subscription = this.subscriptions.get(apiUrl)
+    let subscription = this.subscriptions.get(subscriptionKey)
     
     if (!subscription) {
-      logger.info('[EventSubscriptionManager] Creating new subscription for apiUrl:', apiUrl)
+      logger.info('[EventSubscriptionManager] Creating new subscription for:', subscriptionKey)
       subscription = {
         apiUrl,
-        client: this.createClient(apiUrl),
+        workspacePath,
+        client: this.createClient(apiUrl, workspacePath),
         eventStream: null,
         callbacks: new Map(),
         reconnectAttempts: 0,
         isReconnecting: false,
         abortController: null
       }
-      this.subscriptions.set(apiUrl, subscription)
+      this.subscriptions.set(subscriptionKey, subscription)
       this.startEventListener(subscription)
     }
     
@@ -75,9 +86,14 @@ class EventSubscriptionManager {
   }
 
   unregister(apiUrl: string, sessionId: string): void {
-    logger.info('[EventSubscriptionManager] Unregistering callback for session:', sessionId)
+    this.unregisterWithWorkspace(apiUrl, sessionId, undefined)
+  }
+
+  unregisterWithWorkspace(apiUrl: string, sessionId: string, workspacePath: string | undefined): void {
+    const subscriptionKey = this.getSubscriptionKey(apiUrl, workspacePath)
+    logger.info(`[EventSubscriptionManager] Unregistering callback for session: ${sessionId}, workspace: ${workspacePath || 'default'}`)
     
-    const subscription = this.subscriptions.get(apiUrl)
+    const subscription = this.subscriptions.get(subscriptionKey)
     if (subscription) {
       subscription.callbacks.delete(sessionId)
       logger.info('[EventSubscriptionManager] Callback unregistered. Remaining callbacks:', subscription.callbacks.size)
@@ -85,7 +101,12 @@ class EventSubscriptionManager {
   }
 
   updateActiveTime(apiUrl: string, sessionId: string): void {
-    const subscription = this.subscriptions.get(apiUrl)
+    this.updateActiveTimeWithWorkspace(apiUrl, sessionId, undefined)
+  }
+
+  updateActiveTimeWithWorkspace(apiUrl: string, sessionId: string, workspacePath: string | undefined): void {
+    const subscriptionKey = this.getSubscriptionKey(apiUrl, workspacePath)
+    const subscription = this.subscriptions.get(subscriptionKey)
     if (subscription) {
       const callbackInfo = subscription.callbacks.get(sessionId)
       if (callbackInfo) {
@@ -94,17 +115,23 @@ class EventSubscriptionManager {
     }
   }
 
-  private createClient(apiUrl: string): OpencodeClient {
+  private createClient(apiUrl: string, workspacePath?: string): OpencodeClient {
     const headers: Record<string, string> = {}
     if (OPENCODE_SERVER_PASSWORD) {
       const auth = Buffer.from(`${OPENCODE_SERVER_USERNAME}:${OPENCODE_SERVER_PASSWORD}`).toString('base64')
       headers['Authorization'] = `Basic ${auth}`
     }
     
-    return createOpencodeClient({
+    const config: { baseUrl: string; headers: Record<string, string>; directory?: string } = {
       baseUrl: apiUrl,
       headers
-    })
+    }
+    
+    if (workspacePath) {
+      config.directory = workspacePath
+    }
+    
+    return createOpencodeClient(config)
   }
 
   private async startEventListener(subscription: Subscription): Promise<void> {

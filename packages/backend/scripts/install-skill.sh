@@ -7,11 +7,15 @@ set -e
 SERVER_URL="{{SERVER_URL}}"
 
 FORCE_YES=false
+SOURCE=""
+TARGET_DIR=""
 
-while getopts "y" opt; do
+while getopts "ys:d:" opt; do
   case $opt in
     y) FORCE_YES=true ;;
-    *) echo "Usage: $0 [-y] <skill-slug>"; exit 1 ;;
+    s) SOURCE="$OPTARG" ;;
+    d) TARGET_DIR="$OPTARG" ;;
+    *) echo "Usage: $0 [-y] [-s source] [-d target-dir] <skill-slug>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
@@ -20,11 +24,15 @@ SLUG="${1:-}"
 
 if [ -z "$SLUG" ]; then
     echo "Error: Please provide skill slug"
-    echo "Usage: curl -sSL <server>/api/public/scripts/install-skill.sh | bash -s -- [-y] <skill-slug>"
+    echo "Usage: curl -sSL <server>/api/public/scripts/install-skill.sh | bash -s -- [-y] [-d <target-dir>] <skill-slug>"
     exit 1
 fi
 
-INSTALL_DIR="$HOME/.opencode/skills/$SLUG"
+if [ -n "$TARGET_DIR" ]; then
+    INSTALL_DIR="$TARGET_DIR/$SLUG"
+else
+    INSTALL_DIR="$HOME/.opencode/skills/$SLUG"
+fi
 
 echo "Installing skill: $SLUG"
 echo "Server: $SERVER_URL"
@@ -65,6 +73,9 @@ trap "rm -rf $TEMP_DIR" EXIT
 
 ZIP_FILE="$TEMP_DIR/$SLUG.zip"
 DOWNLOAD_URL="$SERVER_URL/api/public/skills/$SLUG/download"
+if [ -n "$SOURCE" ]; then
+    DOWNLOAD_URL="$DOWNLOAD_URL?source=$SOURCE"
+fi
 
 echo "Downloading: $DOWNLOAD_URL"
 

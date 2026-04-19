@@ -10,11 +10,20 @@ const MAX_FILE_SIZE = process.env.LOG_MAX_FILE_SIZE || '10m'
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
-  winston.format.printf(({ timestamp, level, message, stack }) => {
-    if (stack) {
-      return `[${timestamp}] ${level.toUpperCase().padEnd(5)} ${message}\n${stack}`
+  winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+    let output = `[${timestamp}] ${level.toUpperCase().padEnd(5)} ${message}`
+    
+    const metaValues = Object.values(meta)
+    if (metaValues.length > 0) {
+      metaValues.forEach(v => {
+        output += typeof v === 'object' ? ` ${JSON.stringify(v)}` : ` ${v}`
+      })
     }
-    return `[${timestamp}] ${level.toUpperCase().padEnd(5)} ${message}`
+    
+    if (stack) {
+      output += `\n${stack}`
+    }
+    return output
   })
 )
 
@@ -65,11 +74,18 @@ const accessLoggerInstance = winston.createLogger({
   ]
 })
 
+function wrapMeta(meta?: any): object | undefined {
+  if (meta === undefined) return undefined
+  if (meta === null) return undefined
+  if (typeof meta === 'object') return meta
+  return { value: meta }
+}
+
 export default {
-  debug: (message: string, meta?: any) => logger.debug(message, meta),
-  info: (message: string, meta?: any) => logger.info(message, meta),
-  warn: (message: string, meta?: any) => logger.warn(message, meta),
-  error: (message: string, meta?: any) => logger.error(message, meta),
+  debug: (message: string, meta?: any) => logger.debug(message, wrapMeta(meta)),
+  info: (message: string, meta?: any) => logger.info(message, wrapMeta(meta)),
+  warn: (message: string, meta?: any) => logger.warn(message, wrapMeta(meta)),
+  error: (message: string, meta?: any) => logger.error(message, wrapMeta(meta)),
   
   access: (meta: any) => accessLoggerInstance.info(JSON.stringify(meta)),
   

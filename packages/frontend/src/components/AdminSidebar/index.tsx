@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu } from 'antd'
-import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined, AppstoreOutlined, ToolOutlined } from '@ant-design/icons'
+import { MessageOutlined, UserOutlined, BarChartOutlined, RobotOutlined, SettingOutlined, AppstoreOutlined, ToolOutlined, ScheduleOutlined } from '@ant-design/icons'
 import { getPublicSettings } from '../../services/api'
 import './AdminSidebar.css'
 
@@ -40,7 +40,22 @@ function AdminSidebar() {
       label: '助手管理'
     },
     {
-      key: '/admin/skills',
+      key: '/admin/tasks-menu',
+      icon: <ScheduleOutlined />,
+      label: '任务管理',
+      children: [
+        {
+          key: '/admin/tasks',
+          label: '任务列表'
+        },
+        {
+          key: '/admin/task-executions',
+          label: '执行记录'
+        }
+      ]
+    },
+    {
+      key: '/admin/skills-menu',
       icon: <ToolOutlined />,
       label: '技能管理',
       children: [
@@ -88,6 +103,8 @@ function AdminSidebar() {
     if (pathname.startsWith('/admin/users')) return '/admin/users'
     if (pathname.startsWith('/admin/bots')) return '/admin/bots'
     if (pathname.startsWith('/admin/assistants')) return '/admin/assistants'
+    if (pathname.startsWith('/admin/task-executions')) return '/admin/task-executions'
+    if (pathname.startsWith('/admin/tasks')) return '/admin/tasks'
     if (pathname === '/admin/skills/categories') return '/admin/skills/categories'
     if (pathname.startsWith('/admin/skill-versions')) return '/admin/skill-versions'
     if (pathname.startsWith('/admin/skills')) return '/admin/skills'
@@ -100,7 +117,8 @@ function AdminSidebar() {
   const getOpenKeys = () => {
     const pathname = location.pathname
     const openKeys = []
-    if (pathname.startsWith('/admin/skills') || pathname.startsWith('/admin/skill-versions')) openKeys.push('/admin/skills')
+    if (pathname.startsWith('/admin/tasks') || pathname.startsWith('/admin/task-executions')) openKeys.push('/admin/tasks-menu')
+    if (pathname.startsWith('/admin/skills') || pathname.startsWith('/admin/skill-versions')) openKeys.push('/admin/skills-menu')
     if (pathname.startsWith('/admin/statistics')) openKeys.push('/admin/statistics')
     if (pathname.startsWith('/admin/settings')) openKeys.push('/admin/settings')
     return openKeys

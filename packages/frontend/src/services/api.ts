@@ -1383,3 +1383,160 @@ export async function cancelSkillVersion(versionId: string): Promise<{ success: 
     method: 'PUT',
   })
 }
+
+export interface Task {
+  id: string
+  name: string
+  description?: string | null
+  flowData: string
+  triggerType: 'manual' | 'schedule' | 'webhook'
+  scheduleConfig?: string | null
+  webhookToken?: string | null
+  isActive: boolean
+  botId?: string | null
+  botName?: string | null
+  createdByUser?: {
+    id: string
+    username: string
+    displayName: string
+  } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: Task[]
+}
+
+export interface TaskExecution {
+  id: string
+  taskId: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  triggerType: 'manual' | 'schedule' | 'webhook'
+  triggeredBy: string | null
+  triggeredByUser: {
+    id: string
+    username: string
+    displayName: string
+  } | null
+  cancelledByUser: {
+    id: string
+    username: string
+    displayName: string
+  } | null
+  startedAt?: string | null
+  completedAt?: string | null
+  createdAt: string
+}
+
+export interface TaskExecutionListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: TaskExecution[]
+}
+
+export interface ExecutionMessage {
+  id: string
+  executionId: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  reasoning?: string | null
+  createdAt: string
+}
+
+export async function getTasks(params: { page: number; pageSize: number }): Promise<TaskListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  return request(`${API_BASE}/admin/tasks?${searchParams.toString()}`)
+}
+
+export async function getTask(id: string): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}`)
+}
+
+export async function createTask(data: {
+  name: string
+  description?: string
+  flowData: string
+  triggerType?: string
+  scheduleConfig?: string | null
+  webhookToken?: string
+}): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateTask(id: string, data: Partial<{
+  name: string
+  description: string
+  flowData: string
+  triggerType: string
+  scheduleConfig: string
+  webhookToken: string
+  isActive: boolean
+}>): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await request(`${API_BASE}/admin/tasks/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function toggleTask(id: string): Promise<Task> {
+  return request(`${API_BASE}/admin/tasks/${id}/toggle`, {
+    method: 'PATCH',
+  })
+}
+
+export async function executeTask(id: string): Promise<{ executionId: string }> {
+  return request(`${API_BASE}/admin/tasks/${id}/execute`, {
+    method: 'POST',
+  })
+}
+
+export async function getTaskPreview(id: string): Promise<{ markdown: string }> {
+  return request(`${API_BASE}/admin/tasks/${id}/preview`)
+}
+
+export async function getTaskExecutions(taskId: string, params: { page: number; pageSize: number }): Promise<TaskExecutionListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  return request(`${API_BASE}/admin/tasks/${taskId}/executions?${searchParams.toString()}`)
+}
+
+export async function getAllExecutions(params: { page: number; pageSize: number; taskId?: string }): Promise<TaskExecutionListResponse> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', params.page.toString())
+  searchParams.set('pageSize', params.pageSize.toString())
+  if (params.taskId) {
+    searchParams.set('taskId', params.taskId)
+  }
+  return request(`${API_BASE}/admin/tasks/executions?${searchParams.toString()}`)
+}
+
+export async function getExecution(id: string): Promise<TaskExecution> {
+  return request(`${API_BASE}/admin/tasks/executions/${id}`)
+}
+
+export async function getExecutionMessages(executionId: string): Promise<ExecutionMessage[]> {
+  return request(`${API_BASE}/admin/tasks/executions/${executionId}/messages`)
+}
+
+export async function cancelExecution(id: string): Promise<{ success: boolean; id: string; status: string }> {
+  return request(`${API_BASE}/admin/tasks/executions/${id}/cancel`, {
+    method: 'POST',
+  })
+}

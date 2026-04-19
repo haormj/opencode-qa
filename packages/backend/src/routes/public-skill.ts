@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm'
 import * as skillService from '../services/skill.js'
 import * as skillFileService from '../services/skill-file.js'
 import logger from '../services/logger.js'
+import { normalizeServerUrl } from '../utils/url.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -20,7 +21,7 @@ async function getServerUrl(): Promise<string> {
     .get()
   
   if (setting && setting.value) {
-    return setting.value
+    return normalizeServerUrl(setting.value)
   }
   
   return ''
@@ -29,6 +30,7 @@ async function getServerUrl(): Promise<string> {
 router.get('/skills/:slug/download', async (req, res) => {
   try {
     const { slug } = req.params
+    const source = req.query.source as string | undefined
     
     const skill = await skillService.getSkillBySlug(slug)
     if (!skill) {
@@ -41,7 +43,9 @@ router.get('/skills/:slug/download', async (req, res) => {
     
     const zipBuffer = await skillFileService.createSkillZip(slug, 'current')
     
-    await skillService.incrementDownloadCount(skill.id)
+    if (source !== 'task') {
+      await skillService.incrementDownloadCount(skill.id)
+    }
     
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="${slug}-v${skill.version}.zip"`)

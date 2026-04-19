@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { isAuthenticated, isAdmin } from './services/api'
 import { PageTitle } from './components/PageTitle'
 import Home from './pages/Home'
@@ -18,8 +18,17 @@ import SkillDetail from './pages/admin/SkillDetail'
 import SkillCategories from './pages/admin/SkillCategories'
 import SkillVersions from './pages/admin/SkillVersions'
 import SkillVersionDetail from './pages/admin/SkillVersionDetail'
+import Tasks from './pages/admin/Tasks'
+import TaskCreate from './pages/admin/TaskCreate'
+import TaskExecutionsGlobal from './pages/admin/TaskExecutionsGlobal'
+import TaskExecutionDetail from './pages/admin/TaskExecutionDetail'
 import StatisticsLayout from './pages/admin/StatisticsLayout'
 import StatisticsOverview from './pages/admin/StatisticsOverview'
+
+function TaskExecutionsRedirect() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/admin/task-executions?taskId=${id}`} replace />
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation()
@@ -155,6 +164,11 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="bots" element={<AdminBots />} />
           <Route path="assistants" element={<AdminAssistants />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="tasks/:id" element={<TaskCreate />} />
+          <Route path="tasks/:id/executions" element={<TaskExecutionsRedirect />} />
+          <Route path="task-executions" element={<TaskExecutionsGlobal />} />
+          <Route path="executions/:id" element={<TaskExecutionDetail />} />
           <Route path="skills" element={<AdminSkills />} />
           <Route path="skills/:id" element={<SkillDetail />} />
           <Route path="skills/categories" element={<SkillCategories />} />

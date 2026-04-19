@@ -3,6 +3,7 @@ import { db, bots, sessions, messages } from '../db/index.js'
 import { eq, and, not, desc } from 'drizzle-orm'
 import { deleteOpenCodeSession } from './opencode.js'
 import { backupDatabase, getBackupStatus } from './backup.js'
+import { cleanupOldWorkspaces } from './workspace-manager.js'
 import logger from './logger.js'
 
 const HOURS_24 = 24 * 60 * 60 * 1000
@@ -74,6 +75,12 @@ export function startScheduler(): void {
         } else {
           logger.error(`数据库备份失败: ${result.error}`)
         }
+      }
+
+      logger.info('开始执行工作区清理...')
+      const cleanedWorkspaces = await cleanupOldWorkspaces()
+      if (cleanedWorkspaces > 0) {
+        logger.info(`工作区清理完成: ${cleanedWorkspaces} 个工作区已清理`)
       }
     } catch (error) {
       logger.error('定时任务执行失败', error instanceof Error ? error : new Error(String(error)))

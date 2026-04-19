@@ -4,13 +4,20 @@
 param(
     [Parameter(Mandatory=$true, Position=0)]
     [string]$Slug,
-    [switch]$Force
+    [switch]$Force,
+    [string]$Source,
+    [string]$TargetDir
 )
 
 $ErrorActionPreference = "Stop"
 
 $ServerUrl = "{{SERVER_URL}}"
-$InstallDir = Join-Path $env:USERPROFILE ".opencode\skills\$Slug"
+
+if ($TargetDir) {
+    $InstallDir = Join-Path $TargetDir $Slug
+} else {
+    $InstallDir = Join-Path $env:USERPROFILE ".opencode\skills\$Slug"
+}
 
 Write-Host "Installing skill: $Slug"
 Write-Host "Server: $ServerUrl"
@@ -38,6 +45,9 @@ New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
 try {
     $ZipFile = Join-Path $TempDir "$Slug.zip"
     $DownloadUrl = "$ServerUrl/api/public/skills/$Slug/download"
+    if ($Source) {
+        $DownloadUrl = "$DownloadUrl`?source=$Source"
+    }
     
     Write-Host "Downloading: $DownloadUrl"
     
