@@ -1,5 +1,5 @@
 import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
@@ -225,15 +225,18 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         
         await handleOutputs(flowData, answer)
         
-        await db.update(taskExecutions)
+        const updateResult = await db.update(taskExecutions)
           .set({
             status: 'completed',
             completedAt: new Date(),
             result: answer
           })
-          .where(eq(taskExecutions.id, executionId))
+          .where(and(eq(taskExecutions.id, executionId), eq(taskExecutions.status, 'running')))
+          .returning()
         
-        executionEventManager.emitStatus(executionId, 'completed')
+        if (updateResult.length > 0) {
+          executionEventManager.emitStatus(executionId, 'completed')
+        }
       } catch (streamError) {
         clearInterval(saveInterval)
         throw streamError
@@ -243,15 +246,18 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error(`[TaskExecutor] Stream execution failed for task ${taskId}:`, errorMessage)
       
-      await db.update(taskExecutions)
+      const updateResult = await db.update(taskExecutions)
         .set({
           status: 'failed',
           completedAt: new Date(),
           result: errorMessage
         })
-        .where(eq(taskExecutions.id, executionId))
+        .where(and(eq(taskExecutions.id, executionId), eq(taskExecutions.status, 'running')))
+        .returning()
       
-      executionEventManager.emitStatus(executionId, 'failed')
+      if (updateResult.length > 0) {
+        executionEventManager.emitStatus(executionId, 'failed')
+      }
     }
   })()
   
