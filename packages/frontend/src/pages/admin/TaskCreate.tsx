@@ -566,7 +566,7 @@ function TaskEditorContent() {
             <MiniMap />
             <Background />
             <Panel position="bottom-center">
-              <Typography.Text type="secondary">
+              <Typography.Text type="secondary" className="text-xs">
                 拖拽左侧节点到画布中创建流程
               </Typography.Text>
             </Panel>
