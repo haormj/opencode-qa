@@ -49,7 +49,7 @@ router.get('/:id/events', async (req, res) => {
 
   const messages = await db.select().from(taskExecutionMessages).where(eq(taskExecutionMessages.executionId, executionId)).orderBy(taskExecutionMessages.createdAt)
   for (const msg of messages) {
-    res.write(`event: message\ndata: ${JSON.stringify({ id: msg.id, executionId, role: msg.role, content: msg.content, createdAt: msg.createdAt })}\n\n`)
+    res.write(`event: message\ndata: ${JSON.stringify({ id: msg.id, executionId, role: msg.role, content: msg.content, reasoning: msg.reasoning, createdAt: msg.createdAt })}\n\n`)
   }
 
   if (execution.status === 'running') {
