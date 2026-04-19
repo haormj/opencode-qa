@@ -10,7 +10,26 @@ const FEISHU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24
 </svg>`
 const FEISHU_ICON_BASE64 = Buffer.from(FEISHU_ICON_SVG).toString('base64')
 
+async function updateAdminPassword() {
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+
+  const existing = await db.select().from(users)
+    .where(eq(users.username, adminUsername))
+    .get()
+
+  if (existing) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10)
+    await db.update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.username, adminUsername))
+    console.log(`Admin password updated for user: ${adminUsername}`)
+  }
+}
+
 export async function seed() {
+  await updateAdminPassword()
+  
   const existingUsers = await db.select().from(users).limit(1)
   
   // Seed system settings (always check)

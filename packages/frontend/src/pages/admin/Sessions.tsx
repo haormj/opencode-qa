@@ -140,6 +140,15 @@ function AdminSessions() {
       align: 'center'
     },
     {
+      title: '上下文(tokens)',
+      dataIndex: 'contextTokens',
+      key: 'contextTokens',
+      width: 120,
+      align: 'center',
+      render: (contextTokens: number | null) => 
+        contextTokens != null ? contextTokens.toLocaleString() : '-'
+    },
+    {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',

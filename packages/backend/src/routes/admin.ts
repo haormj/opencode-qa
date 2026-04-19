@@ -51,9 +51,18 @@ router.get('/sessions', async (req, res) => {
 
     const sessionsWithCounts = await Promise.all(sessionList.map(async (s) => {
       const countResult = await db.select({ count: sql<number>`count(*)` }).from(messages).where(eq(messages.sessionId, s.id)).get()
+      
+      const lastBotMessage = await db.select({ inputTokens: messages.inputTokens })
+        .from(messages)
+        .where(and(eq(messages.sessionId, s.id), eq(messages.senderType, 'bot')))
+        .orderBy(desc(messages.createdAt))
+        .limit(1)
+        .get()
+      
       return {
         ...s,
-        messageCount: countResult?.count || 0
+        messageCount: countResult?.count || 0,
+        contextTokens: lastBotMessage?.inputTokens || null
       }
     }))
 
@@ -82,6 +91,7 @@ router.get('/sessions', async (req, res) => {
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         messageCount: s.messageCount,
+        contextTokens: s.contextTokens,
         user: userMap.get(s.userId) || { id: s.userId, username: 'Unknown', displayName: 'Unknown' }
       }))
     })
@@ -108,7 +118,9 @@ router.get('/sessions/:id', async (req, res) => {
       reasoning: messages.reasoning,
       createdAt: messages.createdAt,
       userId: messages.userId,
-      botId: messages.botId
+      botId: messages.botId,
+      inputTokens: messages.inputTokens,
+      outputTokens: messages.outputTokens
     }).from(messages).where(eq(messages.sessionId, id)).orderBy(asc(messages.createdAt))
 
     const messagesWithDetails = await Promise.all(sessionMessages.map(async (m) => {
@@ -130,7 +142,9 @@ router.get('/sessions/:id', async (req, res) => {
         reasoning: m.reasoning,
         createdAt: m.createdAt,
         user,
-        bot
+        bot,
+        inputTokens: m.inputTokens,
+        outputTokens: m.outputTokens
       }
     }))
 
@@ -394,13 +408,31 @@ router.get('/statistics', async (req, res) => {
         : 100
     }))
 
+    const tokenStats = await db.select({
+      assistantId: sessions.assistantId,
+      assistantName: assistants.name,
+      totalInputTokens: sql<number>`sum(${messages.inputTokens})`,
+      totalOutputTokens: sql<number>`sum(${messages.outputTokens})`
+    })
+      .from(messages)
+      .innerJoin(sessions, eq(messages.sessionId, sessions.id))
+      .innerJoin(assistants, eq(sessions.assistantId, assistants.id))
+      .where(eq(messages.senderType, 'bot'))
+      .groupBy(sessions.assistantId, assistants.name)
+
     res.json({
       interceptionRate,
       sessions: { total, active, human, closed },
       users: { total: usersTotal },
       bots: { total: botsTotal },
       assistants: { total: assistantsTotal },
-      assistantStats
+      assistantStats,
+      tokenStats: tokenStats.map(stat => ({
+        assistantId: stat.assistantId,
+        assistantName: stat.assistantName,
+        totalInputTokens: Number(stat.totalInputTokens) || 0,
+        totalOutputTokens: Number(stat.totalOutputTokens) || 0
+      }))
     })
   } catch (error) {
     logger.error('Get statistics error:', error)

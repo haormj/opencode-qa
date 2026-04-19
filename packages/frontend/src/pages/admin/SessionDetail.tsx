@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tag, Button, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
@@ -126,6 +126,8 @@ function AdminSessionDetail() {
         type: 'text',
         content: { text: msg.content },
         reasoning: msg.reasoning,
+        inputTokens: msg.inputTokens,
+        outputTokens: msg.outputTokens,
         position: msg.senderType === 'user' ? 'right' : 'left',
         sender: {
           name: senderName,
@@ -135,6 +137,14 @@ function AdminSessionDetail() {
       }
     })
   }
+
+  const contextTokens = useMemo(() => {
+    if (!session) return null
+    const lastBotMessageWithTokens = [...session.messages]
+      .reverse()
+      .find(m => m.senderType === 'bot' && m.inputTokens != null)
+    return lastBotMessageWithTokens?.inputTokens ?? null
+  }, [session])
 
   const handleReply = (_type: string, text: string) => {
     if (!id || !text.trim()) {
@@ -181,6 +191,7 @@ function AdminSessionDetail() {
           sessionStatus={session.status}
           onSend={handleReply}
           isAdminMode
+          contextTokens={contextTokens}
         />
       </div>
     </div>

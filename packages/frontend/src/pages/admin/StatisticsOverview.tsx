@@ -140,6 +140,47 @@ function StatisticsOverview() {
           <Empty description="暂无会话数据" />
         )}
       </Card>
+
+      <Card title="Token 使用量统计" className="pie-chart-card">
+        {stats.tokenStats && stats.tokenStats.length > 0 ? (
+          <div className="token-stats-table">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+                  <th style={{ padding: '12px 8px', textAlign: 'left' }}>助手名称</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right' }}>输入 Tokens</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right' }}>输出 Tokens</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'right' }}>总计</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.tokenStats.map((stat, index) => (
+                  <tr key={stat.assistantId} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '12px 8px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: ASSISTANT_COLORS[index % ASSISTANT_COLORS.length],
+                        marginRight: '8px'
+                      }}></span>
+                      {stat.assistantName}
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{stat.totalInputTokens.toLocaleString()}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{stat.totalOutputTokens.toLocaleString()}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                      {(stat.totalInputTokens + stat.totalOutputTokens).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty description="暂无 Token 使用数据" />
+        )}
+      </Card>
     </div>
   )
 }

@@ -19,6 +19,8 @@ export interface ExtendedMessageProps extends MessageProps {
     type: 'user' | 'ai' | 'admin'
   }
   reasoning?: string
+  inputTokens?: number | null
+  outputTokens?: number | null
 }
 
 interface ChatBoxProps {
@@ -28,6 +30,7 @@ interface ChatBoxProps {
   onStop?: () => void
   isAdminMode?: boolean
   sessionStatus?: string
+  contextTokens?: number | null
 }
 
 export interface ChatBoxRef {
@@ -35,7 +38,7 @@ export interface ChatBoxRef {
 }
 
 const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
-  ({ messages, typing, onSend, onStop, isAdminMode = false, sessionStatus = 'active' }, ref) => {
+  ({ messages, typing, onSend, onStop, isAdminMode = false, sessionStatus = 'active', contextTokens }, ref) => {
     const wrapperRef = useRef<HTMLDivElement>(null)
     const composerRef = useRef<CustomComposerRef>(null)
     const [isScrolling, setIsScrolling] = useState(false)
@@ -170,6 +173,11 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
   return (
     <div ref={wrapperRef} className={`chat-box-wrapper ${isScrolling ? 'scrolling' : ''} ${isSessionLocked ? 'session-locked' : ''} ${showWelcome ? 'welcome-mode' : ''}`}>
       <div className="chat-content">
+        {contextTokens != null && contextTokens > 0 && (
+          <div className="context-tokens">
+            {contextTokens.toLocaleString()} tokens
+          </div>
+        )}
         {showWelcome && (
           <div className="welcome-message">
             <h2>有什么可以帮你的？</h2>

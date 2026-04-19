@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
@@ -156,7 +156,9 @@ function Home() {
             color: senderColor,
             type: senderType
           },
-          reasoning: msg.reasoning
+          reasoning: msg.reasoning,
+          inputTokens: msg.inputTokens,
+          outputTokens: msg.outputTokens
         })
       })
       
@@ -288,14 +290,16 @@ function Home() {
         }
         if (isFirstChunk) isFirstChunk = false
       },
-      () => {
+      (result) => {
         streamingMessagesRef.current.delete(streamSessionId)
         if (currentDisplaySessionIdRef.current === streamSessionId) {
           setMessages(prev => prev.map(msg =>
             msg._id === assistantMessageId
               ? {
                   ...msg,
-                  content: { text: msg.content.text }
+                  content: { text: msg.content.text },
+                  inputTokens: result.inputTokens,
+                  outputTokens: result.outputTokens
                 }
               : msg
           ))
@@ -323,21 +327,22 @@ function Home() {
   useEffect(() => {
     currentDisplaySessionIdRef.current = sessionId
     if (sessionId) {
-      loadSession(sessionId)
-      
-      const pendingKey = `pendingMessage_${sessionId}`
-      const pendingMessage = sessionStorage.getItem(pendingKey)
-      if (pendingMessage) {
-        sessionStorage.removeItem(pendingKey)
-        setTimeout(() => {
-          sendMessage(pendingMessage, sessionId)
-        }, 100)
+      const initSession = async () => {
+        await loadSession(sessionId)
+        
+        const pendingKey = `pendingMessage_${sessionId}`
+        const pendingMessage = sessionStorage.getItem(pendingKey)
+        if (pendingMessage) {
+          sessionStorage.removeItem(pendingKey)
+          await sendMessage(pendingMessage, sessionId)
+        }
       }
+      initSession()
     } else {
       setMessages([])
       setSessionStatus('active')
     }
-  }, [sessionId, loadSession, sendMessage])
+  }, [sessionId])
 
   const handleSend = useCallback(async (_type: string, text: string) => {
     if (!text.trim()) {
@@ -477,6 +482,13 @@ function Home() {
     onStatus: handleRealtimeStatus
   })
 
+  const contextTokens = useMemo(() => {
+    const lastBotMessageWithTokens = [...messages]
+      .reverse()
+      .find(m => m.sender?.type === 'ai' && m.inputTokens != null)
+    return lastBotMessageWithTokens?.inputTokens ?? null
+  }, [messages])
+
   return (
     <div className="home-layout">
       <Sidebar
@@ -536,6 +548,7 @@ function Home() {
               onSend={handleSend}
               onStop={handleStop}
               sessionStatus={sessionStatus}
+              contextTokens={contextTokens}
             />
           )}
         </div>

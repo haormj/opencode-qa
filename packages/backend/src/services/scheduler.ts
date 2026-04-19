@@ -2,6 +2,7 @@ import schedule from 'node-schedule'
 import { db, bots, sessions, messages } from '../db/index.js'
 import { eq, and, not, desc } from 'drizzle-orm'
 import { deleteOpenCodeSession } from './opencode.js'
+import { backupDatabase, getBackupStatus } from './backup.js'
 import logger from './logger.js'
 
 const HOURS_24 = 24 * 60 * 60 * 1000
@@ -46,10 +47,34 @@ async function closeInactiveSessions(): Promise<number> {
 }
 
 export function startScheduler(): void {
+  const now = new Date()
+  const nextRun = new Date()
+  nextRun.setHours(0, 5, 0, 0)
+  if (nextRun <= now) {
+    nextRun.setDate(nextRun.getDate() + 1)
+  }
+
+  const hoursUntilNextRun = (nextRun.getTime() - now.getTime()) / (60 * 60 * 1000)
+
+  if (hoursUntilNextRun > 1) {
+    closeInactiveSessions().catch(err => logger.error('启动时执行关闭任务失败', err))
+  }
+
   schedule.scheduleJob('5 0 * * *', async () => {
     try {
       await closeInactiveSessions()
       logger.cleanupOldLogs()
+
+      const backupStatus = getBackupStatus()
+      if (backupStatus.enabled) {
+        logger.info('开始执行数据库备份...')
+        const result = await backupDatabase()
+        if (result.success) {
+          logger.info(`数据库备份完成: ${result.backupFile}`)
+        } else {
+          logger.error(`数据库备份失败: ${result.error}`)
+        }
+      }
     } catch (error) {
       logger.error('定时任务执行失败', error instanceof Error ? error : new Error(String(error)))
     }

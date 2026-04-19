@@ -125,6 +125,51 @@ npm run db:seed
 - 迁移文件应提交到 git
 - 每次修改 schema 后需要生成新的迁移文件
 
+### 数据库迁移规范
+
+**重要**：修改数据库 schema 后，必须使用 Drizzle Kit 生成迁移文件，不要手动创建迁移文件。
+
+**正确流程**：
+
+```bash
+cd packages/backend
+
+# 1. 修改 schema.ts
+# 2. 生成迁移文件（会自动生成 SQL 和 snapshot）
+npm run db:generate
+
+# 3. 迁移文件会自动生成在 drizzle/ 目录：
+#    - drizzle/0XXX_xxx.sql        # SQL 迁移文件
+#    - drizzle/meta/0XXX_snapshot.json  # Schema 快照（必须！）
+#    - drizzle/meta/_journal.json  # 更新迁移记录
+```
+
+**迁移文件说明**：
+
+| 文件 | 作用 | 必须 |
+|------|------|------|
+| `0XXX_xxx.sql` | SQL 迁移语句 | ✅ |
+| `meta/0XXX_snapshot.json` | Schema 快照，Drizzle 用它判断迁移状态 | ✅ |
+| `meta/_journal.json` | 迁移记录索引 | ✅ 自动更新 |
+
+**常见错误**：
+
+1. **手动创建迁移文件**：缺少 snapshot.json 导致迁移状态混乱
+2. **忘记运行 db:generate**：schema 修改未生成迁移，数据库结构不一致
+3. **迁移文件不提交**：其他环境无法同步数据库结构
+
+**如果数据库已有数据但迁移报错**：
+
+说明数据库结构与迁移记录不同步，需要手动处理：
+
+```bash
+# 查看当前迁移记录
+sqlite3 data/data.db "SELECT * FROM __drizzle_migrations ORDER BY id;"
+
+# 如果缺少某条迁移记录但列已存在，手动插入记录
+# （需要根据 _journal.json 中的信息）
+```
+
 ## 架构要点
 
 ### 依赖管理

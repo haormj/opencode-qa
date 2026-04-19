@@ -177,7 +177,7 @@ router.post('/stream', authMiddleware, async (req, res) => {
     let opencodeSessionIdFromStream: string | undefined
     let reasoningContent = ''
 
-    const { sessionId: returnedSessionId, answer } = await sendOpenCodeMessageStream(
+    const { sessionId: returnedSessionId, answer, tokens } = await sendOpenCodeMessageStream(
       content,
       botConfig,
       opencodeSessionId,
@@ -203,6 +203,8 @@ router.post('/stream', authMiddleware, async (req, res) => {
       content: answer || '抱歉，我无法回答这个问题。',
       reasoning: reasoningContent || null,
       botId: userBot.id,
+      inputTokens: tokens?.input ?? null,
+      outputTokens: tokens?.output ?? null,
       createdAt: new Date()
     }).returning()
 
@@ -211,7 +213,9 @@ router.post('/stream', authMiddleware, async (req, res) => {
       sessionId,
       content: botMessage.content,
       senderType: botMessage.senderType,
-      createdAt: botMessage.createdAt
+      createdAt: botMessage.createdAt,
+      inputTokens: botMessage.inputTokens,
+      outputTokens: botMessage.outputTokens
     })
     res.end()
 

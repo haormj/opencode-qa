@@ -5,6 +5,8 @@ export interface MessageItem {
   content: string
   reasoning?: string
   createdAt: string
+  inputTokens?: number | null
+  outputTokens?: number | null
   user?: {
     id: string
     displayName: string
@@ -133,6 +135,7 @@ export interface AdminSession {
   createdAt: string
   updatedAt: string
   messageCount: number
+  contextTokens: number | null
   user: {
     id: string
     username: string
@@ -286,7 +289,7 @@ export function sendMessageStream(
   sessionId: string | null,
   onText: (text: string) => void,
   onReasoning: (text: string) => void,
-  onDone: (result: { id: string; sessionId: string; content: string; senderType: string; createdAt: string }) => void,
+  onDone: (result: { id: string; sessionId: string; content: string; senderType: string; createdAt: string; inputTokens?: number | null; outputTokens?: number | null }) => void,
   onError: (error: Error) => void,
   onSession?: (sessionId: string) => void
 ): () => void {
@@ -665,6 +668,13 @@ export interface AssistantStat {
   interceptionRate: number
 }
 
+export interface TokenStat {
+  assistantId: string
+  assistantName: string
+  totalInputTokens: number
+  totalOutputTokens: number
+}
+
 export interface Statistics {
   interceptionRate: number
   sessions: {
@@ -683,6 +693,7 @@ export interface Statistics {
     total: number
   }
   assistantStats: AssistantStat[]
+  tokenStats: TokenStat[]
 }
 
 export async function getStatistics(): Promise<Statistics> {
