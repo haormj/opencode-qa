@@ -1422,6 +1422,11 @@ export interface TaskExecution {
     username: string
     displayName: string
   } | null
+  cancelledByUser: {
+    id: string
+    username: string
+    displayName: string
+  } | null
   startedAt?: string | null
   completedAt?: string | null
   createdAt: string

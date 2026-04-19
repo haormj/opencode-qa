@@ -1,5 +1,6 @@
 import { db, tasks, taskExecutions, taskExecutionMessages, bots, users } from '../db/index.js'
 import { eq, desc, lt, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { randomUUID } from 'crypto'
 
 export async function getTasks(options: { page: number; pageSize: number }) {
@@ -222,12 +223,15 @@ export async function getAllExecutions(options: { page: number; pageSize: number
 }
 
 export async function getExecutionById(id: string) {
+  const cancelledByUsers = alias(users, 'cancelled_by_users')
+  
   const result = await db.select({
     id: taskExecutions.id,
     taskId: taskExecutions.taskId,
     status: taskExecutions.status,
     triggerType: taskExecutions.triggerType,
     triggeredBy: taskExecutions.triggeredBy,
+    cancelledBy: taskExecutions.cancelledBy,
     startedAt: taskExecutions.startedAt,
     completedAt: taskExecutions.completedAt,
     result: taskExecutions.result,
@@ -236,10 +240,14 @@ export async function getExecutionById(id: string) {
     createdAt: taskExecutions.createdAt,
     triggeredByUserId: users.id,
     triggeredByUsername: users.username,
-    triggeredByDisplayName: users.displayName
+    triggeredByDisplayName: users.displayName,
+    cancelledByUserId: cancelledByUsers.id,
+    cancelledByUsername: cancelledByUsers.username,
+    cancelledByDisplayName: cancelledByUsers.displayName
   })
     .from(taskExecutions)
     .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
+    .leftJoin(cancelledByUsers, eq(taskExecutions.cancelledBy, cancelledByUsers.id))
     .where(eq(taskExecutions.id, id))
     .get()
   
@@ -255,6 +263,12 @@ export async function getExecutionById(id: string) {
       id: result.triggeredByUserId,
       username: result.triggeredByUsername,
       displayName: result.triggeredByDisplayName
+    } : null,
+    cancelledBy: result.cancelledBy,
+    cancelledByUser: result.cancelledByUserId ? {
+      id: result.cancelledByUserId,
+      username: result.cancelledByUsername,
+      displayName: result.cancelledByDisplayName
     } : null,
     startedAt: result.startedAt,
     completedAt: result.completedAt,

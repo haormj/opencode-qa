@@ -91,6 +91,7 @@ function TaskExecutionDetail() {
             triggerType: data.triggerType as TaskExecution['triggerType'],
             triggeredBy: data.triggeredBy ?? null,
             triggeredByUser: null,
+            cancelledByUser: null,
             startedAt: data.startedAt ?? null,
             completedAt: data.completedAt ?? null,
             createdAt: data.updatedAt
@@ -223,6 +224,11 @@ function TaskExecutionDetail() {
               {triggerInfo && (
                 <span className="execution-trigger">
                   {triggerInfo}
+                </span>
+              )}
+              {execution.status === 'cancelled' && execution.cancelledByUser && (
+                <span className="execution-cancelled-by">
+                  终止者: {execution.cancelledByUser.displayName || execution.cancelledByUser.username}
                 </span>
               )}
             </div>
