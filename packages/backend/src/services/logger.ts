@@ -74,11 +74,18 @@ const accessLoggerInstance = winston.createLogger({
   ]
 })
 
+function wrapMeta(meta?: any): object | undefined {
+  if (meta === undefined) return undefined
+  if (meta === null) return undefined
+  if (typeof meta === 'object') return meta
+  return { value: meta }
+}
+
 export default {
-  debug: (message: string, meta?: any) => logger.debug(message, meta),
-  info: (message: string, meta?: any) => logger.info(message, meta),
-  warn: (message: string, meta?: any) => logger.warn(message, meta),
-  error: (message: string, meta?: any) => logger.error(message, meta),
+  debug: (message: string, meta?: any) => logger.debug(message, wrapMeta(meta)),
+  info: (message: string, meta?: any) => logger.info(message, wrapMeta(meta)),
+  warn: (message: string, meta?: any) => logger.warn(message, wrapMeta(meta)),
+  error: (message: string, meta?: any) => logger.error(message, wrapMeta(meta)),
   
   access: (meta: any) => accessLoggerInstance.info(JSON.stringify(meta)),
   
