@@ -407,6 +407,8 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
     title: 'Isolated Task Execution'
   })
   
+  logger.info('[OpenCode] Session create result:', JSON.stringify(sessionResult, null, 2))
+  
   if (!sessionResult.data?.id) {
     const errorDetail = sessionResult.error 
       ? JSON.stringify(sessionResult.error) 
