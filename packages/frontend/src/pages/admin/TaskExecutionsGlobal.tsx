@@ -1,22 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Table, Card, Tag, Space, message, Typography, Select, Button } from 'antd'
-import { ReloadOutlined, EyeOutlined } from '@ant-design/icons'
+import { Table, Card, Tag, Space, message, Typography, Select, Button, Popconfirm } from 'antd'
+import { ReloadOutlined, EyeOutlined, StopOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { getAllExecutions, getTasks, type TaskExecution, type Task } from '../../services/api'
+import { getAllExecutions, getTasks, cancelExecution, type TaskExecution, type Task } from '../../services/api'
 
 const statusColors: Record<string, string> = {
   pending: 'default',
   running: 'processing',
   completed: 'success',
-  failed: 'error'
+  failed: 'error',
+  cancelled: 'warning'
 }
 
 const statusLabels: Record<string, string> = {
   pending: '待执行',
   running: '执行中',
   completed: '已完成',
-  failed: '失败'
+  failed: '失败',
+  cancelled: '已终止'
 }
 
 const triggerTypeLabels: Record<string, string> = {
@@ -82,6 +84,16 @@ function TaskExecutionsGlobal() {
 
   const handleViewDetail = (executionId: string) => {
     navigate(`/admin/executions/${executionId}`)
+  }
+
+  const handleCancel = async (executionId: string) => {
+    try {
+      await cancelExecution(executionId)
+      message.success('任务已终止')
+      fetchExecutions()
+    } catch {
+      message.error('终止任务失败')
+    }
   }
 
   const getTaskName = (taskId: string) => {
@@ -160,13 +172,29 @@ function TaskExecutionsGlobal() {
     {
       title: '操作',
       key: 'action',
-      width: 60,
+      width: 100,
       render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewDetail(record.id)}
-        />
+        <Space size={0}>
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record.id)}
+          />
+          {record.status === 'running' && (
+            <Popconfirm
+              title="确定要终止此任务吗？"
+              onConfirm={() => handleCancel(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="text"
+                danger
+                icon={<StopOutlined />}
+              />
+            </Popconfirm>
+          )}
+        </Space>
       )
     }
   ]

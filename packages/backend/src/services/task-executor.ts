@@ -1,7 +1,7 @@
 import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
-import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, type BotConfig } from './opencode.js'
+import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from './task-markdown.js'
 import { createWorkspace, getWorkspacePath } from './workspace-manager.js'
@@ -194,7 +194,16 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
               executionEventManager.emitReasoning(executionId, chunk)
             }
           },
-          () => {}
+          async (sessionId: string) => {
+            logger.info('[TaskExecutor] OpenCode session created:', sessionId)
+            try {
+              await db.update(taskExecutions)
+                .set({ opencodeSessionId: sessionId })
+                .where(eq(taskExecutions.id, executionId))
+            } catch (error) {
+              logger.error('[TaskExecutor] Failed to save opencodeSessionId:', error)
+            }
+          }
         )
         
         clearInterval(saveInterval)
@@ -292,6 +301,43 @@ async function handleFileOutput(config: Record<string, string>, result: string):
 async function handleWebhookOutput(config: Record<string, string>, result: string): Promise<void> {
   const { url } = config
   logger.info(`[TaskExecutor] Webhook output: url=${url}`)
+}
+
+export async function cancelExecution(
+  executionId: string,
+  cancelledBy: string,
+  botConfig: BotConfig
+): Promise<{ success: boolean; error?: string }> {
+  const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, executionId)).get()
+  
+  if (!execution) {
+    return { success: false, error: '执行记录不存在' }
+  }
+  
+  if (execution.status !== 'running') {
+    return { success: false, error: '只有运行中的任务可以终止' }
+  }
+  
+  if (execution.opencodeSessionId) {
+    try {
+      await abortOpenCodeSession(botConfig.apiUrl, execution.opencodeSessionId)
+      await deleteOpenCodeSession(botConfig.apiUrl, execution.opencodeSessionId)
+    } catch (error) {
+      logger.error('[TaskExecutor] Failed to abort/delete OpenCode session:', error)
+    }
+  }
+  
+  await db.update(taskExecutions)
+    .set({
+      status: 'cancelled',
+      cancelledBy,
+      completedAt: new Date()
+    })
+    .where(eq(taskExecutions.id, executionId))
+  
+  executionEventManager.emitStatus(executionId, 'cancelled')
+  
+  return { success: true }
 }
 
 export type { ExecuteTaskOptions, ExecutionResult }

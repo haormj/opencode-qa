@@ -1414,7 +1414,7 @@ export interface TaskListResponse {
 export interface TaskExecution {
   id: string
   taskId: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   triggerType: 'manual' | 'schedule' | 'webhook'
   triggeredBy: string | null
   triggeredByUser: {
@@ -1528,4 +1528,10 @@ export async function getExecution(id: string): Promise<TaskExecution> {
 
 export async function getExecutionMessages(executionId: string): Promise<ExecutionMessage[]> {
   return request(`${API_BASE}/admin/tasks/executions/${executionId}/messages`)
+}
+
+export async function cancelExecution(id: string): Promise<{ success: boolean; id: string; status: string }> {
+  return request(`${API_BASE}/admin/tasks/executions/${id}/cancel`, {
+    method: 'POST',
+  })
 }

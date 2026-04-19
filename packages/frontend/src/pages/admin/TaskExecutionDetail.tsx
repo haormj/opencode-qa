@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Tag, Button, Spin, Typography, Avatar, Empty } from 'antd'
-import { ArrowLeftOutlined, RobotOutlined, UserOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Tag, Button, Spin, Typography, Avatar, Empty, Popconfirm, message } from 'antd'
+import { ArrowLeftOutlined, RobotOutlined, UserOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { Streamdown } from 'streamdown'
 import { code } from '@streamdown/code'
 import { mermaid } from '@streamdown/mermaid'
 import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import type { TaskExecution, ExecutionMessage } from '../../services/api'
+import { cancelExecution } from '../../services/api'
 import { useExecutionEvents } from '../../hooks/useExecutionEvents'
 import './TaskExecutionDetail.css'
 
@@ -15,7 +16,8 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; text:
   pending: { color: 'default', icon: <ClockCircleOutlined />, text: '等待中' },
   running: { color: 'processing', icon: <SyncOutlined spin />, text: '执行中' },
   completed: { color: 'success', icon: <CheckCircleOutlined />, text: '已完成' },
-  failed: { color: 'error', icon: <CloseCircleOutlined />, text: '失败' }
+  failed: { color: 'error', icon: <CloseCircleOutlined />, text: '失败' },
+  cancelled: { color: 'warning', icon: <StopOutlined />, text: '已终止' }
 }
 
 function formatDuration(startedAt: string | null | undefined, completedAt: string | null | undefined): string {
@@ -160,6 +162,17 @@ function TaskExecutionDetail() {
     }
   })
 
+  const handleCancel = async () => {
+    if (!id) return
+    try {
+      await cancelExecution(id)
+      message.success('任务已终止')
+      setExecution(prev => prev ? { ...prev, status: 'cancelled' } : null)
+    } catch (error) {
+      message.error('终止任务失败')
+    }
+  }
+
   if (!connected) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -215,6 +228,21 @@ function TaskExecutionDetail() {
             </div>
           </div>
         </div>
+        {execution.status === 'running' && (
+          <div className="execution-header-right">
+            <Popconfirm
+              title="确认终止"
+              description="确定要终止该任务执行吗？"
+              onConfirm={handleCancel}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button danger icon={<StopOutlined />}>
+                终止任务
+              </Button>
+            </Popconfirm>
+          </div>
+        )}
       </div>
 
       <div className="execution-messages">

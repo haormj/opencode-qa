@@ -236,6 +236,8 @@ export const taskExecutions = sqliteTable('task_executions', {
   triggerType: text('trigger_type').notNull(),
   triggeredBy: text('triggered_by').references(() => users.id, { onDelete: 'set null' }),
   botId: text('bot_id').references(() => bots.id, { onDelete: 'set null' }),
+  opencodeSessionId: text('opencode_session_id'),
+  cancelledBy: text('cancelled_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (table) => ({
   taskIdIdx: index('task_executions_task_id_idx').on(table.taskId)
@@ -423,6 +425,10 @@ export const taskExecutionsRelations = relations(taskExecutions, ({ one, many })
   bot: one(bots, {
     fields: [taskExecutions.botId],
     references: [bots.id]
+  }),
+  cancelUser: one(users, {
+    fields: [taskExecutions.cancelledBy],
+    references: [users.id]
   }),
   messages: many(taskExecutionMessages)
 }))

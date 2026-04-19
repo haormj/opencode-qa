@@ -12,7 +12,7 @@ import {
   getExecutionById,
   getExecutionMessages
 } from '../services/task.js'
-import { executeTask, executeTaskStream } from '../services/task-executor.js'
+import { executeTask, executeTaskStream, cancelExecution } from '../services/task-executor.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from '../services/task-markdown.js'
 import {
   init as initScheduler,
@@ -111,6 +111,51 @@ router.get('/executions/:id/messages', async (req, res) => {
   } catch (error) {
     logger.error('Get execution messages error:', error)
     res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.post('/executions/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user!.id
+    
+    const execution = await getExecutionById(id)
+    if (!execution) {
+      return res.status(404).json({ error: '执行记录不存在' })
+    }
+    
+    if (execution.status !== 'running') {
+      return res.status(400).json({ error: '只有运行中的任务可以终止' })
+    }
+    
+    const task = await getTaskById(execution.taskId)
+    if (!task || !task.botId) {
+      return res.status(400).json({ error: '任务配置异常' })
+    }
+    
+    const bot = await db.select().from(bots).where(eq(bots.id, task.botId)).get()
+    if (!bot) {
+      return res.status(400).json({ error: '机器人配置不存在' })
+    }
+    
+    const botConfig = {
+      apiUrl: bot.apiUrl,
+      provider: bot.provider,
+      model: bot.model,
+      agent: bot.agent,
+      apiKey: bot.apiKey ?? undefined
+    }
+    
+    const result = await cancelExecution(id, userId, botConfig)
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error })
+    }
+    
+    res.json({ success: true, id, status: 'cancelled' })
+  } catch (error) {
+    logger.error('Cancel execution error:', error)
+    res.status(500).json({ error: '服务器内部错误' })
   }
 })
 
