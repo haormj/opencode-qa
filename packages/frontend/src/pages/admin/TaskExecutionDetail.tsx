@@ -77,9 +77,6 @@ function TaskExecutionDetail() {
     onConnected: (data) => {
       setConnected(true)
       isTriggerRef.current = data.isTrigger
-      streamingMessageIdRef.current = null
-      setStreamingReasoning('')
-      setIsStreaming(false)
     },
     onStatus: (data) => {
       setExecution(prev => {
@@ -108,7 +105,10 @@ function TaskExecutionDetail() {
       setMessages(prev => {
         const exists = prev.find(m => m.id === data.id)
         if (exists) {
-          if (streamingMessageIdRef.current === data.id) {
+          // 只在流式传输已结束且收到完整消息时才重置流式状态
+          // 通过检查 reasoning 是否存在来判断消息是否完整
+          // 如果 reasoning 存在，说明后端已保存完整消息，流式传输结束
+          if (streamingMessageIdRef.current === data.id && data.reasoning !== undefined) {
             setStreamingReasoning('')
             setIsStreaming(false)
             streamingMessageIdRef.current = null
@@ -126,9 +126,10 @@ function TaskExecutionDetail() {
       })
     },
     onText: (data) => {
-      if (isTriggerRef.current && streamingMessageIdRef.current) {
+      const currentRef = streamingMessageIdRef.current
+      if (isTriggerRef.current && currentRef) {
         setMessages(prev => prev.map(m => 
-          m.id === streamingMessageIdRef.current 
+          m.id === currentRef 
             ? { ...m, content: m.content + data.text }
             : m
         ))
@@ -141,9 +142,9 @@ function TaskExecutionDetail() {
     },
     onStreamStart: (data) => {
       if (isTriggerRef.current) {
+        streamingMessageIdRef.current = data.messageId
         setIsStreaming(true)
         setStreamingReasoning('')
-        streamingMessageIdRef.current = data.messageId
         setMessages(prev => {
           const exists = prev.find(m => m.id === data.messageId)
           if (exists) return prev
@@ -164,6 +165,37 @@ function TaskExecutionDetail() {
     },
     onError: (error) => {
       console.error('[ExecutionSSE] Error:', error)
+    },
+    onRestore: (data) => {
+      if (!data.isTrigger) return
+      
+      if (data.streamingMessageId) {
+        const streamingMessageId = data.streamingMessageId
+        streamingMessageIdRef.current = streamingMessageId
+        setIsStreaming(true)
+        setStreamingReasoning(data.streamingReasoning || '')
+        
+        if (data.streamingContent) {
+          const streamingContent = data.streamingContent
+          setMessages(prev => {
+            const exists = prev.find(m => m.id === streamingMessageId)
+            if (exists) {
+              return prev.map(m => 
+                m.id === streamingMessageId 
+                  ? { ...m, content: streamingContent } 
+                  : m
+              )
+            }
+            return [...prev, {
+              id: streamingMessageId,
+              executionId: id!,
+              role: 'assistant' as const,
+              content: streamingContent,
+              createdAt: new Date().toISOString()
+            }]
+          })
+        }
+      }
     }
   })
 

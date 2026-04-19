@@ -43,6 +43,13 @@ export interface ExecutionConnectedEventData {
   timestamp: string
 }
 
+export interface ExecutionRestoreEventData {
+  streamingMessageId?: string
+  streamingContent?: string
+  streamingReasoning?: string
+  isTrigger: boolean
+}
+
 interface CallbackFunctions {
   onConnected?: (data: ExecutionConnectedEventData) => void
   onMessage?: (data: ExecutionMessageEventData) => void
@@ -52,6 +59,7 @@ interface CallbackFunctions {
   onStreamStart?: (data: ExecutionStreamStartEventData) => void
   onStreamEnd?: (data: ExecutionTextEventData) => void
   onError?: (error: Event) => void
+  onRestore?: (data: ExecutionRestoreEventData) => void
 }
 
 interface ExecutionState {
@@ -94,38 +102,25 @@ class ExecutionEventManager {
         callbacks.onStatus?.(state.statusData)
       }
       
-      // 按 messages 数组顺序返回（保持正确的时间顺序）
+      // 先恢复消息（保持正确的时间顺序）
+      // 用户消息在前，流式消息不在 messages 数组中
       state.messages.forEach(msg => {
-        if (state.streamingMessageId && msg.id === state.streamingMessageId && state.streamingContent) {
-          callbacks.onMessage?.({ ...msg, content: state.streamingContent })
-        } else {
-          callbacks.onMessage?.(msg)
-        }
+        callbacks.onMessage?.(msg)
       })
       
-      // 如果流式消息不在数组中（被 addMessage 跳过），补充在最后
-      if (state.streamingMessageId && state.streamingContent) {
-        const hasStreamingMsg = state.messages.some(m => m.id === state.streamingMessageId)
-        if (!hasStreamingMsg) {
-          callbacks.onMessage?.({
-            id: state.streamingMessageId,
-            executionId,
-            role: 'assistant',
-            content: state.streamingContent,
-            reasoning: state.streamingReasoning || null,
-            createdAt: new Date().toISOString()
-          })
-        }
-      }
-      
+      // 再恢复流式状态
+      // 此时 streamingMessageIdRef 已被设置，后续 text/reasoning 事件能正常更新
       if (state.streamingMessageId) {
         callbacks.onStreamStart?.({
           executionId,
           messageId: state.streamingMessageId
         })
-        if (state.streamingReasoning) {
-          callbacks.onReasoning?.({ text: state.streamingReasoning })
-        }
+        callbacks.onRestore?.({
+          streamingMessageId: state.streamingMessageId,
+          streamingContent: state.streamingContent,
+          streamingReasoning: state.streamingReasoning,
+          isTrigger: state.isTrigger
+        })
       }
     }
 

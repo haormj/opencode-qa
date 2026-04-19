@@ -5,7 +5,8 @@ import {
   ExecutionStatusEventData,
   ExecutionTextEventData,
   ExecutionStreamStartEventData,
-  ExecutionConnectedEventData
+  ExecutionConnectedEventData,
+  ExecutionRestoreEventData
 } from '../services/execution-event-manager'
 
 export type {
@@ -13,7 +14,8 @@ export type {
   ExecutionStatusEventData,
   ExecutionTextEventData,
   ExecutionStreamStartEventData,
-  ExecutionConnectedEventData
+  ExecutionConnectedEventData,
+  ExecutionRestoreEventData
 }
 
 interface UseExecutionEventsOptions {
@@ -27,6 +29,7 @@ interface UseExecutionEventsOptions {
   onConnected?: (data: ExecutionConnectedEventData) => void
   onDisconnected?: () => void
   onError?: (error: Event) => void
+  onRestore?: (data: ExecutionRestoreEventData) => void
 }
 
 export function useExecutionEvents({
@@ -38,7 +41,8 @@ export function useExecutionEvents({
   onStreamStart,
   onStreamEnd,
   onConnected,
-  onError
+  onError,
+  onRestore
 }: UseExecutionEventsOptions) {
   const onMessageRef = useRef(onMessage)
   const onStatusRef = useRef(onStatus)
@@ -48,6 +52,7 @@ export function useExecutionEvents({
   const onStreamEndRef = useRef(onStreamEnd)
   const onConnectedRef = useRef(onConnected)
   const onErrorRef = useRef(onError)
+  const onRestoreRef = useRef(onRestore)
 
   useEffect(() => {
     onMessageRef.current = onMessage
@@ -58,6 +63,7 @@ export function useExecutionEvents({
     onStreamEndRef.current = onStreamEnd
     onConnectedRef.current = onConnected
     onErrorRef.current = onError
+    onRestoreRef.current = onRestore
   })
 
   useEffect(() => {
@@ -71,7 +77,8 @@ export function useExecutionEvents({
       onReasoning: (data) => onReasoningRef.current?.(data),
       onStreamStart: (data) => onStreamStartRef.current?.(data),
       onStreamEnd: (data) => onStreamEndRef.current?.(data),
-      onError: (error) => onErrorRef.current?.(error)
+      onError: (error) => onErrorRef.current?.(error),
+      onRestore: (data) => onRestoreRef.current?.(data)
     })
 
     return () => {
