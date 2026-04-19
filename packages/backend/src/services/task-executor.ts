@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from './task-markdown.js'
-import { createWorkspace, getWorkspacePath } from './workspace-manager.js'
+import { createWorkspace, getWorkspacePath, cleanupWorkspace, shouldCleanupImmediately } from './workspace-manager.js'
 import logger from './logger.js'
 import type { FlowData, Node, NodeType, NodeData, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, OutputNodeData } from '../types/task.js'
 
@@ -245,6 +245,9 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
               logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
             }
           }
+          if (shouldCleanupImmediately()) {
+            await cleanupWorkspace(executionId)
+          }
           executionEventManager.emitStatus(executionId, 'completed')
         }
       } catch (streamError) {
@@ -273,6 +276,9 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
           } catch (error) {
             logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
           }
+        }
+        if (shouldCleanupImmediately()) {
+          await cleanupWorkspace(executionId)
         }
         executionEventManager.emitStatus(executionId, 'failed')
       }
@@ -365,6 +371,10 @@ export async function cancelExecution(
       completedAt: new Date()
     })
     .where(eq(taskExecutions.id, executionId))
+  
+  if (shouldCleanupImmediately()) {
+    await cleanupWorkspace(executionId)
+  }
   
   executionEventManager.emitStatus(executionId, 'cancelled', cancelledByUser)
   

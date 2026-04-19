@@ -9,11 +9,15 @@ function getWorkspacesRootPath(): string {
 }
 
 function getRetentionHours(): number {
-  return parseInt(process.env.WORKSPACE_RETENTION_HOURS || '24', 10)
+  return parseInt(process.env.WORKSPACE_RETENTION_HOURS || '0', 10)
 }
 
 function isAutoCleanupEnabled(): boolean {
   return process.env.AUTO_CLEANUP_WORKSPACE !== 'false'
+}
+
+export function shouldCleanupImmediately(): boolean {
+  return getRetentionHours() === 0
 }
 
 export function getWorkspacePath(executionId: string): string {
