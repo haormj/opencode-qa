@@ -89,13 +89,19 @@ class ExecutionEventManager {
         callbacks.onStatus?.(state.statusData)
       }
       
-      // 先处理流式消息（如果有）
-      if (state.streamingMessageId && state.streamingContent) {
-        const streamingMsg = state.messages.find(m => m.id === state.streamingMessageId)
-        if (streamingMsg) {
-          callbacks.onMessage?.({ ...streamingMsg, content: state.streamingContent })
+      // 按 messages 数组顺序返回（保持正确的时间顺序）
+      state.messages.forEach(msg => {
+        if (state.streamingMessageId && msg.id === state.streamingMessageId && state.streamingContent) {
+          callbacks.onMessage?.({ ...msg, content: state.streamingContent })
         } else {
-          // 消息可能被 addMessage 跳过了，使用缓存的内容创建一个
+          callbacks.onMessage?.(msg)
+        }
+      })
+      
+      // 如果流式消息不在数组中（被 addMessage 跳过），补充在最后
+      if (state.streamingMessageId && state.streamingContent) {
+        const hasStreamingMsg = state.messages.some(m => m.id === state.streamingMessageId)
+        if (!hasStreamingMsg) {
           callbacks.onMessage?.({
             id: state.streamingMessageId,
             executionId,
@@ -106,13 +112,6 @@ class ExecutionEventManager {
           })
         }
       }
-      
-      // 再处理其他消息（排除流式消息）
-      state.messages.forEach(msg => {
-        if (msg.id !== state.streamingMessageId) {
-          callbacks.onMessage?.(msg)
-        }
-      })
       
       if (state.streamingMessageId) {
         callbacks.onStreamStart?.({
