@@ -168,16 +168,27 @@ class ExecutionEventManager {
       eventSource.addEventListener('status', (event) => {
         try {
           const data = JSON.parse(event.data)
-          this.updateState(executionId, { status: data.status, statusData: data })
-          this.notifyCallbacks(executionId, 'onStatus', data)
-
+          
+          // 如果任务已结束，清空流式缓存，让历史消息正确显示
           if (data.status === 'completed' || data.status === 'failed') {
+            this.updateState(executionId, {
+              status: data.status,
+              statusData: data,
+              streamingMessageId: undefined,
+              streamingContent: undefined,
+              streamingReasoning: undefined
+            })
+            
             const callbackSet = this.callbacks.get(executionId)
             if (!callbackSet || callbackSet.size === 0) {
               this.closeConnection(executionId)
               this.states.delete(executionId)
             }
+          } else {
+            this.updateState(executionId, { status: data.status, statusData: data })
           }
+          
+          this.notifyCallbacks(executionId, 'onStatus', data)
         } catch (error) {
           console.error('[ExecutionEventManager] Failed to parse status:', error)
         }
