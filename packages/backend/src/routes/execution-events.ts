@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { authMiddleware, requireAdmin } from '../middleware/auth.js'
-import { db, taskExecutions, taskExecutionMessages } from '../db/index.js'
+import { db, taskExecutions, taskExecutionMessages, users } from '../db/index.js'
 import { eq } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { executionEventManager } from '../services/execution-event-manager.js'
 import logger from '../services/logger.js'
 
@@ -20,6 +21,18 @@ router.get('/:id/events', async (req, res) => {
     res.write(`event: error\ndata: ${JSON.stringify({ error: 'Execution not found' })}\n\n`)
     res.end()
     return
+  }
+
+  let cancelledByUser = null
+  if (execution.status === 'cancelled' && execution.cancelledBy) {
+    const user = await db.select().from(users).where(eq(users.id, execution.cancelledBy)).get()
+    if (user) {
+      cancelledByUser = {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName
+      }
+    }
   }
 
   res.setHeader('Content-Type', 'text/event-stream')
@@ -44,7 +57,8 @@ router.get('/:id/events', async (req, res) => {
     triggeredBy: execution.triggeredBy,
     startedAt: execution.startedAt,
     completedAt: execution.completedAt,
-    updatedAt: execution.createdAt 
+    updatedAt: execution.createdAt,
+    cancelledByUser
   })}\n\n`)
 
   const messages = await db.select().from(taskExecutionMessages).where(eq(taskExecutionMessages.executionId, executionId)).orderBy(taskExecutionMessages.createdAt)

@@ -19,6 +19,11 @@ export interface ExecutionStatusEventData {
   startedAt?: string | null
   completedAt?: string | null
   updatedAt: string
+  cancelledByUser?: {
+    id: string
+    username: string
+    displayName: string
+  } | null
 }
 
 export interface ExecutionTextEventData {

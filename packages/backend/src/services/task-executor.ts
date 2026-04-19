@@ -1,4 +1,4 @@
-import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
+import { db, tasks, taskExecutions, taskExecutionMessages, users } from '../db/index.js'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
@@ -333,6 +333,13 @@ export async function cancelExecution(
     }
   }
   
+  const user = await db.select().from(users).where(eq(users.id, cancelledBy)).get()
+  const cancelledByUser = user ? {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName
+  } : null
+  
   await db.update(taskExecutions)
     .set({
       status: 'cancelled',
@@ -341,7 +348,7 @@ export async function cancelExecution(
     })
     .where(eq(taskExecutions.id, executionId))
   
-  executionEventManager.emitStatus(executionId, 'cancelled')
+  executionEventManager.emitStatus(executionId, 'cancelled', cancelledByUser)
   
   return { success: true }
 }

@@ -91,13 +91,17 @@ function TaskExecutionDetail() {
             triggerType: data.triggerType as TaskExecution['triggerType'],
             triggeredBy: data.triggeredBy ?? null,
             triggeredByUser: null,
-            cancelledByUser: null,
+            cancelledByUser: data.cancelledByUser ?? null,
             startedAt: data.startedAt ?? null,
             completedAt: data.completedAt ?? null,
             createdAt: data.updatedAt
           }
         }
-        return { ...prev, status: data.status as TaskExecution['status'] }
+        return { 
+          ...prev, 
+          status: data.status as TaskExecution['status'],
+          cancelledByUser: data.cancelledByUser ?? prev.cancelledByUser
+        }
       })
     },
     onMessage: (data) => {
