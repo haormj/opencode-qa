@@ -1,6 +1,6 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback } from 'react'
 import { Input } from 'antd'
-import { Handle, Position, useNodes } from '@xyflow/react'
+import { Handle, Position } from '@xyflow/react'
 
 const { TextArea } = Input
 
@@ -16,14 +16,7 @@ interface StepNodeProps {
 
 const NODE_COLOR = '#F59E0B'
 
-function StepNode({ data, selected, id }: StepNodeProps) {
-  const nodes = useNodes()
-  
-  const stepNumber = useMemo(() => {
-    const stepNodes = nodes.filter(n => n.type === 'step')
-    return stepNodes.findIndex(n => n.id === id) + 1
-  }, [nodes, id])
-
+function StepNode({ data, selected }: StepNodeProps) {
   const updateData = useCallback((value: string) => {
     data.instruction = value
   }, [data])
@@ -71,7 +64,7 @@ function StepNode({ data, selected, id }: StepNodeProps) {
       >
         <span style={{ fontSize: 16 }}>📝</span>
         <span style={{ fontWeight: 500, fontSize: 14, color: '#1f2937' }}>
-          步骤 {stepNumber}
+          步骤
         </span>
       </div>
       
