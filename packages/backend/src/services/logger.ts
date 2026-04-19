@@ -12,9 +12,14 @@ const logFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
     let output = `[${timestamp}] ${level.toUpperCase().padEnd(5)} ${message}`
-    if (Object.keys(meta).length > 0) {
-      output += ` ${JSON.stringify(meta)}`
+    
+    const metaValues = Object.values(meta)
+    if (metaValues.length > 0) {
+      metaValues.forEach(v => {
+        output += typeof v === 'object' ? ` ${JSON.stringify(v)}` : ` ${v}`
+      })
     }
+    
     if (stack) {
       output += `\n${stack}`
     }
