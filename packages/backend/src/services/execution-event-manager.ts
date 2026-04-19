@@ -38,6 +38,7 @@ export interface StreamStartEvent {
   type: 'stream_start'
   data: {
     executionId: string
+    messageId: string
   }
 }
 
@@ -145,10 +146,10 @@ class ExecutionEventManager {
     })
   }
 
-  emitStreamStart(executionId: string): void {
+  emitStreamStart(executionId: string, messageId: string): void {
     this.broadcast(executionId, {
       type: 'stream_start',
-      data: { executionId }
+      data: { executionId, messageId }
     })
   }
 

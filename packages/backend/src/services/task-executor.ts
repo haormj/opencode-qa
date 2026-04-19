@@ -160,7 +160,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         createdAt: assistantMessageTime
       })
       
-      executionEventManager.emitStreamStart(executionId)
+      executionEventManager.emitStreamStart(executionId, assistantMessageId)
       
       let accumulatedContent = ''
       let reasoningContent = ''

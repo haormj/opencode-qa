@@ -76,6 +76,9 @@ function TaskExecutionDetail() {
       console.log('[ExecutionSSE] Connected:', data)
       setConnected(true)
       isTriggerRef.current = data.isTrigger
+      streamingMessageIdRef.current = null
+      setStreamingReasoning('')
+      setIsStreaming(false)
     },
     onStatus: (data) => {
       setExecution(prev => {
@@ -97,21 +100,15 @@ function TaskExecutionDetail() {
     },
     onMessage: (data) => {
       setMessages(prev => {
-        if (data.role === 'assistant' && streamingMessageIdRef.current) {
-          const filtered = prev.filter(m => m.id !== streamingMessageIdRef.current)
-          streamingMessageIdRef.current = null
-          setStreamingReasoning('')
-          setIsStreaming(false)
-          return [...filtered, {
-            id: data.id,
-            executionId: data.executionId,
-            role: data.role as 'assistant',
-            content: data.content,
-            createdAt: data.createdAt
-          }]
-        }
         const exists = prev.find(m => m.id === data.id)
-        if (exists) return prev
+        if (exists) {
+          if (streamingMessageIdRef.current === data.id) {
+            setStreamingReasoning('')
+            setIsStreaming(false)
+            streamingMessageIdRef.current = null
+          }
+          return prev.map(m => m.id === data.id ? { ...m, content: data.content } : m)
+        }
         return [...prev, {
           id: data.id,
           executionId: data.executionId,
@@ -135,19 +132,22 @@ function TaskExecutionDetail() {
         setStreamingReasoning(prev => prev + data.text)
       }
     },
-    onStreamStart: () => {
+    onStreamStart: (data) => {
       if (isTriggerRef.current) {
         setIsStreaming(true)
         setStreamingReasoning('')
-        const tempId = `streaming-${Date.now()}`
-        streamingMessageIdRef.current = tempId
-        setMessages(prev => [...prev, {
-          id: tempId,
-          executionId: id || '',
-          role: 'assistant',
-          content: '',
-          createdAt: new Date().toISOString()
-        }])
+        streamingMessageIdRef.current = data.messageId
+        setMessages(prev => {
+          const exists = prev.find(m => m.id === data.messageId)
+          if (exists) return prev
+          return [...prev, {
+            id: data.messageId,
+            executionId: data.executionId,
+            role: 'assistant' as const,
+            content: '',
+            createdAt: new Date().toISOString()
+          }]
+        })
       }
     },
     onStreamEnd: () => {
