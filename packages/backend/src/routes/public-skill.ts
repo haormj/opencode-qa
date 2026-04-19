@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm'
 import * as skillService from '../services/skill.js'
 import * as skillFileService from '../services/skill-file.js'
 import logger from '../services/logger.js'
+import { normalizeServerUrl } from '../utils/url.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -20,7 +21,7 @@ async function getServerUrl(): Promise<string> {
     .get()
   
   if (setting && setting.value) {
-    return setting.value
+    return normalizeServerUrl(setting.value)
   }
   
   return ''

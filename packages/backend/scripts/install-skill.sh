@@ -8,12 +8,14 @@ SERVER_URL="{{SERVER_URL}}"
 
 FORCE_YES=false
 SOURCE=""
+TARGET_DIR=""
 
-while getopts "ys:" opt; do
+while getopts "ys:d:" opt; do
   case $opt in
     y) FORCE_YES=true ;;
     s) SOURCE="$OPTARG" ;;
-    *) echo "Usage: $0 [-y] [-s source] <skill-slug>"; exit 1 ;;
+    d) TARGET_DIR="$OPTARG" ;;
+    *) echo "Usage: $0 [-y] [-s source] [-d target-dir] <skill-slug>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
@@ -22,11 +24,15 @@ SLUG="${1:-}"
 
 if [ -z "$SLUG" ]; then
     echo "Error: Please provide skill slug"
-    echo "Usage: curl -sSL <server>/api/public/scripts/install-skill.sh | bash -s -- [-y] <skill-slug>"
+    echo "Usage: curl -sSL <server>/api/public/scripts/install-skill.sh | bash -s -- [-y] [-d <target-dir>] <skill-slug>"
     exit 1
 fi
 
-INSTALL_DIR="$HOME/.opencode/skills/$SLUG"
+if [ -n "$TARGET_DIR" ]; then
+    INSTALL_DIR="$TARGET_DIR/$SLUG"
+else
+    INSTALL_DIR="$HOME/.opencode/skills/$SLUG"
+fi
 
 echo "Installing skill: $SLUG"
 echo "Server: $SERVER_URL"

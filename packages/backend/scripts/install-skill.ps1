@@ -5,13 +5,19 @@ param(
     [Parameter(Mandatory=$true, Position=0)]
     [string]$Slug,
     [switch]$Force,
-    [string]$Source
+    [string]$Source,
+    [string]$TargetDir
 )
 
 $ErrorActionPreference = "Stop"
 
 $ServerUrl = "{{SERVER_URL}}"
-$InstallDir = Join-Path $env:USERPROFILE ".opencode\skills\$Slug"
+
+if ($TargetDir) {
+    $InstallDir = Join-Path $TargetDir $Slug
+} else {
+    $InstallDir = Join-Path $env:USERPROFILE ".opencode\skills\$Slug"
+}
 
 Write-Host "Installing skill: $Slug"
 Write-Host "Server: $ServerUrl"

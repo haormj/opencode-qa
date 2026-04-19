@@ -1,9 +1,10 @@
 import { db, tasks, taskExecutions, taskExecutionMessages } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
-import { sendOpenCodeMessage, sendOpenCodeMessageStream, type BotConfig } from './opencode.js'
+import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
 import { generateTaskMarkdown } from './task-markdown.js'
+import { createWorkspace, getWorkspacePath } from './workspace-manager.js'
 import logger from './logger.js'
 import type { FlowData, Node, NodeType, NodeData, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, OutputNodeData } from '../types/task.js'
 
@@ -34,6 +35,9 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
   const executionId = randomUUID()
   const now = new Date()
   
+  const workspacePath = await createWorkspace(executionId)
+  logger.info(`[TaskExecutor] Created workspace for execution ${executionId}: ${workspacePath}`)
+  
   await db.insert(taskExecutions).values({
     id: executionId,
     taskId,
@@ -47,11 +51,15 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
   
   try {
     const flowData: FlowData = JSON.parse(task.flowData)
-    const markdown = await generateTaskMarkdown(flowData)
+    const markdown = await generateTaskMarkdown(flowData, workspacePath)
     
     await saveMessage(executionId, 'user', markdown)
     
-    const { answer } = await sendOpenCodeMessage(markdown, botConfig)
+    const { answer } = await sendOpenCodeMessageWithWorkspace(
+      markdown,
+      botConfig,
+      workspacePath
+    )
     
     await saveMessage(executionId, 'assistant', answer)
     
@@ -93,6 +101,9 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   const executionId = randomUUID()
   const now = new Date()
   
+  const workspacePath = await createWorkspace(executionId)
+  logger.info(`[TaskExecutor] Created workspace for stream execution ${executionId}: ${workspacePath}`)
+  
   await db.insert(taskExecutions).values({
     id: executionId,
     taskId,
@@ -109,7 +120,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
   ;(async () => {
     try {
       const flowData: FlowData = JSON.parse(task.flowData)
-      const markdown = await generateTaskMarkdown(flowData)
+      const markdown = await generateTaskMarkdown(flowData, workspacePath)
       
       const userMessageId = randomUUID()
       const userMessageTime = new Date()
@@ -129,7 +140,6 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         createdAt: userMessageTime
       })
       
-      // Wait for client to connect (max 3 seconds)
       const maxWaitTime = 3000
       const waitStartTime = Date.now()
       while (executionEventManager.getClientCount(executionId) === 0) {
@@ -168,10 +178,10 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
       }, 2000)
       
       try {
-        const { answer } = await sendOpenCodeMessageStream(
+        const { answer } = await sendOpenCodeMessageStreamWithWorkspace(
           markdown,
           botConfig,
-          undefined,
+          workspacePath,
           (chunk: string, type: string) => {
             if (type === 'text') {
               accumulatedContent += chunk

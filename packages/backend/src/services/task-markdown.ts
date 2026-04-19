@@ -1,6 +1,8 @@
+import { join } from 'path'
 import { db, systemSettings, skills } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { decrypt } from './encryption.js'
+import { normalizeServerUrl } from '../utils/url.js'
 import type { FlowData, Node, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData } from '../types/task.js'
 
 async function getServerUrl(): Promise<string> {
@@ -12,7 +14,7 @@ async function getServerUrl(): Promise<string> {
     throw new Error('请先在系统设置中配置服务器地址')
   }
   
-  return setting.value
+  return normalizeServerUrl(setting.value)
 }
 
 function topologicalSort(nodes: Node[], edges: { source: string; target: string }[]): Node[] {
@@ -59,10 +61,34 @@ function topologicalSort(nodes: Node[], edges: { source: string; target: string 
   return result
 }
 
-function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string): string {
+function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, workspacePath?: string): string {
   const slug = data.skillSlug || ''
   if (!slug) {
     return `## 技能安装\n\n请选择要安装的技能。`
+  }
+  
+  if (workspacePath) {
+    const skillsDir = join(workspacePath, '.opencode', 'skills')
+    const unixPath = skillsDir.replace(/\\/g, '/')
+    const windowsPath = skillsDir.replace(/\\/g, '\\\\')
+    
+    return `## 技能安装
+
+安装技能 "${slug}" 到当前工作区。
+
+根据当前平台执行以下命令：
+
+Linux/macOS:
+\`\`\`bash
+curl -sSL "${serverUrl}/api/public/scripts/install-skill.sh" | bash -s -- -y -s task -d '${unixPath}' ${slug}
+\`\`\`
+
+Windows PowerShell:
+\`\`\`powershell
+powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-RestMethod '${serverUrl}/api/public/scripts/install-skill.ps1'))) -Slug '${slug}' -Force -Source 'task' -TargetDir '${windowsPath}'"
+\`\`\`
+
+安装完成后，列出安装的文件确认安装成功。`
   }
   
   return `## 技能安装
@@ -84,11 +110,21 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
 安装完成后，列出安装的文件确认安装成功。`
 }
 
-function codeDownloadToMarkdown(data: CodeDownloadNodeData): string {
+function codeDownloadToMarkdown(data: CodeDownloadNodeData, workspacePath?: string): string {
   let content = `## 代码下载\n\n`
+  
+  let targetPath = data.targetPath || '/tmp/repo'
+  if (workspacePath && data.targetPath) {
+    if (!data.targetPath.startsWith('/') && !data.targetPath.match(/^[A-Z]:\\/i)) {
+      targetPath = `${workspacePath}/${data.targetPath}`
+    }
+  } else if (workspacePath) {
+    targetPath = `${workspacePath}/repo`
+  }
+  
   content += `- **仓库地址**: ${data.repoUrl || '-'}\n`
   content += `- **分支**: ${data.branch || 'main'}\n`
-  content += `- **目标路径**: ${data.targetPath || '/tmp/repo'}\n`
+  content += `- **目标路径**: ${targetPath}\n`
   
   if (data.username) {
     let password = data.password
@@ -112,12 +148,12 @@ function stepToMarkdown(data: StepNodeData, stepNumber: number): string {
   return content
 }
 
-async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string): Promise<string> {
+async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string, workspacePath?: string): Promise<string> {
   switch (node.type) {
     case 'skillInstall':
-      return skillInstallToMarkdown(node.data as SkillInstallNodeData, serverUrl)
+      return skillInstallToMarkdown(node.data as SkillInstallNodeData, serverUrl, workspacePath)
     case 'codeDownload':
-      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData)
+      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData, workspacePath)
     case 'step':
       return stepToMarkdown(node.data as StepNodeData, getNextStepIndex())
     case 'output':
@@ -127,14 +163,18 @@ async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, server
   }
 }
 
-export async function generateTaskMarkdown(flowData: FlowData): Promise<string> {
+export async function generateTaskMarkdown(flowData: FlowData, workspacePath?: string): Promise<string> {
   const serverUrl = await getServerUrl()
   const sortedNodes = topologicalSort(flowData.nodes, flowData.edges)
   const parts: string[] = ['# 任务执行计划\n']
   
+  if (workspacePath) {
+    parts.push(`**工作区**: \`${workspacePath}\`\n`)
+  }
+  
   let stepIndex = 0
   for (const node of sortedNodes) {
-    const content = await nodeToMarkdown(node, () => ++stepIndex, serverUrl)
+    const content = await nodeToMarkdown(node, () => ++stepIndex, serverUrl, workspacePath)
     if (content) {
       parts.push(content)
     }

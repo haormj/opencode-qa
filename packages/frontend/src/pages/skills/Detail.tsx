@@ -46,6 +46,10 @@ function Detail() {
   const [readmeLoading, setReadmeLoading] = useState(false)
   const [readmeLoaded, setReadmeLoaded] = useState(false)
 
+  const normalizeServerUrl = (url: string): string => {
+    return url.trim().replace(/\/+$/, '')
+  }
+
   useEffect(() => {
     if (!slug) return
     setLoading(true)
@@ -75,10 +79,10 @@ function Detail() {
     fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
-        setServerUrl(data['install.serverUrl'] || window.location.origin)
+        setServerUrl(normalizeServerUrl(data['install.serverUrl'] || window.location.origin))
       })
       .catch(() => {
-        setServerUrl(window.location.origin)
+        setServerUrl(normalizeServerUrl(window.location.origin))
       })
   }, [])
 
