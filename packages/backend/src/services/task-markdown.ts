@@ -61,10 +61,10 @@ function topologicalSort(nodes: Node[], edges: { source: string; target: string 
   return result
 }
 
-function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, workspacePath?: string): string {
+function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, stepNumber: number, workspacePath?: string): string {
   const slug = data.skillSlug || ''
   if (!slug) {
-    return `## 技能安装\n\n请选择要安装的技能。`
+    return `## 步骤 ${stepNumber}: 技能安装\n\n请选择要安装的技能。`
   }
   
   if (workspacePath) {
@@ -72,7 +72,7 @@ function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, w
     const unixPath = skillsDir.replace(/\\/g, '/')
     const windowsPath = skillsDir.replace(/\\/g, '\\\\')
     
-    return `## 技能安装
+    return `## 步骤 ${stepNumber}: 技能安装
 
 安装技能 "${slug}" 到当前工作区。
 
@@ -91,7 +91,7 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
 安装完成后，列出安装的文件确认安装成功。`
   }
   
-  return `## 技能安装
+  return `## 步骤 ${stepNumber}: 技能安装
 
 安装技能 "${slug}"。
 
@@ -110,8 +110,8 @@ powershell -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Invoke-Re
 安装完成后，列出安装的文件确认安装成功。`
 }
 
-function codeDownloadToMarkdown(data: CodeDownloadNodeData, workspacePath?: string): string {
-  let content = `## 代码下载\n\n`
+function codeDownloadToMarkdown(data: CodeDownloadNodeData, stepNumber: number, workspacePath?: string): string {
+  let content = `## 步骤 ${stepNumber}: 代码下载\n\n`
   
   let targetPath = data.targetPath || '/tmp/repo'
   if (workspacePath && data.targetPath) {
@@ -151,9 +151,9 @@ function stepToMarkdown(data: StepNodeData, stepNumber: number): string {
 async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, serverUrl: string, workspacePath?: string): Promise<string> {
   switch (node.type) {
     case 'skillInstall':
-      return skillInstallToMarkdown(node.data as SkillInstallNodeData, serverUrl, workspacePath)
+      return skillInstallToMarkdown(node.data as SkillInstallNodeData, serverUrl, getNextStepIndex(), workspacePath)
     case 'codeDownload':
-      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData, workspacePath)
+      return codeDownloadToMarkdown(node.data as CodeDownloadNodeData, getNextStepIndex(), workspacePath)
     case 'step':
       return stepToMarkdown(node.data as StepNodeData, getNextStepIndex())
     case 'output':
