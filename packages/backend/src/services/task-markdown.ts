@@ -205,13 +205,18 @@ async function nodeToMarkdown(
 
 export async function prepareWorkspaceScripts(
   flowData: FlowData, 
-  workspacePath: string
+  workspacePath?: string,
+  options?: { dryRun?: boolean }
 ): Promise<Map<string, CloneScriptInfo>> {
   const scriptsMap = new Map<string, CloneScriptInfo>()
   const sortedNodes = topologicalSort(flowData.nodes, flowData.edges)
   
-  const scriptsDir = join(workspacePath, 'scripts')
-  await mkdir(scriptsDir, { recursive: true })
+  const dryRun = options?.dryRun ?? false
+  
+  if (!dryRun && workspacePath) {
+    const scriptsDir = join(workspacePath, 'scripts')
+    await mkdir(scriptsDir, { recursive: true })
+  }
   
   const repoNameCount = new Map<string, number>()
   
@@ -247,18 +252,21 @@ export async function prepareWorkspaceScripts(
     
     const branch = data.branch || 'main'
     
-    // 生成 .sh 脚本
-    const shContent = `#!/bin/bash
+    // 非 dryRun 模式才写文件
+    if (!dryRun && workspacePath) {
+      // 生成 .sh 脚本
+      const shContent = `#!/bin/bash
 set -e
 git clone -b ${branch} "${authUrl}" "${targetPath}"
 `
-    await writeFile(join(workspacePath, `scripts/clone-${repoName}.sh`), shContent)
-    
-    // 生成 .ps1 脚本
-    const ps1Content = `$ErrorActionPreference = "Stop"
+      await writeFile(join(workspacePath, `scripts/clone-${repoName}.sh`), shContent)
+      
+      // 生成 .ps1 脚本
+      const ps1Content = `$ErrorActionPreference = "Stop"
 git clone -b ${branch} "${authUrl}" "${targetPath}"
 `
-    await writeFile(join(workspacePath, `scripts/clone-${repoName}.ps1`), ps1Content)
+      await writeFile(join(workspacePath, `scripts/clone-${repoName}.ps1`), ps1Content)
+    }
     
     scriptsMap.set(node.id, { repoName, shPath, ps1Path, targetPath })
   }

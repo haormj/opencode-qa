@@ -13,7 +13,7 @@ import {
   getExecutionMessages
 } from '../services/task.js'
 import { executeTask, executeTaskStream } from '../services/task-executor.js'
-import { generateTaskMarkdown } from '../services/task-markdown.js'
+import { generateTaskMarkdown, prepareWorkspaceScripts } from '../services/task-markdown.js'
 import {
   init as initScheduler,
   registerTask,
@@ -289,7 +289,8 @@ router.get('/:id/preview', async (req, res) => {
     }
     
     const flowData: FlowData = JSON.parse(task.flowData)
-    const markdown = await generateTaskMarkdown(flowData)
+    const scriptsMap = await prepareWorkspaceScripts(flowData, undefined, { dryRun: true })
+    const markdown = await generateTaskMarkdown(flowData, '{workspace}', scriptsMap)
     
     res.json({ markdown })
   } catch (error) {
