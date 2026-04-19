@@ -242,12 +242,13 @@ export async function prepareWorkspaceScripts(
     // 构建带认证的 URL
     let authUrl = data.repoUrl
     if (data.username && data.password) {
+      let decryptedPassword = data.password
       try {
-        const decryptedPassword = decrypt(data.password)
-        authUrl = injectCredentials(data.repoUrl, data.username, decryptedPassword)
+        decryptedPassword = decrypt(data.password)
       } catch {
-        // 解密失败，使用原 URL
+        // 解密失败，可能是明文密码，直接使用原值
       }
+      authUrl = injectCredentials(data.repoUrl, data.username, decryptedPassword)
     }
     
     const branch = data.branch || 'main'
