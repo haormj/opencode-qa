@@ -8,6 +8,21 @@ function getWorkspacesRootPath(): string {
     : resolve(process.cwd(), 'data', 'workspaces')
 }
 
+function getOpenCodePathPrefix(): string | undefined {
+  return process.env.OPENCODE_WORKSPACE_PATH_PREFIX
+}
+
+export function toOpenCodePath(containerPath: string): string {
+  const prefix = getOpenCodePathPrefix()
+  if (!prefix) return containerPath
+  
+  const workspacesRoot = getWorkspacesRootPath()
+  if (containerPath.startsWith(workspacesRoot)) {
+    return containerPath.replace(workspacesRoot, prefix)
+  }
+  return containerPath
+}
+
 function getRetentionHours(): number {
   return parseInt(process.env.WORKSPACE_RETENTION_HOURS || '0', 10)
 }

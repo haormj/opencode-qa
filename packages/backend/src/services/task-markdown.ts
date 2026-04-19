@@ -4,6 +4,7 @@ import { db, systemSettings, skills } from '../db/index.js'
 import { eq } from 'drizzle-orm'
 import { decrypt } from './encryption.js'
 import { normalizeServerUrl } from '../utils/url.js'
+import { toOpenCodePath } from './workspace-manager.js'
 import type { FlowData, Node, SkillInstallNodeData, CodeDownloadNodeData, StepNodeData, CloneScriptInfo } from '../types/task.js'
 
 async function getServerUrl(): Promise<string> {
@@ -100,7 +101,7 @@ function skillInstallToMarkdown(data: SkillInstallNodeData, serverUrl: string, s
   }
   
   if (workspacePath) {
-    const skillsDir = join(workspacePath, '.opencode', 'skills')
+    const skillsDir = toOpenCodePath(join(workspacePath, '.opencode', 'skills'))
     const unixPath = skillsDir.replace(/\\/g, '/')
     const windowsPath = skillsDir.replace(/\\/g, '\\\\')
     
@@ -302,7 +303,7 @@ export async function generateTaskMarkdown(
 ---`
   
   if (workspacePath) {
-    markdown += `\n\n**工作区**: \`${workspacePath}\``
+    markdown += `\n\n**工作区**: \`${toOpenCodePath(workspacePath)}\``
   }
   
   if (steps.length > 0) {

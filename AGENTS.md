@@ -273,6 +273,25 @@ npm run db:generate
 npm run db:studio
 ```
 
+### 容器部署路径映射
+
+当 OpenCode 服务运行在宿主机，而 opencode-qa 运行在容器中时，需要配置路径映射。
+
+**场景**：容器将 `/opt/data` 挂载到 `/app/packages/backend/data`，OpenCode 服务需要宿主机路径。
+
+**配置**：
+
+```bash
+# .env
+OPENCODE_WORKSPACE_PATH_PREFIX=/opt/data/workspaces
+```
+
+**效果**：
+- 容器内路径：`/app/packages/backend/data/workspaces/xxx`
+- 转换后路径：`/opt/data/workspaces/xxx`
+
+**不配置时**：路径不转换，保持原样。
+
 ## 分支策略
 
 ### 分支角色

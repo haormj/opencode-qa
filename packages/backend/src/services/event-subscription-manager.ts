@@ -2,6 +2,7 @@ import { createOpencodeClient, type OpencodeClient } from '@opencode-ai/sdk/v2'
 
 import logger from './logger.js'
 import { parseThinkTags, type ParseState } from './think-tag-parser.js'
+import { toOpenCodePath } from './workspace-manager.js'
 
 export type ChunkType = 'text' | 'reasoning'
 
@@ -128,7 +129,7 @@ class EventSubscriptionManager {
     }
     
     if (workspacePath) {
-      config.directory = workspacePath
+      config.directory = toOpenCodePath(workspacePath)
     }
     
     return createOpencodeClient(config)
