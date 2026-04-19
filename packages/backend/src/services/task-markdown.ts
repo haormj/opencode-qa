@@ -166,10 +166,17 @@ async function nodeToMarkdown(node: Node, getNextStepIndex: () => number, server
 export async function generateTaskMarkdown(flowData: FlowData, workspacePath?: string): Promise<string> {
   const serverUrl = await getServerUrl()
   const sortedNodes = topologicalSort(flowData.nodes, flowData.edges)
-  const parts: string[] = ['# 任务执行计划\n']
+  const parts: string[] = [
+    '# 任务执行计划\n',
+    '\n**执行规则：**\n',
+    '1. 严格按顺序执行，完成当前步骤后再执行下一步\n',
+    '2. 遇到错误立即终止，不要继续执行后续步骤\n',
+    '3. 每完成一步，简要报告执行状态（成功/失败）\n',
+    '\n---\n'
+  ]
   
   if (workspacePath) {
-    parts.push(`**工作区**: \`${workspacePath}\`\n`)
+    parts.push(`\n**工作区**: \`${workspacePath}\`\n`)
   }
   
   let stepIndex = 0
