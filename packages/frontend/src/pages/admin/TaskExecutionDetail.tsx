@@ -214,6 +214,9 @@ function TaskExecutionDetail() {
               执行详情
             </Typography.Title>
             <div className="execution-meta">
+              <span className="execution-id">
+                ID: {execution.id.slice(0, 8)}
+              </span>
               <Tag color={statusInfo.color} icon={statusInfo.icon}>
                 {statusInfo.text}
               </Tag>
