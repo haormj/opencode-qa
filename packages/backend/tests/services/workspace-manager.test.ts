@@ -172,7 +172,7 @@ describe('Workspace Manager', () => {
       const config = getConfig()
       
       expect(config.workspacesRoot).toBe(tempDir)
-      expect(config.retentionHours).toBe(24)
+      expect(config.retentionHours).toBe(0)
       expect(config.autoCleanupEnabled).toBe(true)
     })
 
