@@ -73,24 +73,34 @@ function CodeDownloadNode({ data, selected }: CodeDownloadNodeProps) {
       {/* 内容区域 */}
       <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Input
+          id="repoUrl"
+          name="repoUrl"
           size="small"
           placeholder="仓库地址"
           defaultValue={data.repoUrl}
           onChange={(e) => updateData('repoUrl', e.target.value)}
         />
         <Input
+          id="username"
+          name="username"
+          autoComplete="username"
           size="small"
           placeholder="用户名"
           defaultValue={data.username}
           onChange={(e) => updateData('username', e.target.value)}
         />
         <Password
+          id="password"
+          name="password"
+          autoComplete="current-password"
           size="small"
           placeholder="密码/Token"
           defaultValue={data.password}
           onChange={(e) => updateData('password', e.target.value)}
         />
         <Input
+          id="branch"
+          name="branch"
           size="small"
           placeholder="分支 (默认 main)"
           defaultValue={data.branch}

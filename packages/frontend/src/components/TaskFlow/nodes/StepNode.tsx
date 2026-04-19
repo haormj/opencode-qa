@@ -71,6 +71,8 @@ function StepNode({ data, selected }: StepNodeProps) {
       {/* 内容区域 */}
       <div style={{ padding: 12 }}>
         <TextArea
+          id="instruction"
+          name="instruction"
           size="small"
           placeholder="请输入指令内容..."
           rows={3}

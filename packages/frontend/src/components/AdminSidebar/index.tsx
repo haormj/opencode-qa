@@ -40,7 +40,7 @@ function AdminSidebar() {
       label: '助手管理'
     },
     {
-      key: '/admin/tasks',
+      key: '/admin/tasks-menu',
       icon: <ScheduleOutlined />,
       label: '任务管理',
       children: [
@@ -55,7 +55,7 @@ function AdminSidebar() {
       ]
     },
     {
-      key: '/admin/skills',
+      key: '/admin/skills-menu',
       icon: <ToolOutlined />,
       label: '技能管理',
       children: [
@@ -117,8 +117,8 @@ function AdminSidebar() {
   const getOpenKeys = () => {
     const pathname = location.pathname
     const openKeys = []
-    if (pathname.startsWith('/admin/tasks') || pathname.startsWith('/admin/task-executions')) openKeys.push('/admin/tasks')
-    if (pathname.startsWith('/admin/skills') || pathname.startsWith('/admin/skill-versions')) openKeys.push('/admin/skills')
+    if (pathname.startsWith('/admin/tasks') || pathname.startsWith('/admin/task-executions')) openKeys.push('/admin/tasks-menu')
+    if (pathname.startsWith('/admin/skills') || pathname.startsWith('/admin/skill-versions')) openKeys.push('/admin/skills-menu')
     if (pathname.startsWith('/admin/statistics')) openKeys.push('/admin/statistics')
     if (pathname.startsWith('/admin/settings')) openKeys.push('/admin/settings')
     return openKeys

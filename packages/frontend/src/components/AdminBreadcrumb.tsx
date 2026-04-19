@@ -15,8 +15,8 @@ const breadcrumbMap: Record<string, { title: string; parent?: string }> = {
   '/admin/settings': { title: '系统设置' },
   '/admin/settings/system': { title: '系统配置', parent: '/admin/settings' },
   '/admin/settings/sso': { title: '统一登录', parent: '/admin/settings' },
-  '/admin/tasks': { title: '任务列表', parent: '/admin/task-management' },
-  '/admin/task-executions': { title: '执行记录', parent: '/admin/task-management' },
+  '/admin/tasks': { title: '任务列表', parent: '/admin/tasks-menu' },
+  '/admin/task-executions': { title: '执行记录', parent: '/admin/tasks-menu' },
 }
 
 const taskManagementTitle = '任务管理'
@@ -78,7 +78,7 @@ function AdminBreadcrumb() {
       const parentConfig = breadcrumbMap[config.parent]
       if (parentConfig) {
         items.push({ title: parentConfig.title, path: config.parent })
-      } else if (config.parent === '/admin/task-management') {
+      } else if (config.parent === '/admin/tasks-menu') {
         items.push({ title: taskManagementTitle })
       }
     }

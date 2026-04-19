@@ -89,6 +89,7 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
       {/* 内容区域 */}
       <div style={{ padding: 12 }} className="nodrag">
         <Select
+          id="skillId"
           size="small"
           showSearch
           filterOption={(input, option) => {
@@ -105,7 +106,7 @@ function SkillInstallNode({ data, selected }: SkillInstallNodeProps) {
           style={{ width: '100%' }}
           getPopupContainer={() => document.body}
           open={open}
-          onDropdownVisibleChange={setOpen}
+          onOpenChange={setOpen}
           className="nodrag"
           loading={loading}
         />
