@@ -42,7 +42,13 @@ async function getUserFromRequest(req: Request): Promise<{ id: string } | null> 
 
     return { id: user.id }
   } catch (error) {
-    logger.error('[SSE] Auth error:', error)
+    if (error instanceof jwt.TokenExpiredError) {
+      logger.debug('[SSE] Token expired')
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      logger.debug('[SSE] Invalid token:', error.message)
+    } else {
+      logger.error('[SSE] Auth error:', error)
+    }
     return null
   }
 }

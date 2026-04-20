@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { getToken } from '../services/api'
+import { getToken, removeToken } from '../services/api'
 
 const API_BASE = '/api'
 
@@ -104,6 +104,22 @@ export function useSessionEvents({
 
       eventSource.addEventListener('heartbeat', () => {
         // 心跳事件，保持连接活跃
+      })
+
+      eventSource.addEventListener('error', (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.error === 'Unauthorized') {
+            console.warn('[SSE] Unauthorized, redirecting to login')
+            disconnect()
+            removeToken()
+            window.location.href = '/login'
+            return
+          }
+          console.error('[SSE] Server error:', data.error)
+        } catch {
+          console.error('[SSE] Failed to parse error event:', event)
+        }
       })
 
       eventSource.onerror = (error) => {
