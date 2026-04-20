@@ -252,9 +252,13 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
                 logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
               }
             }
-            if (shouldCleanupImmediately()) {
-              await cleanupWorkspace(executionId)
-            }
+  if (shouldCleanupImmediately()) {
+    try {
+      await cleanupWorkspace(executionId)
+    } catch (error) {
+      logger.warn('[TaskExecutor] Workspace cleanup failed (may be in use):', error)
+    }
+  }
             executionEventManager.emitStatus(executionId, 'completed', false)
           }
         }
