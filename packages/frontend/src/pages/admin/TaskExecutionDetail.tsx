@@ -1,12 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Tag, Button, Spin, Typography, Avatar, Empty, Popconfirm, message } from 'antd'
-import { ArrowLeftOutlined, RobotOutlined, UserOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
-import { Streamdown } from 'streamdown'
-import { code } from '@streamdown/code'
-import { mermaid } from '@streamdown/mermaid'
-import { math } from '@streamdown/math'
-import { cjk } from '@streamdown/cjk'
+import { Tag, Button, Spin, Typography, Empty, Popconfirm, message } from 'antd'
+import { ArrowLeftOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
+import ChatBox, { ExtendedMessageProps } from '@/components/ChatBox'
 import type { TaskExecution, ExecutionMessage } from '../../services/api'
 import { cancelExecution, appendExecutionMessage, closeExecutionSession } from '../../services/api'
 import { useExecutionEvents } from '../../hooks/useExecutionEvents'
@@ -61,21 +57,9 @@ function TaskExecutionDetail() {
   const [messages, setMessages] = useState<ExecutionMessage[]>([])
   const [streamingReasoning, setStreamingReasoning] = useState<string>('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [inputText, setInputText] = useState('')
-  const [sending, setSending] = useState(false)
   const [closing, setClosing] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const isTriggerRef = useRef(false)
   const streamingMessageIdRef = useRef<string | null>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamingReasoning])
 
   useExecutionEvents({
     executionId: id || null,
@@ -214,22 +198,15 @@ function TaskExecutionDetail() {
     }
   }
 
-  const handleSend = useCallback(async () => {
-    if (!id || !inputText.trim() || sending || isStreaming) return
-    
-    const content = inputText.trim()
-    setInputText('')
-    setSending(true)
+  const handleSend = useCallback(async (_type: string, text: string) => {
+    if (!id || !text.trim() || isStreaming) return
     
     try {
-      await appendExecutionMessage(id, content)
+      await appendExecutionMessage(id, text.trim())
     } catch (error) {
       message.error('发送失败')
-      setInputText(content)
-    } finally {
-      setSending(false)
     }
-  }, [id, inputText, sending, isStreaming])
+  }, [id, isStreaming])
 
   const handleStop = useCallback(async () => {
     if (!id) return
@@ -256,16 +233,27 @@ function TaskExecutionDetail() {
     }
   }, [id, navigate])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!e.shiftKey && e.key === 'Enter') {
-      handleSend()
-      e.preventDefault()
-    }
-  }, [handleSend])
-
-  const hasValue = !!inputText.trim()
-  const showSendButton = !isStreaming && hasValue
-  const showStopButton = isStreaming
+  const chatMessages = useMemo((): ExtendedMessageProps[] => {
+    return messages.map((msg) => {
+      const isStreamingMsg = msg.id === streamingMessageIdRef.current
+      
+      let reasoning = msg.reasoning ?? undefined
+      if (isStreaming && isStreamingMsg && streamingReasoning) {
+        reasoning = streamingReasoning
+      }
+      
+      return {
+        _id: msg.id,
+        type: 'text',
+        content: { text: msg.content },
+        position: msg.role === 'user' ? 'right' : 'left',
+        sender: msg.role === 'user' 
+          ? { name: '任务指令', type: 'user' as const, color: '#87d068' }
+          : { name: '机器人', type: 'ai' as const, color: '#1890ff' },
+        reasoning
+      }
+    })
+  }, [messages, isStreaming, streamingReasoning])
 
   if (!connected) {
     return (
@@ -353,109 +341,36 @@ function TaskExecutionDetail() {
         )}
       </div>
 
-      <div className="execution-messages">
-        {messages.length === 0 ? (
-          <Empty description="暂无消息" className="mt-20" />
-        ) : (
-          <>
-            {messages.map((msg) => {
-              const isUser = msg.role === 'user'
-              const isStreamingMsg = msg.id === streamingMessageIdRef.current
-              return (
-                <div
-                  key={msg.id}
-                  className={`execution-message ${isUser ? 'message-right' : 'message-left'}`}
-                >
-                  <div className="message-sender">
-                    {isUser ? (
-                      <>
-                        <span className="sender-name">任务指令</span>
-                        <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#87d068' }} />
-                      </>
-                    ) : (
-                      <>
-                        <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#1890ff' }} />
-                        <span className="sender-name">机器人</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="message-bubble">
-                    {isUser ? (
-                      <div className="message-text">{msg.content}</div>
-                    ) : (
-                      <>
-                        {isStreaming && isStreamingMsg && streamingReasoning && (
-                          <details className="reasoning-block" open>
-                            <summary className="reasoning-summary">
-                              💭 思考中
-                              <span className="reasoning-dots">
-                                <span className="reasoning-dot">.</span>
-                                <span className="reasoning-dot">.</span>
-                                <span className="reasoning-dot">.</span>
-                              </span>
-                            </summary>
-                            <div className="reasoning-content">{streamingReasoning}</div>
-                          </details>
-                        )}
-                        {!isStreamingMsg && msg.reasoning && (
-                          <details className="reasoning-block">
-                            <summary className="reasoning-summary">💭 思考过程</summary>
-                            <div className="reasoning-content">{msg.reasoning}</div>
-                          </details>
-                        )}
-                        <Streamdown
-                          className="message-content"
-                          plugins={{ code, mermaid, math, cjk }}
-                          isAnimating={isStreaming && isStreamingMsg}
-                          caret={isStreaming && isStreamingMsg ? 'block' : undefined}
-                        >
-                          {msg.content}
-                        </Streamdown>
-                      </>
-                    )}
+      {execution.isDebug && execution.status === 'running' ? (
+        <div className="execution-chatbox">
+          <ChatBox
+            messages={chatMessages}
+            typing={isStreaming}
+            onSend={handleSend}
+            onStop={handleStop}
+            isAdminMode={false}
+            sessionStatus="active"
+          />
+        </div>
+      ) : (
+        <div className="execution-messages-readonly">
+          {messages.length === 0 ? (
+            <Empty description="暂无消息" className="mt-20" />
+          ) : (
+            <div className="messages-list">
+              {chatMessages.map(msg => (
+                <div key={msg._id as string} className="readonly-message">
+                  {msg.reasoning && (
+                    <details className="reasoning-block">
+                      <summary className="reasoning-summary">💭 思考过程</summary>
+                      <div className="reasoning-content">{msg.reasoning}</div>
+                    </details>
+                  )}
+                  <div className={`message-content-readonly ${msg.position}`}>
+                    {msg.content.text}
                   </div>
                 </div>
-              )
-            })}
-          </>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {execution.isDebug && execution.status === 'running' && (
-        <div className="execution-composer" data-has-value={hasValue}>
-          <div className="Composer-inputWrap">
-            <textarea
-              ref={inputRef}
-              className="Input Input--outline Composer-input"
-              placeholder="输入消息..."
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isStreaming}
-            />
-          </div>
-          {(showSendButton || showStopButton) && (
-            <div className="Composer-actions">
-              {showSendButton && (
-                <Button
-                  className="Composer-sendBtn"
-                  type="primary"
-                  onMouseDown={handleSend}
-                  disabled={sending}
-                >
-                  发送
-                </Button>
-              )}
-              {showStopButton && (
-                <Button
-                  className="Composer-stopBtn"
-                  type="default"
-                  onMouseDown={handleStop}
-                >
-                  停止
-                </Button>
-              )}
+              ))}
             </div>
           )}
         </div>
