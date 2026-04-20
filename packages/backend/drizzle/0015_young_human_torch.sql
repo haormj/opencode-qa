@@ -1,0 +1,1 @@
+ALTER TABLE `task_executions` ADD `is_debug` integer DEFAULT false NOT NULL;

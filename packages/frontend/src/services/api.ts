@@ -1429,6 +1429,7 @@ export interface TaskExecution {
   } | null
   startedAt?: string | null
   completedAt?: string | null
+  isDebug: boolean
   createdAt: string
 }
 

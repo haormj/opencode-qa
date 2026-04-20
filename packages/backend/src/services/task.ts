@@ -166,6 +166,7 @@ export async function getAllExecutions(options: { page: number; pageSize: number
     triggeredBy: taskExecutions.triggeredBy,
     startedAt: taskExecutions.startedAt,
     completedAt: taskExecutions.completedAt,
+    isDebug: taskExecutions.isDebug,
     createdAt: taskExecutions.createdAt,
     triggeredByUserId: users.id,
     triggeredByUsername: users.username,
@@ -216,6 +217,7 @@ export async function getAllExecutions(options: { page: number; pageSize: number
     } : null,
     startedAt: item.startedAt,
     completedAt: item.completedAt,
+    isDebug: item.isDebug,
     createdAt: item.createdAt
   }))
   
@@ -237,6 +239,7 @@ export async function getExecutionById(id: string) {
     result: taskExecutions.result,
     logs: taskExecutions.logs,
     botId: taskExecutions.botId,
+    isDebug: taskExecutions.isDebug,
     createdAt: taskExecutions.createdAt,
     triggeredByUserId: users.id,
     triggeredByUsername: users.username,
@@ -275,6 +278,7 @@ export async function getExecutionById(id: string) {
     result: result.result,
     logs: result.logs,
     botId: result.botId,
+    isDebug: result.isDebug,
     createdAt: result.createdAt
   }
 }

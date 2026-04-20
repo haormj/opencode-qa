@@ -114,6 +114,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
     triggerType,
     triggeredBy: triggeredBy ?? null,
     botId: botId ?? null,
+    isDebug: debug || false,
     createdAt: now
   })
   

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Tag, Button, Spin, Typography, Avatar, Empty, Popconfirm, message } from 'antd'
 import { ArrowLeftOutlined, RobotOutlined, UserOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { Streamdown } from 'streamdown'
@@ -55,8 +55,6 @@ function formatTriggerInfo(execution: TaskExecution | null): string {
 function TaskExecutionDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const isDebug = searchParams.get('debug') === 'true'
   
   const [connected, setConnected] = useState(false)
   const [execution, setExecution] = useState<TaskExecution | null>(null)
@@ -98,6 +96,7 @@ function TaskExecutionDetail() {
             cancelledByUser: data.cancelledByUser ?? null,
             startedAt: data.startedAt ?? null,
             completedAt: data.completedAt ?? null,
+            isDebug: false,
             createdAt: data.updatedAt
           }
         }
@@ -332,7 +331,7 @@ function TaskExecutionDetail() {
         </div>
         {execution.status === 'running' && (
           <div className="execution-header-right">
-            {isDebug ? (
+            {execution.isDebug ? (
               <Button type="primary" onClick={handleCloseSession} loading={closing}>
                 关闭会话
               </Button>
@@ -422,7 +421,7 @@ function TaskExecutionDetail() {
         <div ref={messagesEndRef} />
       </div>
 
-      {isDebug && execution.status === 'running' && (
+      {execution.isDebug && execution.status === 'running' && (
         <div className="execution-composer" data-has-value={hasValue}>
           <div className="Composer-inputWrap">
             <textarea

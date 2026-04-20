@@ -237,6 +237,7 @@ export const taskExecutions = sqliteTable('task_executions', {
   triggeredBy: text('triggered_by').references(() => users.id, { onDelete: 'set null' }),
   botId: text('bot_id').references(() => bots.id, { onDelete: 'set null' }),
   opencodeSessionId: text('opencode_session_id'),
+  isDebug: integer('is_debug', { mode: 'boolean' }).notNull().default(false),
   cancelledBy: text('cancelled_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (table) => ({
