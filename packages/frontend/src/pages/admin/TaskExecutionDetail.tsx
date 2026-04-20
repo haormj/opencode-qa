@@ -349,6 +349,7 @@ function TaskExecutionDetail() {
           onStop={handleStop}
           isAdminMode={false}
           sessionStatus={execution.isDebug && execution.status === 'running' ? 'active' : 'closed'}
+          hideComposer={!execution.isDebug}
         />
       </div>
     </div>

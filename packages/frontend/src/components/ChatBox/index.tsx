@@ -31,6 +31,7 @@ interface ChatBoxProps {
   isAdminMode?: boolean
   sessionStatus?: string
   contextTokens?: number | null
+  hideComposer?: boolean
 }
 
 export interface ChatBoxRef {
@@ -38,7 +39,7 @@ export interface ChatBoxRef {
 }
 
 const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
-  ({ messages, typing, onSend, onStop, isAdminMode = false, sessionStatus = 'active', contextTokens }, ref) => {
+  ({ messages, typing, onSend, onStop, isAdminMode = false, sessionStatus = 'active', contextTokens, hideComposer = false }, ref) => {
     const wrapperRef = useRef<HTMLDivElement>(null)
     const composerRef = useRef<CustomComposerRef>(null)
     const [isScrolling, setIsScrolling] = useState(false)
@@ -189,7 +190,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
           onSend={handleSend}
           placeholder={getPlaceholder()}
           isTyping={typing}
-          Composer={(props) => (
+          Composer={hideComposer ? () => null : (props) => (
             <CustomComposer
               ref={composerRef}
               {...props}
