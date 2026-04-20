@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Tag, Button, Spin, Typography, Avatar, Empty, Popconfirm, message } from 'antd'
 import { ArrowLeftOutlined, RobotOutlined, UserOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { Streamdown } from 'streamdown'
@@ -8,7 +8,7 @@ import { mermaid } from '@streamdown/mermaid'
 import { math } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import type { TaskExecution, ExecutionMessage } from '../../services/api'
-import { cancelExecution } from '../../services/api'
+import { cancelExecution, appendExecutionMessage, closeExecutionSession } from '../../services/api'
 import { useExecutionEvents } from '../../hooks/useExecutionEvents'
 import './TaskExecutionDetail.css'
 
@@ -55,14 +55,21 @@ function formatTriggerInfo(execution: TaskExecution | null): string {
 function TaskExecutionDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isDebug = searchParams.get('debug') === 'true'
+  
   const [connected, setConnected] = useState(false)
   const [execution, setExecution] = useState<TaskExecution | null>(null)
   const [messages, setMessages] = useState<ExecutionMessage[]>([])
   const [streamingReasoning, setStreamingReasoning] = useState<string>('')
   const [isStreaming, setIsStreaming] = useState(false)
+  const [inputText, setInputText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [closing, setClosing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const isTriggerRef = useRef(false)
   const streamingMessageIdRef = useRef<string | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,9 +112,6 @@ function TaskExecutionDetail() {
       setMessages(prev => {
         const exists = prev.find(m => m.id === data.id)
         if (exists) {
-          // 只在流式传输已结束且收到完整消息时才重置流式状态
-          // 通过检查 reasoning 是否存在来判断消息是否完整
-          // 如果 reasoning 存在，说明后端已保存完整消息，流式传输结束
           if (streamingMessageIdRef.current === data.id && data.reasoning !== undefined) {
             setStreamingReasoning('')
             setIsStreaming(false)
@@ -210,6 +214,59 @@ function TaskExecutionDetail() {
     }
   }
 
+  const handleSend = useCallback(async () => {
+    if (!id || !inputText.trim() || sending || isStreaming) return
+    
+    const content = inputText.trim()
+    setInputText('')
+    setSending(true)
+    
+    try {
+      await appendExecutionMessage(id, content)
+    } catch (error) {
+      message.error('发送失败')
+      setInputText(content)
+    } finally {
+      setSending(false)
+    }
+  }, [id, inputText, sending, isStreaming])
+
+  const handleStop = useCallback(async () => {
+    if (!id) return
+    try {
+      await cancelExecution(id)
+      message.success('已停止')
+      setIsStreaming(false)
+    } catch (error) {
+      message.error('停止失败')
+    }
+  }, [id])
+
+  const handleCloseSession = useCallback(async () => {
+    if (!id) return
+    setClosing(true)
+    try {
+      await closeExecutionSession(id)
+      message.success('会话已关闭')
+      navigate('/admin/tasks')
+    } catch (error) {
+      message.error('关闭失败')
+    } finally {
+      setClosing(false)
+    }
+  }, [id, navigate])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!e.shiftKey && e.key === 'Enter') {
+      handleSend()
+      e.preventDefault()
+    }
+  }, [handleSend])
+
+  const hasValue = !!inputText.trim()
+  const showSendButton = !isStreaming && hasValue
+  const showStopButton = isStreaming
+
   if (!connected) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -275,17 +332,23 @@ function TaskExecutionDetail() {
         </div>
         {execution.status === 'running' && (
           <div className="execution-header-right">
-            <Popconfirm
-              title="确认终止"
-              description="确定要终止该任务执行吗？"
-              onConfirm={handleCancel}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button danger icon={<StopOutlined />}>
-                终止任务
+            {isDebug ? (
+              <Button type="primary" onClick={handleCloseSession} loading={closing}>
+                关闭会话
               </Button>
-            </Popconfirm>
+            ) : (
+              <Popconfirm
+                title="确认终止"
+                description="确定要终止该任务执行吗？"
+                onConfirm={handleCancel}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button danger icon={<StopOutlined />}>
+                  终止任务
+                </Button>
+              </Popconfirm>
+            )}
           </div>
         )}
       </div>
@@ -358,6 +421,45 @@ function TaskExecutionDetail() {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {isDebug && execution.status === 'running' && (
+        <div className="execution-composer" data-has-value={hasValue}>
+          <div className="Composer-inputWrap">
+            <textarea
+              ref={inputRef}
+              className="Input Input--outline Composer-input"
+              placeholder="输入消息..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isStreaming}
+            />
+          </div>
+          {(showSendButton || showStopButton) && (
+            <div className="Composer-actions">
+              {showSendButton && (
+                <Button
+                  className="Composer-sendBtn"
+                  type="primary"
+                  onMouseDown={handleSend}
+                  disabled={sending}
+                >
+                  发送
+                </Button>
+              )}
+              {showStopButton && (
+                <Button
+                  className="Composer-stopBtn"
+                  type="default"
+                  onMouseDown={handleStop}
+                >
+                  停止
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

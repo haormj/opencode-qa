@@ -303,3 +303,61 @@
     opacity: 1;
   }
 }
+
+.execution-composer {
+  display: flex;
+  align-items: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  flex-shrink: 0;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.execution-composer .Composer-inputWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.execution-composer .Composer-input {
+  width: 100%;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.execution-composer .Composer-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.execution-composer .Composer-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.execution-composer .Composer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.execution-composer .Composer-sendBtn,
+.execution-composer .Composer-stopBtn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+}

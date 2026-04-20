@@ -12,7 +12,7 @@ import {
   getExecutionById,
   getExecutionMessages
 } from '../services/task.js'
-import { executeTask, executeTaskStream, cancelExecution } from '../services/task-executor.js'
+import { executeTask, executeTaskStream, cancelExecution, appendExecutionMessage, closeExecutionSession } from '../services/task-executor.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from '../services/task-markdown.js'
 import {
   init as initScheduler,
@@ -155,6 +155,45 @@ router.post('/executions/:id/cancel', async (req, res) => {
     res.json({ success: true, id, status: 'cancelled' })
   } catch (error) {
     logger.error('Cancel execution error:', error)
+    res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+router.post('/executions/:id/messages', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { content } = req.body
+    
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: '消息内容不能为空' })
+    }
+    
+    const result = await appendExecutionMessage(id, content)
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error })
+    }
+    
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('Append execution message error:', error)
+    res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+router.post('/executions/:id/close', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const result = await closeExecutionSession(id)
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error })
+    }
+    
+    res.json({ success: true })
+  } catch (error) {
+    logger.error('Close execution session error:', error)
     res.status(500).json({ error: '服务器内部错误' })
   }
 })

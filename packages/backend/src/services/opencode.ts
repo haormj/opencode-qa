@@ -400,11 +400,13 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
   botConfig: BotConfig,
   workspacePath: string,
   onChunk: (chunk: string, type: ChunkType) => void,
-  onSessionId: (sessionId: string) => void
+  onSessionId: (sessionId: string) => void,
+  existingSessionId?: string
 ): Promise<{ sessionId: string; answer: string; tokens?: { input: number; output: number } }> {
   logger.info('[OpenCode] sendOpenCodeMessageStreamWithWorkspace called:', { 
     workspacePath,
-    messagePreview: message.substring(0, 50) 
+    messagePreview: message.substring(0, 50),
+    existingSessionId
   })
   
   const client = createIsolatedClient({
@@ -412,22 +414,30 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
     workspacePath
   })
   
-  logger.info('[OpenCode] Creating isolated session in workspace:', workspacePath)
-  const sessionResult = await client.session.create({
-    title: 'Isolated Task Execution'
-  })
+  let sessionId: string
   
-  if (!sessionResult.data?.id) {
-    const errorDetail = sessionResult.error 
-      ? JSON.stringify(sessionResult.error) 
-      : 'No session ID returned'
-    logger.error(`[OpenCode] Isolated session creation failed: ${errorDetail}`)
-    throw new Error(`Failed to create isolated OpenCode session: ${errorDetail}`)
+  if (existingSessionId) {
+    sessionId = existingSessionId
+    logger.info('[OpenCode] Reusing existing session:', sessionId)
+  } else {
+    logger.info('[OpenCode] Creating isolated session in workspace:', workspacePath)
+    const sessionResult = await client.session.create({
+      title: 'Isolated Task Execution'
+    })
+    
+    if (!sessionResult.data?.id) {
+      const errorDetail = sessionResult.error 
+        ? JSON.stringify(sessionResult.error) 
+        : 'No session ID returned'
+      logger.error(`[OpenCode] Isolated session creation failed: ${errorDetail}`)
+      throw new Error(`Failed to create isolated OpenCode session: ${errorDetail}`)
+    }
+    
+    sessionId = sessionResult.data.id
+    logger.info('[OpenCode] Isolated session created:', sessionId)
   }
   
-  const sessionId = sessionResult.data.id
   onSessionId(sessionId)
-  logger.info('[OpenCode] Isolated session created:', sessionId)
   
   let answer = ''
   let tokensData: { input: number; output: number } | undefined = undefined

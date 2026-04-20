@@ -5,7 +5,7 @@ import type { Connection, Node, Edge, NodeTypes, EdgeTypes } from '@xyflow/react
 import '@xyflow/react/dist/style.css'
 import { Card, Form, Input, Button, message, Typography, Divider, Menu, Modal, Select, Switch } from 'antd'
 import type { MenuProps } from 'antd'
-import { SaveOutlined, PlayCircleOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons'
+import { SaveOutlined, ArrowLeftOutlined, EyeOutlined, CopyOutlined, BugOutlined } from '@ant-design/icons'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import copy from 'copy-to-clipboard'
@@ -310,7 +310,7 @@ function TaskEditorContent() {
       await handleSave()
       const result = await executeTask(id)
       message.success('任务开始执行')
-      navigate(`/admin/executions/${result.executionId}`)
+      navigate(`/admin/executions/${result.executionId}?debug=true`)
     } catch (error) {
       if (error instanceof Error) {
         message.error(error.message)
@@ -526,10 +526,10 @@ function TaskEditorContent() {
         </Button>
         <Button
           type="primary"
-          icon={<PlayCircleOutlined />}
+          icon={<BugOutlined />}
           onClick={handleExecute}
         >
-          运行
+          调试
         </Button>
       </div>
 

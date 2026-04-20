@@ -1,4 +1,4 @@
-import { db, tasks, taskExecutions, taskExecutionMessages, users } from '../db/index.js'
+import { db, tasks, taskExecutions, taskExecutionMessages, users, bots } from '../db/index.js'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
@@ -377,6 +377,173 @@ export async function cancelExecution(
   }
   
   executionEventManager.emitStatus(executionId, 'cancelled', cancelledByUser)
+  
+  return { success: true }
+}
+
+export async function appendExecutionMessage(
+  executionId: string,
+  content: string
+): Promise<{ success: boolean; error?: string }> {
+  const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, executionId)).get()
+  
+  if (!execution) {
+    return { success: false, error: '执行记录不存在' }
+  }
+  
+  if (execution.status !== 'running') {
+    return { success: false, error: '只有运行中的任务可以追加消息' }
+  }
+  
+  if (!execution.opencodeSessionId) {
+    return { success: false, error: 'OpenCode 会话不存在' }
+  }
+  
+  const task = await db.select().from(tasks).where(eq(tasks.id, execution.taskId)).get()
+  if (!task || !task.botId) {
+    return { success: false, error: '任务配置异常' }
+  }
+  
+  const bot = await db.select().from(bots).where(eq(bots.id, task.botId)).get()
+  if (!bot) {
+    return { success: false, error: '机器人配置不存在' }
+  }
+  
+  const botConfig: BotConfig = {
+    apiUrl: bot.apiUrl,
+    provider: bot.provider,
+    model: bot.model,
+    agent: bot.agent,
+    apiKey: bot.apiKey ?? undefined
+  }
+  
+  const workspacePath = getWorkspacePath(executionId)
+  
+  const userMessageId = randomUUID()
+  const userMessageTime = new Date()
+  await db.insert(taskExecutionMessages).values({
+    id: userMessageId,
+    executionId,
+    role: 'user',
+    content,
+    createdAt: userMessageTime
+  })
+  
+  executionEventManager.emitMessage(executionId, {
+    id: userMessageId,
+    executionId,
+    role: 'user',
+    content,
+    createdAt: userMessageTime
+  })
+  
+  const assistantMessageId = randomUUID()
+  const assistantMessageTime = new Date()
+  await db.insert(taskExecutionMessages).values({
+    id: assistantMessageId,
+    executionId,
+    role: 'assistant',
+    content: '',
+    reasoning: null,
+    createdAt: assistantMessageTime
+  })
+  
+  executionEventManager.emitStreamStart(executionId, assistantMessageId)
+  
+  let accumulatedContent = ''
+  let reasoningContent = ''
+  
+  try {
+    const { answer } = await sendOpenCodeMessageStreamWithWorkspace(
+      content,
+      botConfig,
+      workspacePath,
+      (chunk: string, type: string) => {
+        if (type === 'text') {
+          accumulatedContent += chunk
+          executionEventManager.emitText(executionId, chunk)
+        } else if (type === 'reasoning') {
+          reasoningContent += chunk
+          executionEventManager.emitReasoning(executionId, chunk)
+        }
+      },
+      async (sessionId: string) => {
+        logger.info('[TaskExecutor] Reusing OpenCode session:', sessionId)
+      },
+      execution.opencodeSessionId
+    )
+    
+    executionEventManager.emitStreamEnd(executionId)
+    
+    await db.update(taskExecutionMessages)
+      .set({ content: answer, reasoning: reasoningContent || null })
+      .where(eq(taskExecutionMessages.id, assistantMessageId))
+    
+    executionEventManager.emitMessage(executionId, {
+      id: assistantMessageId,
+      executionId,
+      role: 'assistant',
+      content: answer,
+      reasoning: reasoningContent || null,
+      createdAt: assistantMessageTime
+    })
+    
+    return { success: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`[TaskExecutor] Failed to append message:`, errorMessage)
+    
+    executionEventManager.emitStreamEnd(executionId)
+    
+    return { success: false, error: errorMessage }
+  }
+}
+
+export async function closeExecutionSession(
+  executionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, executionId)).get()
+  
+  if (!execution) {
+    return { success: false, error: '执行记录不存在' }
+  }
+  
+  if (execution.status !== 'running') {
+    return { success: false, error: '只有运行中的任务可以关闭' }
+  }
+  
+  const task = await db.select().from(tasks).where(eq(tasks.id, execution.taskId)).get()
+  if (!task || !task.botId) {
+    return { success: false, error: '任务配置异常' }
+  }
+  
+  const bot = await db.select().from(bots).where(eq(bots.id, task.botId)).get()
+  if (!bot) {
+    return { success: false, error: '机器人配置不存在' }
+  }
+  
+  if (execution.opencodeSessionId) {
+    try {
+      await abortOpenCodeSession(bot.apiUrl, execution.opencodeSessionId)
+      await deleteOpenCodeSession(bot.apiUrl, execution.opencodeSessionId)
+      logger.info('[TaskExecutor] Deleted OpenCode session:', execution.opencodeSessionId)
+    } catch (error) {
+      logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
+    }
+  }
+  
+  await db.update(taskExecutions)
+    .set({
+      status: 'completed',
+      completedAt: new Date()
+    })
+    .where(eq(taskExecutions.id, executionId))
+  
+  if (shouldCleanupImmediately()) {
+    await cleanupWorkspace(executionId)
+  }
+  
+  executionEventManager.emitStatus(executionId, 'completed')
   
   return { success: true }
 }

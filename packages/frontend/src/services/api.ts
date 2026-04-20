@@ -1540,3 +1540,17 @@ export async function cancelExecution(id: string): Promise<{ success: boolean; i
     method: 'POST',
   })
 }
+
+export async function appendExecutionMessage(executionId: string, content: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/tasks/executions/${executionId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+}
+
+export async function closeExecutionSession(executionId: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/tasks/executions/${executionId}/close`, {
+    method: 'POST'
+  })
+}
