@@ -259,13 +259,13 @@ export async function prepareWorkspaceScripts(
       // 生成 .sh 脚本
       const shContent = `#!/bin/bash
 set -e
-git clone -b ${branch} "${authUrl}" "${targetPath}"
+git clone --depth=1 -b ${branch} "${authUrl}" "${targetPath}"
 `
       await writeFile(join(workspacePath, `scripts/clone-${repoName}.sh`), shContent)
       
       // 生成 .ps1 脚本
       const ps1Content = `$ErrorActionPreference = "Stop"
-git clone -b ${branch} "${authUrl}" "${targetPath}"
+git clone --depth=1 -b ${branch} "${authUrl}" "${targetPath}"
 `
       await writeFile(join(workspacePath, `scripts/clone-${repoName}.ps1`), ps1Content)
     }
