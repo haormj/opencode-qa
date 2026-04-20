@@ -4,7 +4,7 @@ import { Tag, Button, Spin, Typography, Empty, Popconfirm, message } from 'antd'
 import { ArrowLeftOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
 import ChatBox, { ExtendedMessageProps } from '@/components/ChatBox'
 import type { TaskExecution, ExecutionMessage } from '../../services/api'
-import { cancelExecution, appendExecutionMessage, closeExecutionSession } from '../../services/api'
+import { cancelExecution, appendExecutionMessage, closeExecutionSession, stopExecutionStream } from '../../services/api'
 import { useExecutionEvents } from '../../hooks/useExecutionEvents'
 import './TaskExecutionDetail.css'
 
@@ -211,8 +211,7 @@ function TaskExecutionDetail() {
   const handleStop = useCallback(async () => {
     if (!id) return
     try {
-      await cancelExecution(id)
-      message.success('已停止')
+      await stopExecutionStream(id)
       setIsStreaming(false)
     } catch (error) {
       message.error('停止失败')

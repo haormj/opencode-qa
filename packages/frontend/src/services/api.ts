@@ -1556,3 +1556,9 @@ export async function closeExecutionSession(executionId: string): Promise<{ succ
     method: 'POST'
   })
 }
+
+export async function stopExecutionStream(executionId: string): Promise<{ success: boolean }> {
+  return request(`${API_BASE}/admin/tasks/executions/${executionId}/stop-stream`, {
+    method: 'POST'
+  })
+}

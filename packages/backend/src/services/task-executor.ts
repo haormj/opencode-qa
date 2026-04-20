@@ -3,6 +3,7 @@ import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, disposeIsolatedClient, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
+import { eventSubscriptionManager } from './event-subscription-manager.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from './task-markdown.js'
 import { createWorkspace, getWorkspacePath, cleanupWorkspace, shouldCleanupImmediately } from './workspace-manager.js'
 import logger from './logger.js'
@@ -560,6 +561,49 @@ export async function closeExecutionSession(
   }
   
   executionEventManager.emitStatus(executionId, 'completed')
+  
+  return { success: true }
+}
+
+export async function stopExecutionStream(
+  executionId: string
+): Promise<{ success: boolean; error?: string }> {
+  const execution = await db.select().from(taskExecutions).where(eq(taskExecutions.id, executionId)).get()
+  
+  if (!execution) {
+    return { success: false, error: '执行记录不存在' }
+  }
+  
+  if (execution.status !== 'running') {
+    return { success: false, error: '只有运行中的任务可以停止' }
+  }
+  
+  if (!execution.opencodeSessionId) {
+    return { success: false, error: 'OpenCode 会话不存在' }
+  }
+  
+  const task = await db.select().from(tasks).where(eq(tasks.id, execution.taskId)).get()
+  if (!task || !task.botId) {
+    return { success: false, error: '任务配置异常' }
+  }
+  
+  const bot = await db.select().from(bots).where(eq(bots.id, task.botId)).get()
+  if (!bot) {
+    return { success: false, error: '机器人配置不存在' }
+  }
+  
+  const workspacePath = getWorkspacePath(executionId)
+  
+  try {
+    await abortOpenCodeSession(bot.apiUrl, execution.opencodeSessionId)
+    logger.info('[TaskExecutor] Aborted OpenCode session:', execution.opencodeSessionId)
+  } catch (error) {
+    logger.error('[TaskExecutor] Failed to abort OpenCode session:', error)
+  }
+  
+  eventSubscriptionManager.unregisterWithWorkspace(bot.apiUrl, execution.opencodeSessionId, workspacePath)
+  
+  executionEventManager.emitStreamEnd(executionId)
   
   return { success: true }
 }
