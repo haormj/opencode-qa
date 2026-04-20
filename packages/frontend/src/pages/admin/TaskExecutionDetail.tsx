@@ -341,40 +341,16 @@ function TaskExecutionDetail() {
         )}
       </div>
 
-      {execution.isDebug && execution.status === 'running' ? (
-        <div className="execution-chatbox">
-          <ChatBox
-            messages={chatMessages}
-            typing={isStreaming}
-            onSend={handleSend}
-            onStop={handleStop}
-            isAdminMode={false}
-            sessionStatus="active"
-          />
-        </div>
-      ) : (
-        <div className="execution-messages-readonly">
-          {messages.length === 0 ? (
-            <Empty description="暂无消息" className="mt-20" />
-          ) : (
-            <div className="messages-list">
-              {chatMessages.map(msg => (
-                <div key={msg._id as string} className="readonly-message">
-                  {msg.reasoning && (
-                    <details className="reasoning-block">
-                      <summary className="reasoning-summary">💭 思考过程</summary>
-                      <div className="reasoning-content">{msg.reasoning}</div>
-                    </details>
-                  )}
-                  <div className={`message-content-readonly ${msg.position}`}>
-                    {msg.content.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="execution-chatbox">
+        <ChatBox
+          messages={chatMessages}
+          typing={isStreaming}
+          onSend={handleSend}
+          onStop={handleStop}
+          isAdminMode={false}
+          sessionStatus={execution.isDebug && execution.status === 'running' ? 'active' : 'closed'}
+        />
+      </div>
     </div>
   )
 }
