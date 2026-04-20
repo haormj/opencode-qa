@@ -215,8 +215,6 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         
         clearInterval(saveInterval)
         
-        executionEventManager.emitStreamEnd(executionId)
-        
         await db.update(taskExecutionMessages)
           .set({ content: answer, reasoning: reasoningContent || null })
           .where(eq(taskExecutionMessages.id, assistantMessageId))
@@ -229,6 +227,8 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
           reasoning: reasoningContent || null,
           createdAt: assistantMessageTime
         })
+        
+        executionEventManager.emitStreamEnd(executionId)
         
         await handleOutputs(flowData, answer)
         
@@ -245,6 +245,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
             .returning()
           
           if (updateResult.length > 0) {
+            executionEventManager.emitStatus(executionId, 'completed', false)
             if (currentSessionId) {
               try {
                 await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
@@ -253,14 +254,13 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
                 logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
               }
             }
-  if (shouldCleanupImmediately()) {
-    try {
-      await cleanupWorkspace(executionId)
-    } catch (error) {
-      logger.warn('[TaskExecutor] Workspace cleanup failed (may be in use):', error)
-    }
-  }
-            executionEventManager.emitStatus(executionId, 'completed', false)
+            if (shouldCleanupImmediately()) {
+              try {
+                await cleanupWorkspace(executionId)
+              } catch (error) {
+                logger.warn('[TaskExecutor] Workspace cleanup failed (may be in use):', error)
+              }
+            }
           }
         }
       } catch (streamError) {
@@ -282,6 +282,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         .returning()
       
       if (updateResult.length > 0) {
+        executionEventManager.emitStatus(executionId, 'failed', debug || false)
         if (currentSessionId) {
           try {
             await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
@@ -293,7 +294,6 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         if (shouldCleanupImmediately()) {
           await cleanupWorkspace(executionId)
         }
-        executionEventManager.emitStatus(executionId, 'failed', debug || false)
       }
     }
   })()
@@ -487,8 +487,6 @@ export async function appendExecutionMessage(
       true
     )
     
-    executionEventManager.emitStreamEnd(executionId)
-    
     await db.update(taskExecutionMessages)
       .set({ content: answer, reasoning: reasoningContent || null })
       .where(eq(taskExecutionMessages.id, assistantMessageId))
@@ -501,6 +499,8 @@ export async function appendExecutionMessage(
       reasoning: reasoningContent || null,
       createdAt: assistantMessageTime
     })
+    
+    executionEventManager.emitStreamEnd(executionId)
     
     return { success: true }
   } catch (error) {

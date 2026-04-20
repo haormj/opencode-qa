@@ -51,6 +51,16 @@ function TaskExecutionsGlobal() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(() => {
     return searchParams.get('taskId') || undefined
   })
+  const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined)
+
+  const statusOptions = [
+    { value: undefined, label: '全部状态' },
+    { value: 'pending', label: '待执行' },
+    { value: 'running', label: '执行中' },
+    { value: 'completed', label: '已完成' },
+    { value: 'failed', label: '失败' },
+    { value: 'cancelled', label: '已终止' }
+  ]
 
   const fetchTasks = async () => {
     try {
@@ -64,7 +74,7 @@ function TaskExecutionsGlobal() {
   const fetchExecutions = async () => {
     setLoading(true)
     try {
-      const result = await getAllExecutions({ page, pageSize, taskId: selectedTaskId })
+      const result = await getAllExecutions({ page, pageSize, taskId: selectedTaskId, status: selectedStatus })
       setExecutions(result.items)
       setTotal(result.total)
     } catch {
@@ -80,7 +90,7 @@ function TaskExecutionsGlobal() {
 
   useEffect(() => {
     fetchExecutions()
-  }, [page, pageSize, selectedTaskId])
+  }, [page, pageSize, selectedTaskId, selectedStatus])
 
   const handleViewDetail = (executionId: string) => {
     navigate(`/admin/executions/${executionId}`)
@@ -196,6 +206,17 @@ function TaskExecutionsGlobal() {
       title="执行记录"
       extra={
         <Space>
+          <Select
+            allowClear
+            placeholder="按状态筛选"
+            style={{ width: 120 }}
+            value={selectedStatus}
+            onChange={(value) => {
+              setSelectedStatus(value)
+              setPage(1)
+            }}
+            options={statusOptions}
+          />
           <Select
             allowClear
             placeholder="按任务筛选"

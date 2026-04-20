@@ -1,5 +1,5 @@
 import { db, tasks, taskExecutions, taskExecutionMessages, bots, users } from '../db/index.js'
-import { eq, desc, lt, sql } from 'drizzle-orm'
+import { eq, desc, lt, sql, and } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { randomUUID } from 'crypto'
 
@@ -154,8 +154,8 @@ export async function getExecutionsByTaskId(taskId: string, options: { page: num
   return list
 }
 
-export async function getAllExecutions(options: { page: number; pageSize: number; taskId?: string }) {
-  const { page, pageSize, taskId } = options
+export async function getAllExecutions(options: { page: number; pageSize: number; taskId?: string; status?: string }) {
+  const { page, pageSize, taskId, status } = options
   const offset = (page - 1) * pageSize
   
   const selectFields = {
@@ -173,34 +173,28 @@ export async function getAllExecutions(options: { page: number; pageSize: number
     triggeredByDisplayName: users.displayName
   }
   
-  let list
-  let countResult
-  
+  const conditions = []
   if (taskId) {
-    list = await db.select(selectFields)
-      .from(taskExecutions)
-      .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
-      .where(eq(taskExecutions.taskId, taskId))
-      .orderBy(desc(taskExecutions.createdAt))
-      .limit(pageSize)
-      .offset(offset)
-    
-    countResult = await db.select({ count: sql<number>`count(*)` })
-      .from(taskExecutions)
-      .where(eq(taskExecutions.taskId, taskId))
-      .get()
-  } else {
-    list = await db.select(selectFields)
-      .from(taskExecutions)
-      .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
-      .orderBy(desc(taskExecutions.createdAt))
-      .limit(pageSize)
-      .offset(offset)
-    
-    countResult = await db.select({ count: sql<number>`count(*)` })
-      .from(taskExecutions)
-      .get()
+    conditions.push(eq(taskExecutions.taskId, taskId))
   }
+  if (status) {
+    conditions.push(eq(taskExecutions.status, status))
+  }
+  
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  
+  const list = await db.select(selectFields)
+    .from(taskExecutions)
+    .leftJoin(users, eq(taskExecutions.triggeredBy, users.id))
+    .where(whereClause)
+    .orderBy(desc(taskExecutions.createdAt))
+    .limit(pageSize)
+    .offset(offset)
+  
+  const countResult = await db.select({ count: sql<number>`count(*)` })
+    .from(taskExecutions)
+    .where(whereClause)
+    .get()
   
   const count = countResult?.count || 0
   

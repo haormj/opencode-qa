@@ -224,7 +224,7 @@ function TaskExecutionDetail() {
     try {
       await closeExecutionSession(id)
       message.success('会话已关闭')
-      navigate('/admin/tasks')
+      navigate('/admin/task-executions')
     } catch (error) {
       message.error('关闭失败')
     } finally {
