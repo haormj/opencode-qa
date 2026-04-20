@@ -58,6 +58,7 @@ router.get('/:id/events', async (req, res) => {
     startedAt: execution.startedAt,
     completedAt: execution.completedAt,
     updatedAt: execution.createdAt,
+    isDebug: execution.isDebug,
     cancelledByUser
   })}\n\n`)
 
