@@ -6,6 +6,7 @@ export interface StatusEvent {
     executionId: string
     status: string
     updatedAt: Date
+    isDebug: boolean
     cancelledByUser?: {
       id: string
       username: string
@@ -120,13 +121,14 @@ class ExecutionEventManager {
     logger.debug(`[ExecutionEvent] Broadcast ${event.type} to ${isStreamEvent ? 'trigger-only' : 'all'} clients in execution ${executionId}`)
   }
 
-  emitStatus(executionId: string, status: string, cancelledByUser?: StatusEvent['data']['cancelledByUser']): void {
+  emitStatus(executionId: string, status: string, isDebug: boolean = false, cancelledByUser?: StatusEvent['data']['cancelledByUser']): void {
     this.broadcast(executionId, {
       type: 'status',
       data: {
         executionId,
         status,
         updatedAt: new Date(),
+        isDebug,
         cancelledByUser
       }
     })

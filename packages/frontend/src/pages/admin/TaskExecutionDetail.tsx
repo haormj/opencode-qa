@@ -96,14 +96,15 @@ function TaskExecutionDetail() {
             cancelledByUser: data.cancelledByUser ?? null,
             startedAt: data.startedAt ?? null,
             completedAt: data.completedAt ?? null,
-            isDebug: false,
+            isDebug: data.isDebug ?? false,
             createdAt: data.updatedAt
           }
         }
         return { 
           ...prev, 
           status: data.status as TaskExecution['status'],
-          cancelledByUser: data.cancelledByUser ?? prev.cancelledByUser
+          cancelledByUser: data.cancelledByUser ?? prev.cancelledByUser,
+          isDebug: data.isDebug ?? prev.isDebug
         }
       })
     },

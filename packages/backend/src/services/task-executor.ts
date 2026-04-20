@@ -118,7 +118,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
     createdAt: now
   })
   
-  executionEventManager.emitStatus(executionId, 'running')
+  executionEventManager.emitStatus(executionId, 'running', debug || false)
   
   ;(async () => {
     let currentSessionId: string | null = null
@@ -253,7 +253,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
             if (shouldCleanupImmediately()) {
               await cleanupWorkspace(executionId)
             }
-            executionEventManager.emitStatus(executionId, 'completed')
+            executionEventManager.emitStatus(executionId, 'completed', false)
           }
         }
       } catch (streamError) {
@@ -286,7 +286,7 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         if (shouldCleanupImmediately()) {
           await cleanupWorkspace(executionId)
         }
-        executionEventManager.emitStatus(executionId, 'failed')
+        executionEventManager.emitStatus(executionId, 'failed', debug || false)
       }
     }
   })()
@@ -382,7 +382,7 @@ export async function cancelExecution(
     await cleanupWorkspace(executionId)
   }
   
-  executionEventManager.emitStatus(executionId, 'cancelled', cancelledByUser)
+  executionEventManager.emitStatus(executionId, 'cancelled', execution.isDebug, cancelledByUser)
   
   return { success: true }
 }
