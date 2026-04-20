@@ -389,6 +389,7 @@ router.get('/:id/preview', async (req, res) => {
 router.post('/:id/execute', async (req, res) => {
   try {
     const { id } = req.params
+    const { debug } = req.body
     const userId = req.user!.id
     
     const task = await getTaskById(id)
@@ -426,7 +427,8 @@ router.post('/:id/execute', async (req, res) => {
       triggerType: 'manual',
       triggeredBy: userId,
       botConfig,
-      botId: bot.id
+      botId: bot.id,
+      debug: debug || false
     })
     
     res.json({ executionId })

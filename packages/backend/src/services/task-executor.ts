@@ -15,6 +15,7 @@ interface ExecuteTaskOptions {
   botConfig: BotConfig
   botId?: string | null
   webhookPayload?: Record<string, unknown>
+  debug?: boolean
 }
 
 interface ExecutionResult {
@@ -92,7 +93,7 @@ export async function executeTask(options: ExecuteTaskOptions): Promise<Executio
 }
 
 export async function executeTaskStream(options: ExecuteTaskOptions): Promise<string> {
-  const { taskId, triggerType, triggeredBy, botConfig, botId, webhookPayload } = options
+  const { taskId, triggerType, triggeredBy, botConfig, botId, webhookPayload, debug } = options
   
   const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get()
   if (!task) {
@@ -227,28 +228,32 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
         
         await handleOutputs(flowData, answer)
         
-        const updateResult = await db.update(taskExecutions)
-          .set({
-            status: 'completed',
-            completedAt: new Date(),
-            result: answer
-          })
-          .where(and(eq(taskExecutions.id, executionId), eq(taskExecutions.status, 'running')))
-          .returning()
-        
-        if (updateResult.length > 0) {
-          if (currentSessionId) {
-            try {
-              await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
-              logger.info('[TaskExecutor] Deleted OpenCode session:', currentSessionId)
-            } catch (error) {
-              logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
+        if (debug) {
+          logger.info(`[TaskExecutor] Debug mode: keeping session alive for execution ${executionId}`)
+        } else {
+          const updateResult = await db.update(taskExecutions)
+            .set({
+              status: 'completed',
+              completedAt: new Date(),
+              result: answer
+            })
+            .where(and(eq(taskExecutions.id, executionId), eq(taskExecutions.status, 'running')))
+            .returning()
+          
+          if (updateResult.length > 0) {
+            if (currentSessionId) {
+              try {
+                await deleteOpenCodeSession(botConfig.apiUrl, currentSessionId)
+                logger.info('[TaskExecutor] Deleted OpenCode session:', currentSessionId)
+              } catch (error) {
+                logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
+              }
             }
+            if (shouldCleanupImmediately()) {
+              await cleanupWorkspace(executionId)
+            }
+            executionEventManager.emitStatus(executionId, 'completed')
           }
-          if (shouldCleanupImmediately()) {
-            await cleanupWorkspace(executionId)
-          }
-          executionEventManager.emitStatus(executionId, 'completed')
         }
       } catch (streamError) {
         clearInterval(saveInterval)

@@ -1500,9 +1500,10 @@ export async function toggleTask(id: string): Promise<Task> {
   })
 }
 
-export async function executeTask(id: string): Promise<{ executionId: string }> {
+export async function executeTask(id: string, debug?: boolean): Promise<{ executionId: string }> {
   return request(`${API_BASE}/admin/tasks/${id}/execute`, {
     method: 'POST',
+    body: JSON.stringify({ debug: debug || false }),
   })
 }
 
