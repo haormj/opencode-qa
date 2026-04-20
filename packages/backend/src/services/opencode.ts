@@ -25,6 +25,7 @@ interface IsolatedClientOptions {
 }
 
 const clients = new Map<string, ReturnType<typeof createOpencodeClient>>()
+const isolatedClients = new Map<string, ReturnType<typeof createOpencodeClient>>()
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {}
@@ -46,12 +47,33 @@ function getClient(apiUrl: string) {
   return clients.get(apiUrl)!
 }
 
-function createIsolatedClient(options: IsolatedClientOptions) {
-  return createOpencodeClient({
+function getOrCreateIsolatedClient(options: IsolatedClientOptions) {
+  const key = options.workspacePath
+  if (isolatedClients.has(key)) {
+    logger.debug('[OpenCode] Reusing cached isolated client for workspace:', key)
+    return isolatedClients.get(key)!
+  }
+  logger.info('[OpenCode] Creating new isolated client for workspace:', key)
+  const client = createOpencodeClient({
     baseUrl: options.apiUrl,
     headers: getAuthHeaders(),
     directory: toOpenCodePath(options.workspacePath)
   })
+  isolatedClients.set(key, client)
+  return client
+}
+
+export async function disposeIsolatedClient(workspacePath: string): Promise<void> {
+  const client = isolatedClients.get(workspacePath)
+  if (client) {
+    try {
+      await client.global.dispose()
+      isolatedClients.delete(workspacePath)
+      logger.info('[OpenCode] Isolated client disposed for workspace:', workspacePath)
+    } catch (error) {
+      logger.error('[OpenCode] Failed to dispose isolated client:', error)
+    }
+  }
 }
 
 export async function checkOrCreateOpenCodeSession(apiUrl: string, sessionId?: string): Promise<{ sessionId: string; needsRebuild: boolean }> {
@@ -336,9 +358,10 @@ export async function sendOpenCodeMessageWithWorkspace(
     messagePreview: message.substring(0, 50) 
   })
   
-  const client = createIsolatedClient({
-    apiUrl: botConfig.apiUrl,
-    workspacePath
+  const client = createOpencodeClient({
+    baseUrl: botConfig.apiUrl,
+    headers: getAuthHeaders(),
+    directory: toOpenCodePath(workspacePath)
   })
   
   try {
@@ -401,15 +424,17 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
   workspacePath: string,
   onChunk: (chunk: string, type: ChunkType) => void,
   onSessionId: (sessionId: string) => void,
-  existingSessionId?: string
+  existingSessionId?: string,
+  isDebug: boolean = false
 ): Promise<{ sessionId: string; answer: string; tokens?: { input: number; output: number } }> {
   logger.info('[OpenCode] sendOpenCodeMessageStreamWithWorkspace called:', { 
     workspacePath,
     messagePreview: message.substring(0, 50),
-    existingSessionId
+    existingSessionId,
+    isDebug
   })
   
-  const client = createIsolatedClient({
+  const client = getOrCreateIsolatedClient({
     apiUrl: botConfig.apiUrl,
     workspacePath
   })
@@ -531,11 +556,16 @@ export async function sendOpenCodeMessageStreamWithWorkspace(
     }
     eventSubscriptionManager.unregisterWithWorkspace(botConfig.apiUrl, sessionId, workspacePath)
     
-    try {
-      await client.global.dispose()
-      logger.info('[OpenCode] Isolated client disposed')
-    } catch (error) {
-      logger.error('[OpenCode] Failed to dispose client:', error)
+    if (!isDebug) {
+      try {
+        await client.global.dispose()
+        isolatedClients.delete(workspacePath)
+        logger.info('[OpenCode] Isolated client disposed')
+      } catch (error) {
+        logger.error('[OpenCode] Failed to dispose client:', error)
+      }
+    } else {
+      logger.info('[OpenCode] Debug mode: keeping isolated client alive for workspace:', workspacePath)
     }
     
     logger.info(`[OpenCode] Isolated stream completed for session: ${sessionId}, answer length: ${answer.length}`)

@@ -1,7 +1,7 @@
 import { db, tasks, taskExecutions, taskExecutionMessages, users, bots } from '../db/index.js'
 import { eq, and } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
-import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, type BotConfig } from './opencode.js'
+import { sendOpenCodeMessage, sendOpenCodeMessageStream, sendOpenCodeMessageWithWorkspace, sendOpenCodeMessageStreamWithWorkspace, abortOpenCodeSession, deleteOpenCodeSession, disposeIsolatedClient, type BotConfig } from './opencode.js'
 import { executionEventManager } from './execution-event-manager.js'
 import { generateTaskMarkdown, prepareWorkspaceScripts } from './task-markdown.js'
 import { createWorkspace, getWorkspacePath, cleanupWorkspace, shouldCleanupImmediately } from './workspace-manager.js'
@@ -207,7 +207,9 @@ export async function executeTaskStream(options: ExecuteTaskOptions): Promise<st
             } catch (error) {
               logger.error('[TaskExecutor] Failed to save opencodeSessionId:', error)
             }
-          }
+          },
+          undefined,
+          debug || false
         )
         
         clearInterval(saveInterval)
@@ -476,7 +478,8 @@ export async function appendExecutionMessage(
       async (sessionId: string) => {
         logger.info('[TaskExecutor] Reusing OpenCode session:', sessionId)
       },
-      execution.opencodeSessionId
+      execution.opencodeSessionId,
+      true
     )
     
     executionEventManager.emitStreamEnd(executionId)
@@ -537,6 +540,9 @@ export async function closeExecutionSession(
       logger.error('[TaskExecutor] Failed to delete OpenCode session:', error)
     }
   }
+  
+  const workspacePath = getWorkspacePath(executionId)
+  await disposeIsolatedClient(workspacePath)
   
   await db.update(taskExecutions)
     .set({
